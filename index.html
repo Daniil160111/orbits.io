@@ -235,7 +235,6 @@
   }
   #game-container.show { display:block; }
 
-  /* Мягкая блокировка всего фона при ошибке */
   body.orbits-error-mode #browser-view,
   body.orbits-error-mode #pwa-view {
     filter: brightness(0.35) blur(12px);
@@ -337,7 +336,6 @@
     console.error('JS-ошибка:', e.message, e.filename, e.lineno);
   });
 
-  // ★ Регистрация SW
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js', { scope: './' })
       .then((reg) => console.log('[SW] зарегистрирован, scope:', reg.scope))
@@ -487,7 +485,6 @@
   const URL_BG_BROWSER    = './Текстуры/Меню/F1.jpg';
   const URL_MUSIC_BROWSER = './Звуки/Меню/Титульный.mp3';
 
-  // Все системные звуки для предзагрузки
   const SYS_SOUNDS = [
     { key: 'sys_back_select_menu', url: './Звуки/Система/Back-select-menu.wav' },
     { key: 'sys_back',             url: './Звуки/Система/Back.wav' },
@@ -534,9 +531,7 @@
   let manifest = null;
   let modalOpen = false;
 
-  // Защита от повторного запуска
-  let pipelineRunning = false;
-  let currentErrorShown = false;
+  let loadingRunning = false;
 
   window.__ORBITS_BLOCK_STACK__ = ['./menu.js'];
   window.__ORBITS_CURRENT_BLOCK__ = null;
@@ -548,7 +543,7 @@
   let glCanvas, gl, glProgram, glUniforms = {}, glBuffer = null,
       glIndexBuffer = null, glIndexCount = 0, bgTexture = null,
       animRaf = 0, animStart = 0, animFrozen = false, animFreezeTime = 0,
-      loadingRunning = false, webglSupported = false;
+      webglSupported = false;
 
   let watchdogTimer = null, watchdogLastPing = 0;
 
@@ -556,9 +551,7 @@
     return (window.Settings && window.Settings.get) ? window.Settings.get(key) : undefined;
   }
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
-  function sfxVolume() { const v = getS('sfxVolume'); return (typeof v === 'number') ? v : 0.8; }
 
-  // ===== Прогресс загрузки =====
   let stats = { loadedBytes: 0, totalBytes: 0 };
   function updateLoadingProgress() {
     const el = document.getElementById('loading-progress');
@@ -627,7 +620,6 @@
   }
 
   // ===== WebGL — усиленный флаг =====
-  // ★ Амплитуда ×1.3, сильнее в сторону камеры и в противоположную
   const VERT_SHADER = `
     attribute vec2 a_uv;
     uniform float u_time;
@@ -637,17 +629,13 @@
     varying vec3 v_normal;
     float flagHeight(float u, float v, float t) {
       float amp = (0.20 + u * 1.10) * 1.30;
-      // Синусоиды с усилением в сторону камеры (передний край, u -> 1)
-      // и в противоположную (задний край, u -> 0)
       float frontBoost = 1.0 + u * 0.6;
       float backBoost  = 1.0 + (1.0 - u) * 0.4;
       float w1 = sin(u * 6.0 + t * 2.4) * 0.35 * frontBoost;
       float w2 = sin(u * 9.5 - t * 1.9 + v * 1.5) * 0.20;
       float w3 = sin(v * 4.0 + t * 1.6) * 0.10 * backBoost;
       float w4 = sin(u * 2.5 - t * 0.8) * 0.15;
-      // Дополнительное развитие в сторону камеры
       float w5 = sin(u * 12.0 + t * 3.1) * 0.12 * smoothstep(0.5, 1.0, u);
-      // И в противоположную
       float w6 = sin(u * 14.0 - t * 2.7) * 0.10 * smoothstep(0.5, 0.0, u);
       float sag = -cos(v * 3.14159) * 0.08;
       return (w1 + w2 + w3 + w4 + w5 + w6) * amp + sag;
@@ -661,7 +649,7 @@
       float ZOOM = 1.15;
       float x = (uv.x - 0.5) * 2.0 * ZOOM;
       float y = (uv.y - 0.5) * 2.0 * ZOOM;
-      float z = h * 1.30;   // ★ глубина тоже ×1.3
+      float z = h * 1.30;
       float xShift = sin(uv.x * 3.0 + t * 1.2) * 0.05 * (0.3 + uv.x);
       float eps = 0.01;
       float hx = flagHeight(uv.x + eps, uv.y, t);
@@ -707,7 +695,7 @@
       gl_FragColor = vec4(finalColor, 1.0);
     }
   `;
-  const GRID_X = 140, GRID_Y = 48;   // ★ плотнее сетка для более живого флага
+  const GRID_X = 140, GRID_Y = 48;
 
   function buildGrid() {
     const positions = [];
@@ -781,13 +769,15 @@
     return true;
   }
 
+  let paused_by_error = false;
+
   function startWebGL() {
     animStart = performance.now();
     animFrozen = false;
     function loop(now) {
       animRaf = requestAnimationFrame(loop);
       if (!webglSupported) return;
-      if (paused_by_error) return;   // ★ останавливаем анимацию при ошибке
+      if (paused_by_error) return;
       const time = animFrozen ? animFreezeTime : (now - animStart) / 1000;
       gl.uniform1f(glUniforms.uTime, time);
       gl.uniform1f(glUniforms.uAspect, glCanvas.width / glCanvas.height);
@@ -798,14 +788,11 @@
     animRaf = requestAnimationFrame(loop);
   }
 
-  // ★ Флаг остановки при ошибке
-  let paused_by_error = false;
   function freezeForError() {
     paused_by_error = true;
     animFrozen = true;
     animFreezeTime = (performance.now() - animStart) / 1000;
     document.body.classList.add('orbits-error-mode');
-    // Останавливаем анимацию phase-label
     const pl = document.getElementById('phase-label');
     if (pl) pl.classList.add('frozen');
   }
@@ -842,7 +829,6 @@
     } catch (e) {}
   }
 
-  // Предзагрузка всех системных звуков
   async function preloadSystemSounds() {
     if (!window.Sound) return;
     const tasks = SYS_SOUNDS.map(s =>
@@ -907,20 +893,14 @@
     }
   }
 
-  // ★ Перезапуск загрузки после ошибки — без предупреждения
   async function restartLoading() {
     unfreezeAfterError();
-    // Сброс
     loadingRunning = false;
-    pipelineRunning = false;
     stats = { loadedBytes: 0, totalBytes: 0 };
     updateLoadingProgress();
-    // Скрываем loader и показываем disclaimer заново — НЕТ, сразу loader
     $('screen-loader').classList.add('show');
-    // Запускаем пайплайн заново
     await sleep(300);
     if (webglSupported) {
-      // перезапускаем анимацию
       animStart = performance.now();
       animFrozen = false;
     }
@@ -1175,18 +1155,16 @@
     await openBlockByUrl(prev);
   }
 
-  // ===== Белый переход к menu.js (1.5 сек, название растёт до белого) =====
+  // ===== Белый переход к menu.js (1.5 сек) =====
   async function goToMenuWithTransition() {
     const flash = $('white-flash');
     const logo = $('transition-logo');
 
-    // Подготовка логотипа
     logo.style.transition = 'none';
     logo.style.display = 'flex';
     logo.style.opacity = '0';
     void logo.offsetWidth;
 
-    // 1. Логотип начинает расти (1.5 сек до полного размера)
     logo.style.transition = 'opacity 0.6s ease';
     logo.classList.add('show');
     logo.querySelector('img').style.transition = 'transform 1.5s cubic-bezier(0.16,1,0.3,1)';
@@ -1194,18 +1172,14 @@
     void logo.querySelector('img').offsetWidth;
     logo.querySelector('img').style.transform = 'scale(2.2)';
 
-    // 2. Экран засветляется до белого за 1.5 сек
     flash.style.transition = 'opacity 1.5s ease';
     flash.classList.add('show');
 
-    // 3. Ждём 1.5 сек — лого и белый завершены
     await sleep(1500);
 
-    // 4. Под белым — переключаем на menu
     $('screen-loader').style.display = 'none';
     $('game-container').style.display = 'block';
 
-    // ★ Уведомляем Troll о смене блока
     try { if (window.Troll) Troll.setBlock('menu'); } catch (e) {}
 
     try {
@@ -1216,11 +1190,9 @@
 
     await sleep(200);
 
-    // 5. Убираем белый за 1 сек
     flash.style.transition = 'opacity 1s ease';
     flash.classList.remove('show');
 
-    // 6. Лого уменьшается и исчезает
     logo.querySelector('img').style.transition = 'transform 1.2s cubic-bezier(0.16,1,0.3,1), opacity 0.8s ease';
     logo.querySelector('img').style.transform = 'scale(0.6)';
     logo.classList.remove('show');
@@ -1296,6 +1268,9 @@
       if (!window.ORBITS.assets.find(x => x.url === a.url)) window.ORBITS.assets.push(a);
     }
 
+    // ★ Сразу ставим блок loading
+    try { if (window.Troll) Troll.setBlock('loading'); } catch (e) {}
+
     try {
       const resp = await fetch(LOAD_URL, { cache: 'no-store' });
       manifest = await resp.json();
@@ -1322,16 +1297,12 @@
     $('screen-loader').style.transition = 'opacity ' + LOADER_FADE_MS + 'ms ease';
     $('screen-loader').classList.add('show');
 
-    // ★ Уведомляем Troll
-    try { if (window.Troll) Troll.setBlock('loading'); } catch (e) {}
-
     if (!initWebGL()) console.warn('WebGL не поддерживается');
     else startWebGL();
 
     try { await prepareAll(); }
     catch (e) { console.warn('prepareAll ошибка:', e.message); }
 
-    // Предзагрузка всех системных звуков
     try { await preloadSystemSounds(); }
     catch (e) { console.warn('preloadSystemSounds ошибка:', e.message); }
 
@@ -1348,6 +1319,13 @@
     const blocks = (manifest && Array.isArray(manifest.blocks))
       ? manifest.blocks
       : [{ path: './menu.js', assets: [] }];
+
+    // ★ Сообщаем Troll реальное число блоков
+    try {
+      if (window.Troll && Troll.setTotalBlocks) {
+        Troll.setTotalBlocks(blocks.length);
+      }
+    } catch (e) {}
 
     let collectedAssets = [];
     try {
@@ -1406,7 +1384,6 @@
 
     stopWatchdog();
 
-    // Переход к menu.js с лого (1.5 сек)
     await goToMenuWithTransition();
 
     loadingRunning = false;

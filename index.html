@@ -234,6 +234,20 @@
     background: transparent; overflow:hidden; display:none;
   }
   #game-container.show { display:block; }
+
+  /* Мягкая блокировка всего фона при ошибке */
+  body.orbits-error-mode #browser-view,
+  body.orbits-error-mode #pwa-view {
+    filter: brightness(0.35) blur(12px);
+    pointer-events: none;
+    transition: filter 0.7s ease;
+  }
+  body.orbits-error-mode #loader-canvas,
+  body.orbits-error-mode #transition-logo,
+  body.orbits-error-mode #white-flash {
+    opacity: 0 !important;
+    transition: opacity 0.7s ease;
+  }
 </style>
 </head>
 <body>
@@ -323,7 +337,7 @@
     console.error('JS-ошибка:', e.message, e.filename, e.lineno);
   });
 
-  // ★ Регистрация SW — сразу
+  // ★ Регистрация SW
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js', { scope: './' })
       .then((reg) => console.log('[SW] зарегистрирован, scope:', reg.scope))
@@ -468,9 +482,26 @@
   const URL_STARTUP      = './Звуки/Меню/Startup.mp3';
   const URL_ERROR_SND    = './Звуки/Система/Error.wav';
   const URL_CONTINUE_SND = './Звуки/Система/Button.wav';
+  const URL_WINDOW_SND   = './Звуки/Система/Window.wav';
 
   const URL_BG_BROWSER    = './Текстуры/Меню/F1.jpg';
   const URL_MUSIC_BROWSER = './Звуки/Меню/Титульный.mp3';
+
+  // Все системные звуки для предзагрузки
+  const SYS_SOUNDS = [
+    { key: 'sys_back_select_menu', url: './Звуки/Система/Back-select-menu.wav' },
+    { key: 'sys_back',             url: './Звуки/Система/Back.wav' },
+    { key: 'sys_blok_slot',        url: './Звуки/Система/Blok_slot.wav' },
+    { key: 'sys_button',           url: './Звуки/Система/Button.wav' },
+    { key: 'sys_error',            url: './Звуки/Система/Error.wav' },
+    { key: 'sys_message',          url: './Звуки/Система/Message.wav' },
+    { key: 'sys_save',             url: './Звуки/Система/Save.wav' },
+    { key: 'sys_setting',          url: './Звуки/Система/Setting.wav' },
+    { key: 'sys_start_race',       url: './Звуки/Система/Start-race-menu-to-select.wav' },
+    { key: 'sys_tap_screen',       url: './Звуки/Система/Tap-to-screen.wav' },
+    { key: 'sys_unblok_slot',      url: './Звуки/Система/Unblok_slot.wav' },
+    { key: 'sys_window',           url: './Звуки/Система/Window.wav' }
+  ];
 
   const BROWSER_MUSIC_TAIL_TRIM = 0.022;
 
@@ -503,6 +534,10 @@
   let manifest = null;
   let modalOpen = false;
 
+  // Защита от повторного запуска
+  let pipelineRunning = false;
+  let currentErrorShown = false;
+
   window.__ORBITS_BLOCK_STACK__ = ['./menu.js'];
   window.__ORBITS_CURRENT_BLOCK__ = null;
   window.__ORBITS_ACTIVE_BLOCK__ = null;
@@ -521,16 +556,14 @@
     return (window.Settings && window.Settings.get) ? window.Settings.get(key) : undefined;
   }
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
+  function sfxVolume() { const v = getS('sfxVolume'); return (typeof v === 'number') ? v : 0.8; }
 
   // ===== Прогресс загрузки =====
   let stats = { loadedBytes: 0, totalBytes: 0 };
   function updateLoadingProgress() {
     const el = document.getElementById('loading-progress');
     if (!el) return;
-    if (stats.totalBytes === 0) {
-      el.textContent = '';
-      return;
-    }
+    if (stats.totalBytes === 0) { el.textContent = ''; return; }
     const loaded = stats.loadedBytes / (1024 * 1024);
     const total = stats.totalBytes / (1024 * 1024);
     el.textContent = loaded.toFixed(2) + ' / ' + total.toFixed(2) + ' МБ';
@@ -593,7 +626,8 @@
     return 'fnv_' + h.toString(16).padStart(8, '0') + '_len_' + bytes.length.toString(16);
   }
 
-  // ===== WebGL (загрузочный флаг) =====
+  // ===== WebGL — усиленный флаг =====
+  // ★ Амплитуда ×1.3, сильнее в сторону камеры и в противоположную
   const VERT_SHADER = `
     attribute vec2 a_uv;
     uniform float u_time;
@@ -602,13 +636,21 @@
     varying float v_height;
     varying vec3 v_normal;
     float flagHeight(float u, float v, float t) {
-      float amp = 0.20 + u * 1.10;
-      float w1 = sin(u * 6.0 + t * 2.4) * 0.35;
+      float amp = (0.20 + u * 1.10) * 1.30;
+      // Синусоиды с усилением в сторону камеры (передний край, u -> 1)
+      // и в противоположную (задний край, u -> 0)
+      float frontBoost = 1.0 + u * 0.6;
+      float backBoost  = 1.0 + (1.0 - u) * 0.4;
+      float w1 = sin(u * 6.0 + t * 2.4) * 0.35 * frontBoost;
       float w2 = sin(u * 9.5 - t * 1.9 + v * 1.5) * 0.20;
-      float w3 = sin(v * 4.0 + t * 1.6) * 0.10;
+      float w3 = sin(v * 4.0 + t * 1.6) * 0.10 * backBoost;
       float w4 = sin(u * 2.5 - t * 0.8) * 0.15;
+      // Дополнительное развитие в сторону камеры
+      float w5 = sin(u * 12.0 + t * 3.1) * 0.12 * smoothstep(0.5, 1.0, u);
+      // И в противоположную
+      float w6 = sin(u * 14.0 - t * 2.7) * 0.10 * smoothstep(0.5, 0.0, u);
       float sag = -cos(v * 3.14159) * 0.08;
-      return (w1 + w2 + w3 + w4) * amp + sag;
+      return (w1 + w2 + w3 + w4 + w5 + w6) * amp + sag;
     }
     void main() {
       vec2 uv = a_uv;
@@ -619,13 +661,13 @@
       float ZOOM = 1.15;
       float x = (uv.x - 0.5) * 2.0 * ZOOM;
       float y = (uv.y - 0.5) * 2.0 * ZOOM;
-      float z = h * 1.05;
+      float z = h * 1.30;   // ★ глубина тоже ×1.3
       float xShift = sin(uv.x * 3.0 + t * 1.2) * 0.05 * (0.3 + uv.x);
       float eps = 0.01;
       float hx = flagHeight(uv.x + eps, uv.y, t);
       float hy = flagHeight(uv.x, uv.y + eps, t);
-      vec3 tangentX = vec3(eps * 2.0 * ZOOM, 0.0, (hx - h) * 1.05);
-      vec3 tangentY = vec3(0.0, eps * 2.0 * ZOOM, (hy - h) * 1.05);
+      vec3 tangentX = vec3(eps * 2.0 * ZOOM, 0.0, (hx - h) * 1.30);
+      vec3 tangentY = vec3(0.0, eps * 2.0 * ZOOM, (hy - h) * 1.30);
       vec3 normal = normalize(cross(tangentX, tangentY));
       v_normal = normal;
       gl_Position = vec4(x + xShift, y, z, 1.0);
@@ -665,7 +707,7 @@
       gl_FragColor = vec4(finalColor, 1.0);
     }
   `;
-  const GRID_X = 120, GRID_Y = 40;
+  const GRID_X = 140, GRID_Y = 48;   // ★ плотнее сетка для более живого флага
 
   function buildGrid() {
     const positions = [];
@@ -745,6 +787,7 @@
     function loop(now) {
       animRaf = requestAnimationFrame(loop);
       if (!webglSupported) return;
+      if (paused_by_error) return;   // ★ останавливаем анимацию при ошибке
       const time = animFrozen ? animFreezeTime : (now - animStart) / 1000;
       gl.uniform1f(glUniforms.uTime, time);
       gl.uniform1f(glUniforms.uAspect, glCanvas.width / glCanvas.height);
@@ -753,6 +796,26 @@
       gl.drawElements(gl.TRIANGLES, glIndexCount, gl.UNSIGNED_SHORT, 0);
     }
     animRaf = requestAnimationFrame(loop);
+  }
+
+  // ★ Флаг остановки при ошибке
+  let paused_by_error = false;
+  function freezeForError() {
+    paused_by_error = true;
+    animFrozen = true;
+    animFreezeTime = (performance.now() - animStart) / 1000;
+    document.body.classList.add('orbits-error-mode');
+    // Останавливаем анимацию phase-label
+    const pl = document.getElementById('phase-label');
+    if (pl) pl.classList.add('frozen');
+  }
+  function unfreezeAfterError() {
+    paused_by_error = false;
+    animFrozen = false;
+    animStart = performance.now() - animFreezeTime * 1000;
+    document.body.classList.remove('orbits-error-mode');
+    const pl = document.getElementById('phase-label');
+    if (pl) pl.classList.remove('frozen');
   }
 
   async function prepareAll() {
@@ -768,14 +831,24 @@
         img.src = URL_LOAD_BG;
       }),
       Sound.loadBuffer('music_startup', URL_STARTUP).catch(() => {}),
-      Sound.loadBuffer('error_snd', URL_ERROR_SND).catch(() => {}),
-      Sound.loadBuffer('continue_snd', URL_CONTINUE_SND).catch(() => {})
+      Sound.loadBuffer('sys_error', URL_ERROR_SND).catch(() => {}),
+      Sound.loadBuffer('sys_button', URL_CONTINUE_SND).catch(() => {}),
+      Sound.loadBuffer('sys_window', URL_WINDOW_SND).catch(() => {})
     ]);
     try {
       await Sound.playMusic('music_startup', {
         loop: false, volume: 0.9 * musicVolume(), fadeIn: 0.3
       });
     } catch (e) {}
+  }
+
+  // Предзагрузка всех системных звуков
+  async function preloadSystemSounds() {
+    if (!window.Sound) return;
+    const tasks = SYS_SOUNDS.map(s =>
+      Sound.loadBuffer(s.key, s.url).catch(() => {})
+    );
+    await Promise.all(tasks);
   }
 
   function pingWatchdog() { watchdogLastPing = Date.now(); }
@@ -827,14 +900,34 @@
       ErrorManager.show({
         code: code,
         detail: detail || '',
-        onContinue: onContinue || function () {}
+        onContinue: onContinue || function () { restartLoading(); }
       });
     } else {
       console.warn('ErrorManager не загружен, ошибка:', code, detail);
     }
   }
 
-  // ===== СКАЧИВАНИЕ (без зеркал, относительные пути) =====
+  // ★ Перезапуск загрузки после ошибки — без предупреждения
+  async function restartLoading() {
+    unfreezeAfterError();
+    // Сброс
+    loadingRunning = false;
+    pipelineRunning = false;
+    stats = { loadedBytes: 0, totalBytes: 0 };
+    updateLoadingProgress();
+    // Скрываем loader и показываем disclaimer заново — НЕТ, сразу loader
+    $('screen-loader').classList.add('show');
+    // Запускаем пайплайн заново
+    await sleep(300);
+    if (webglSupported) {
+      // перезапускаем анимацию
+      animStart = performance.now();
+      animFrozen = false;
+    }
+    await runLoaderPipeline();
+  }
+
+  // ===== СКАЧИВАНИЕ =====
   async function downloadOnce(url) {
     const resp = await fetch(url, {
       mode: 'cors', credentials: 'omit', cache: 'no-store'
@@ -888,7 +981,6 @@
     throw lastErr || new Error('Не удалось скачать: ' + url);
   }
 
-  // ★ Ассеты: мягкий fallback по регистру
   async function fetchAsset(url, expectedHash) {
     const cached = await dbGet(STORE_ASSETS, url);
     if (cached && cached.blob && cached.blob.size > 0) {
@@ -908,7 +1000,6 @@
     return entry;
   }
 
-  // ★ Блоки: без повторов и без зеркал. 404 = игнорим.
   async function fetchBlockText(url) {
     const resp = await fetch(url, {
       mode: 'cors', credentials: 'omit', cache: 'no-store'
@@ -930,7 +1021,6 @@
     let missingCount = 0;
     let loadedCount = 0;
 
-    // Сначала — считаем общий размер ассетов блоков
     for (const def of blockDefs) {
       if (def && Array.isArray(def.assets)) {
         for (const a of def.assets) {
@@ -943,9 +1033,7 @@
         }
       }
     }
-    // Плюс размер самих блоков (приблизительно)
-    stats.totalBytes += blockDefs.length * 5 * 1024; // ~5 КБ на блок
-
+    stats.totalBytes += blockDefs.length * 5 * 1024;
     updateLoadingProgress();
 
     for (const def of blockDefs) {
@@ -1087,43 +1175,57 @@
     await openBlockByUrl(prev);
   }
 
-  // ===== Белый переход к menu.js с растущим лого =====
+  // ===== Белый переход к menu.js (1.5 сек, название растёт до белого) =====
   async function goToMenuWithTransition() {
     const flash = $('white-flash');
     const logo = $('transition-logo');
 
-    // 1. Резко показываем лого, начнёт расти
+    // Подготовка логотипа
     logo.style.transition = 'none';
     logo.style.display = 'flex';
     logo.style.opacity = '0';
     void logo.offsetWidth;
-    logo.style.transition = 'opacity 0.8s ease';
-    logo.classList.add('show');
 
-    // 2. Одновременно — белый
-    flash.style.transition = 'opacity 1s ease';
+    // 1. Логотип начинает расти (1.5 сек до полного размера)
+    logo.style.transition = 'opacity 0.6s ease';
+    logo.classList.add('show');
+    logo.querySelector('img').style.transition = 'transform 1.5s cubic-bezier(0.16,1,0.3,1)';
+    logo.querySelector('img').style.transform = 'scale(0.6)';
+    void logo.querySelector('img').offsetWidth;
+    logo.querySelector('img').style.transform = 'scale(2.2)';
+
+    // 2. Экран засветляется до белого за 1.5 сек
+    flash.style.transition = 'opacity 1.5s ease';
     flash.classList.add('show');
 
-    await sleep(1200);
+    // 3. Ждём 1.5 сек — лого и белый завершены
+    await sleep(1500);
 
-    // 3. Под белым — переключаем на menu
+    // 4. Под белым — переключаем на menu
     $('screen-loader').style.display = 'none';
     $('game-container').style.display = 'block';
+
+    // ★ Уведомляем Troll о смене блока
+    try { if (window.Troll) Troll.setBlock('menu'); } catch (e) {}
+
     try {
       await runBlock('./menu.js');
     } catch (e) {
       console.warn('[goToMenu] menu.js ошибка:', e.message);
     }
 
-    await sleep(300);
+    await sleep(200);
 
-    // 4. Убираем белый
+    // 5. Убираем белый за 1 сек
     flash.style.transition = 'opacity 1s ease';
     flash.classList.remove('show');
 
-    // 5. Лого уменьшается и исчезает
+    // 6. Лого уменьшается и исчезает
+    logo.querySelector('img').style.transition = 'transform 1.2s cubic-bezier(0.16,1,0.3,1), opacity 0.8s ease';
+    logo.querySelector('img').style.transform = 'scale(0.6)';
     logo.classList.remove('show');
-    await sleep(1400);
+
+    await sleep(1200);
     logo.style.display = 'none';
   }
 
@@ -1220,11 +1322,18 @@
     $('screen-loader').style.transition = 'opacity ' + LOADER_FADE_MS + 'ms ease';
     $('screen-loader').classList.add('show');
 
+    // ★ Уведомляем Troll
+    try { if (window.Troll) Troll.setBlock('loading'); } catch (e) {}
+
     if (!initWebGL()) console.warn('WebGL не поддерживается');
     else startWebGL();
 
     try { await prepareAll(); }
     catch (e) { console.warn('prepareAll ошибка:', e.message); }
+
+    // Предзагрузка всех системных звуков
+    try { await preloadSystemSounds(); }
+    catch (e) { console.warn('preloadSystemSounds ошибка:', e.message); }
 
     await runLoaderPipeline();
   }
@@ -1246,6 +1355,7 @@
       pingWatchdog();
     } catch (e) {
       loadingRunning = false; stopWatchdog();
+      freezeForError();
       showError('download', e.message);
       return;
     }
@@ -1258,7 +1368,6 @@
       if (!allAssets.find(x => x.url === a.url)) allAssets.push(a);
     }
 
-    // Считаем общий размер всех ассетов (плюс к уже посчитанному)
     for (const a of allAssets) {
       try {
         const r = await fetch(a.url, { method: 'HEAD', mode: 'cors' });
@@ -1280,6 +1389,7 @@
       pingWatchdog();
     } catch (e) {
       loadingRunning = false; stopWatchdog();
+      freezeForError();
       showError('corrupted', e.message);
       return;
     }
@@ -1288,6 +1398,7 @@
     if (criticalFailed.length > 0) {
       stopWatchdog();
       loadingRunning = false;
+      freezeForError();
       showError('download',
         'Критичные файлы не загружены: ' + criticalFailed.map(f => f.url).join(', '));
       return;
@@ -1295,7 +1406,7 @@
 
     stopWatchdog();
 
-    // Переход к menu.js с лого
+    // Переход к menu.js с лого (1.5 сек)
     await goToMenuWithTransition();
 
     loadingRunning = false;
@@ -1323,7 +1434,6 @@
       deferredPrompt = e;
     });
 
-    // ★ Кнопка «Установить приложение» — устанавливает PWA напрямую
     btnInstall.addEventListener('click', async () => {
       if (deferredPrompt) {
         deferredPrompt.prompt();

@@ -72,6 +72,9 @@
   const RIPPLE_FADE_MS = 1300;
   const SUB_APPEAR_MS  = 1000;
 
+  // ★ Длительность блокировки кнопок (мс) — пока звук играет
+  const SOUND_LOCK_MS = 350;
+
   let container = null;
   let persistentBg = null;
   let whiteOverlay = null;
@@ -81,6 +84,13 @@
   let titleLock = false;
   let subLock = false;
   let musicPlayedOnce = false;
+
+  // ★ Глобальная блокировка кнопок при звуке
+  let soundLockActive = false;
+  let soundLockTimer = null;
+
+  // ★ Флаг «первый запуск после index» — нужно белое появление 1.5 сек
+  let isFirstAppearance = false;
 
   let rippleCanvas = null, rippleGl = null, rippleProgram = null,
       rippleUniforms = {}, rippleTexture = null, rippleRaf = 0,
@@ -102,12 +112,31 @@
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
   function vibeEnabled() { const v = getS('vibration');   return (typeof v === 'boolean') ? v : true; }
 
+  // ★ Вибрация усилена на 30% в игре — но в меню умеренная
+  const VIBE_MULT = 1.0;
+
   function sfx(name, baseVolume = 1.0) {
-    if (!window.Sound) return;
+    if (!window.Sound) return false;
     try {
-      if (!Sound.hasBuffer(name)) return;
+      if (!Sound.hasBuffer(name)) return false;
       Sound.playSFX(name, { volume: baseVolume * sfxVolume(), fadeIn: 0 });
-    } catch (e) {}
+      return true;
+    } catch (e) { return false; }
+  }
+
+  // ★ Звук + блокировка кнопок на время звучания
+  function sfxAndLock(name, baseVolume = 1.0, lockMs = SOUND_LOCK_MS) {
+    if (soundLockActive) return false;
+    const played = sfx(name, baseVolume);
+    if (played) {
+      soundLockActive = true;
+      if (soundLockTimer) clearTimeout(soundLockTimer);
+      soundLockTimer = setTimeout(() => {
+        soundLockActive = false;
+        soundLockTimer = null;
+      }, lockMs);
+    }
+    return played;
   }
 
   const canVibrate = () => !!navigator.vibrate && vibeEnabled();
@@ -127,7 +156,7 @@
     let t = 0;
     pulses.forEach((p) => {
       const id = setTimeout(() => {
-        if (canVibrate()) { try { navigator.vibrate(p.dur); } catch (e) {} }
+        if (canVibrate()) { try { navigator.vibrate(Math.round(p.dur * VIBE_MULT)); } catch (e) {} }
       }, t);
       vibeTimeouts.push(id);
       t += p.dur + p.pause;
@@ -136,11 +165,11 @@
   function vibrateButton() {
     if (!canVibrate()) return;
     stopVibrate();
-    try { navigator.vibrate([13, 30, 13]); } catch (e) {}
+    try { navigator.vibrate([Math.round(13 * VIBE_MULT), 30, Math.round(13 * VIBE_MULT)]); } catch (e) {}
   }
   function vibrateSensor() {
     if (!canVibrate()) return;
-    try { navigator.vibrate([7, 30, 7]); } catch (e) {}
+    try { navigator.vibrate([Math.round(7 * VIBE_MULT), 30, Math.round(7 * VIBE_MULT)]); } catch (e) {}
   }
 
   async function loadAssets() {
@@ -227,7 +256,21 @@
     return whiteOverlay;
   }
 
-  // ===== РЯБЬ (без изменений) =====
+  // ★ Показать белый оверлей и плавно убрать (1.5 сек)
+  async function whiteFadeOut(durationMs = 1500) {
+    const ov = getWhiteOverlay();
+    ov.style.transition = 'none';
+    ov.style.opacity = '1';
+    void ov.offsetWidth;
+    ov.style.transition = 'opacity ' + durationMs + 'ms ease';
+    ov.classList.add('show');
+    await sleep(30);
+    ov.style.opacity = '0';
+    await sleep(durationMs);
+    ov.classList.remove('show');
+  }
+
+  // ===== РЯБЬ =====
   const RIPPLE_VERT = "attribute vec2 a_pos; varying vec2 v_uv; void main() { v_uv = a_pos * 0.5 + 0.5; gl_Position = vec4(a_pos, 0.0, 1.0); }";
   const RIPPLE_FRAG = `
     precision highp float;
@@ -455,9 +498,10 @@
     const onTap = async (e) => {
       if (titleLock) return;
       if (currentScreen !== 'title') return;
+      if (soundLockActive) return;  // ★ блокировка
       titleLock = true;
       vibrateWave();
-      sfx('menu_sfx_tap', 1.0);
+      sfxAndLock('sys_tap_screen', 1.0, 400);
       const point = getPointer(e);
       if (point) waterRipple(point.x, point.y);
       setTimeout(() => goToSubScreen(), SUB_APPEAR_MS);
@@ -554,14 +598,19 @@
       const doOpen = (e) => {
         if (e) e.preventDefault();
         if (subLock || anyClicked) return;
+        if (soundLockActive) return;  // ★ блокировка
         lockAll();
         subLock = true;
         vibrateButton();
-        sfx('menu_sfx_btn', 1.0);
-        btn.classList.add('clicked');
+
         const blockName = BLOCK_MAP[btn.dataset.id];
+        // ★ Звук: menu → settings/select/score/shop = start_race
+        //          онлайн = online_unavailable (обрабатывается в select)
+        //          solo = start_race
+        sfxAndLock('sys_start_race', 1.0, 500);
+        btn.classList.add('clicked');
+
         if (blockName && window.ORBITS && ORBITS.openBlock) {
-          // Передать тип solo/online для select.js
           if (blockName === 'select') {
             window.__ORBITS_SELECT_TYPE__ = (btn.dataset.id === 'online') ? 'online' : 'solo';
           }
@@ -592,10 +641,12 @@
     const goBack = (e) => {
       if (e) e.preventDefault();
       if (subLock || anyClicked) return;
+      if (soundLockActive) return;  // ★ блокировка
       lockAll();
       subLock = true;
       vibrateButton();
-      sfx('menu_sfx_btn', 0.9);
+      // ★ Назад к титульному — звук Back
+      sfxAndLock('sys_back', 0.9, 350);
       goToTitleScreen();
     };
     back.addEventListener('click', goBack);
@@ -775,7 +826,24 @@
     const returning = !!window.__ORBITS_RETURNING__;
     window.__ORBITS_RETURNING__ = false;
 
-    if (returning) {
+    // ★ Уведомляем Troll
+    try { if (window.Troll) Troll.setBlock('menu'); } catch (e) {}
+
+    // ★ При первом запуске после index — белый оверлей плавно убирается (1.5 сек)
+    if (!returning && !window.__ORBITS_MENU_SEEN__) {
+      window.__ORBITS_MENU_SEEN__ = true;
+      isFirstAppearance = true;
+      const ov = getWhiteOverlay();
+      ov.style.transition = 'none';
+      ov.style.opacity = '1';
+      ov.classList.add('show');
+      void ov.offsetWidth;
+      ov.style.transition = 'opacity 1500ms ease';
+      ov.style.opacity = '0';
+      await sleep(1500);
+      ov.classList.remove('show');
+      await showTitleScreen(true);
+    } else if (returning) {
       await showSubScreenDirect();
     } else {
       await showTitleScreen(true);

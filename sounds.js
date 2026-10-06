@@ -1,9 +1,42 @@
 /* =====================================================================
    ORBITS.IO — SOUND ENGINE
-   Путь: Блоки/sounds.js
+   Путь: sounds.js
+
+   API:
+     Sound.init()
+     Sound.unlock()
+     Sound.loadBuffer(key, source)
+     Sound.playMusic(key, opts)
+     Sound.playMusicIntroLoop(key, opts)
+     Sound.stopMusic(fadeOut)
+     Sound.playSFX(key, opts)
+     Sound.playSys(name, baseVolume)   ← ★ новый: играет системный звук
+     Sound.hasBuffer(key)
+     Sound.getDuration(key)
+     Sound.setMasterVolume / setMusicVolume / setSFXVolume
+     Sound.mute / unmute / pauseAll / resumeAll
+     Sound.getSysList()                 ← ★ новый: список системных
    ===================================================================== */
 (function (global) {
   'use strict';
+
+  // ★ Список системных звуков — единая точка правды
+  const SYS_SOUNDS = {
+    back_select_menu: './Звуки/Система/Back-select-menu.wav',
+    back:             './Звуки/Система/Back.wav',
+    blok_slot:        './Звуки/Система/Blok_slot.wav',
+    button:           './Звуки/Система/Button.wav',
+    error:            './Звуки/Система/Error.wav',
+    message:          './Звуки/Система/Message.wav',
+    save:             './Звуки/Система/Save.wav',
+    setting:          './Звуки/Система/Setting.wav',
+    start_race:       './Звуки/Система/Start-race-menu-to-select.wav',
+    tap_screen:       './Звуки/Система/Tap-to-screen.wav',
+    unblok_slot:      './Звуки/Система/Unblok_slot.wav',
+    window:           './Звуки/Система/Window.wav'
+  };
+
+  const SYS_PREFIX = 'sys_';
 
   const Sound = {
     ctx: null,
@@ -17,6 +50,7 @@
     _sfxPool: [],
     _poolSize: 16,
     _securityInstalled: false,
+    _sysPreloaded: false,
 
     init() {
       if (this.ctx) return this.ctx;
@@ -281,6 +315,46 @@
       slot.source = src;
     },
 
+    // ★ НОВЫЙ API: играет системный звук по короткому имени
+    // name: 'button' | 'back' | 'error' | 'save' | 'setting' | 'window'
+    //       'message' | 'start_race' | 'tap_screen' | 'blok_slot'
+    //       'unblok_slot' | 'back_select_menu'
+    // baseVolume: 0..1
+    // Возвращает true если звук реально проиграл
+    playSys(name, baseVolume) {
+      if (!name) return false;
+      const url = SYS_SOUNDS[name];
+      if (!url) return false;
+      const key = SYS_PREFIX + name;
+      if (!this._buffers[key]) {
+        // Если не загружен — попробуем загрузить в фоне и не играем
+        this.loadBuffer(key, url).catch(() => {});
+        return false;
+      }
+      const vol = (typeof baseVolume === 'number') ? baseVolume : 1.0;
+      this.playSFX(key, { volume: vol, fadeIn: 0 });
+      return true;
+    },
+
+    // ★ Предзагрузка всех системных звуков
+    async preloadAllSys() {
+      if (this._sysPreloaded) return;
+      this._sysPreloaded = true;
+      this.init();
+      if (!this.ctx) return;
+      const tasks = [];
+      for (const name in SYS_SOUNDS) {
+        const key = SYS_PREFIX + name;
+        if (!this._buffers[key]) {
+          tasks.push(this.loadBuffer(key, SYS_SOUNDS[name]).catch(() => {}));
+        }
+      }
+      await Promise.all(tasks);
+    },
+
+    // ★ Список системных звуков (для диагностики)
+    getSysList() { return Object.keys(SYS_SOUNDS); },
+
     setMasterVolume(v, fade = 0) { this._ramp(this.masterGain.gain, v, fade); },
     setMusicVolume(v, fade = 0)  { this._ramp(this.musicGain.gain, v, fade); },
     setSFXVolume(v, fade = 0)    { this._ramp(this.sfxGain.gain, v, fade); },
@@ -302,7 +376,16 @@
     hasBuffer(key) { return !!this._buffers[key]; },
     getDuration(key) { return this._buffers[key] ? this._buffers[key].duration : 0; },
     unloadBuffer(key) { delete this._buffers[key]; },
-    unloadAll() { this._buffers = {}; }
+    unloadAll() { this._buffers = {}; this._sysPreloaded = false; }
+  };
+
+  // Автопредзагрузка системных звуков при первой возможности
+  // (после unlock — пользователь кликнул, аудио разрешено)
+  const originalUnlock = Sound.unlock.bind(Sound);
+  Sound.unlock = async function () {
+    const ok = await originalUnlock();
+    if (ok) { try { await Sound.preloadAllSys(); } catch (e) {} }
+    return ok;
   };
 
   global.Sound = Sound;

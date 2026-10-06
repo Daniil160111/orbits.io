@@ -1,31 +1,6 @@
 /* =====================================================================
    ORBITS.IO — TROLL v5 (полная адаптивная ИИ-система + оценка устройства)
    Путь: troll.js
-
-   Самообучающаяся система управления производительностью.
-   Без нейросетей, без библиотек, без нагрузки на GPU.
-
-   Компоненты:
-   - Perception  — замер FPS, frame time, jitter, тренд, прогноз
-   - Memory      — скелеты (базы + дети), глобальные точки, типы нагрузки
-   - Reasoning   — ансамбль из 5 стратегий с обучаемыми весами
-   - Action      — плавное изменение FPS и renderScale
-   - Reflection  — проверка результата, откат ошибочных решений
-   - Feedback    — обновление весов, затухание, перепривязка сирот
-   - DeviceScore — оценка устройства (баллы, мощность, статус адаптации)
-
-   API:
-     Troll.setBlock('map1');
-     Troll.setContext({ zone:'water', phase:'race' });
-     Troll.setLoadTypes(['water','particles']);
-     Troll.clearContext();
-     Troll.markMin(ctx); Troll.markMax(ctx);
-     Troll.subscribe(cb);
-     Troll.getProfile('map1');
-     Troll.getDeviceScore();       ← ★ новый
-     Troll.getStats();
-     Troll.resetAll();
-     Troll.show(); Troll.hide();
    ===================================================================== */
 (function () {
   'use strict';
@@ -36,54 +11,44 @@
 
   const HUD_ID = 'orbits-troll-hud';
   const STORAGE_KEY = 'orbits_troll_ai';
-  const STORAGE_VERSION = 5;   // ★ версия поднята
+  const STORAGE_VERSION = 5;
 
-  // Границы
   const FPS_MIN = 30;
   const FPS_NATIVE_60 = 60;
   const FPS_NATIVE_120 = 120;
   const SCALE_MIN = 0.55;
   const SCALE_MAX = 1.00;
 
-  // Шаги (за тик 100мс)
   const FPS_STEP = 1;
   const SCALE_STEP = 0.01;
 
-  // Множители шага
   const STEP_FAST = 3.0;
   const STEP_SLOW = 0.5;
   const STEP_NORMAL = 1.0;
 
-  // Гистерезис (мс)
   const HYST_BAD = 3000;
   const HYST_GOOD = 8000;
   const HYST_REFLECT = 5000;
 
-  // Замеры
   const FRAME_WINDOW = 90;
   const WARMUP_FRAMES = 30;
   const TICK_MS = 100;
   const FPS_HISTORY_SIZE = 30;
 
-  // Пороги классификации
   const TH_GOOD = 0.95;
   const TH_OK = 0.85;
   const TH_WARN = 0.70;
   const TH_CRIT = 0.55;
 
-  // Fuzzy match
   const FUZZY_THRESHOLD = 0.60;
   const BASE_CREATE_SIMILARITY = 0.50;
   const BASE_REBIND_THRESHOLD = 0.50;
 
-  // Скелеты
   const CHILDREN_PER_BASE_MAX = 3;
 
-  // Затухание
   const DECAY_PER_DAY = 0.99;
   const DECAY_MIN_STRENGTH = 0.10;
 
-  // Лимиты
   const MAX_BASES_PER_BLOCK = 500;
   const MAX_CHILDREN_PER_BLOCK = 1500;
   const MAX_GLOBAL_BASES = 1000;
@@ -91,7 +56,6 @@
   const MAX_HISTORY = 100;
   const MAX_LOAD_TYPES = 50;
 
-  // ★ Device Score: максимум баллов
   const SCORE_MAX = 1000000;
 
   // ============================================================
@@ -136,8 +100,10 @@
   let lastHudRender = 0;
   let lastSaveTime = 0;
 
-  // ★ Кэш оценки устройства
   let deviceScoreCache = null;
+
+  // ★ Общее число блоков в игре
+  let TOTAL_BLOCKS = 25;
 
   // ============================================================
   // УТИЛИТЫ
@@ -192,7 +158,7 @@
         totalActions: 0, totalSuccesses: 0, totalFailures: 0,
         sessionsCount: 0, firstSeen: Date.now(), lastSeen: Date.now()
       },
-      deviceScore: null    // ★ кэш оценки устройства
+      deviceScore: null
     };
   }
 
@@ -1001,30 +967,41 @@
   }
 
   // ============================================================
-  // ★ DEVICE SCORE — оценка устройства
+  // DEVICE SCORE
   // ============================================================
 
-  // Возвращает объект:
-  // {
-  //   score: 0..1000000,
-  //   tier: 'weak' | 'normal' | 'good' | 'powerful',
-  //   tierLabel: { ru, en, fr, es },
-  //   adaptation: { percent, status, statusLabel: {ru,en,fr,es} },
-  //   breakdown: { cpu, gpu, memory, fps, stability, blocks }
-  // }
+  function setTotalBlocks(n) {
+    if (typeof n === 'number' && n > 0) {
+      TOTAL_BLOCKS = n;
+      deviceScoreCache = null;
+    }
+  }
+
+  function estimateMemoryGB(cores) {
+    const dm = navigator.deviceMemory;
+    if (typeof dm === 'number' && dm > 0) return dm;
+    if (cores <= 2) return 2;
+    if (cores <= 4) return 3;
+    if (cores <= 6) return 4;
+    if (cores <= 8) return 6;
+    return 8;
+  }
+
+  function estimateGPUFallback(cores) {
+    if (cores <= 2) return 50000;
+    if (cores <= 4) return 150000;
+    if (cores <= 6) return 250000;
+    if (cores <= 8) return 300000;
+    return 350000;
+  }
+
   function computeDeviceScore() {
-    // ---- CPU ----
-    const cores = navigator.hardwareConcurrency || 1;
-    // 1 core → 0, 8+ cores → max
+    const cores = navigator.hardwareConcurrency || 2;
     const cpuScore = Math.round(clamp((cores - 1) / 7, 0, 1) * 250000);
 
-    // ---- Memory ----
-    const memoryGB = navigator.deviceMemory || 0;
-    // 0.5 GB → 0, 8+ GB → max. Если 0 — считаем 2 GB (средний дефолт)
-    const memValue = memoryGB > 0 ? memoryGB : 2;
-    const memScore = Math.round(clamp((memValue - 0.5) / 7.5, 0, 1) * 150000);
+    const memoryGB = estimateMemoryGB(cores);
+    const memScore = Math.round(clamp((memoryGB - 0.5) / 7.5, 0, 1) * 150000);
 
-    // ---- GPU ----
     let gpuRenderer = '';
     let gpuVendor = '';
     try {
@@ -1042,9 +1019,10 @@
       }
     } catch (e) {}
 
-    // Эвристики по GPU
-    let gpuScore = 100000; // базовый
-    if (/apple m[1-9]|apple gpu/.test(gpuRenderer)) gpuScore = 400000;
+    let gpuScore;
+    if (!gpuRenderer) {
+      gpuScore = estimateGPUFallback(cores);
+    } else if (/apple m[1-9]|apple gpu/.test(gpuRenderer)) gpuScore = 400000;
     else if (/adreno \(tm\) (6|7|8)|adreno 6|adreno 7|adreno 8/.test(gpuRenderer)) gpuScore = 350000;
     else if (/mali-g[7-9]|mali-g1[0-9]|immortalis/.test(gpuRenderer)) gpuScore = 320000;
     else if (/mali-g[5-6]/.test(gpuRenderer)) gpuScore = 220000;
@@ -1053,30 +1031,25 @@
     else if (/mali-4|mali-t[1-6]|videocore/.test(gpuRenderer)) gpuScore = 40000;
     else if (/nvidia|geforce|radeon|intel iris|intel uhd/.test(gpuRenderer)) gpuScore = 280000;
     else if (/swiftshader|software|llvmpipe/.test(gpuRenderer)) gpuScore = 10000;
+    else gpuScore = estimateGPUFallback(cores);
 
-    // ---- FPS ----
-    // Если играли — оценим по среднему FPS на последнем блоке
-    // 30 FPS → половина, 60 FPS → максимум, 120 FPS → максимум с бонусом
     let fpsAvg = 0;
     let blocksCount = 0;
+    let blocksWithSamples = 0;
     for (const id in memory.blocks) {
       const b = memory.blocks[id];
+      blocksCount++;
       if (b.samples > 20) {
         fpsAvg = Math.max(fpsAvg, b.avgFPS || 0);
-        blocksCount++;
+        blocksWithSamples++;
       }
     }
-    // Если нет данных — считаем 60 (базовое предположение)
     const fpsForScore = fpsAvg > 0 ? fpsAvg : 60;
     const fpsScore = Math.round(clamp(fpsForScore / 60, 0, 1) * 150000);
 
-    // ---- Stability ----
-    // Если jitter мал — стабильно, бонус
     const jit = frameTimeJitter();
     const stabilityScore = Math.round(clamp(1 - jit / 20, 0, 1) * 50000);
 
-    // ---- Blocks adapted ----
-    // Бонус за то, сколько блоков уже адаптировано (есть точки с hits > 2)
     let adaptedBlocks = 0;
     for (const id in memory.blocks) {
       const b = memory.blocks[id];
@@ -1085,36 +1058,31 @@
       if (!hasAdapted) for (const hid in b.children) if (b.children[hid].hits > 2) { hasAdapted = true; break; }
       if (hasAdapted) adaptedBlocks++;
     }
-    const blocksScore = Math.round(clamp(adaptedBlocks / 12, 0, 1) * 50000);
+    const blocksScore = Math.round(clamp(adaptedBlocks / TOTAL_BLOCKS, 0, 1) * 50000);
 
-    // ---- Сумма ----
     const totalScore = clamp(
       cpuScore + memScore + gpuScore + fpsScore + stabilityScore + blocksScore,
       0, SCORE_MAX
     );
 
-    // ---- Tier ----
     let tier = 'weak';
     if (totalScore >= 700000) tier = 'powerful';
     else if (totalScore >= 400000) tier = 'good';
     else if (totalScore >= 200000) tier = 'normal';
 
-    // ---- Adaptation ----
-    // Процент адаптации: сколько блоков уже имеют рабочие точки
-    const totalBlocks = 25; // ожидаем 25 блоков в игре
-    const adaptationPercent = Math.round(clamp(adaptedBlocks / totalBlocks, 0, 1) * 100);
+    const adaptationPercent = Math.round(clamp(adaptedBlocks / TOTAL_BLOCKS, 0, 1) * 100);
 
-    let adaptationStatus = 'none';        // нельзя оптимизировать
+    let adaptationStatus = 'none';
     if (totalScore >= 800000 && adaptationPercent === 0) {
-      adaptationStatus = 'not_needed';    // не требуется оптимизации
+      adaptationStatus = 'not_needed';
     } else if (adaptationPercent === 0) {
-      adaptationStatus = 'partial';       // часть невозможно оптимизировать
+      adaptationStatus = 'none';
     } else if (adaptationPercent < 60) {
-      adaptationStatus = 'partial';       // частично
+      adaptationStatus = 'partial';
     } else if (adaptationPercent < 95) {
-      adaptationStatus = 'adapting';      // оптимизация
+      adaptationStatus = 'adapting';
     } else {
-      adaptationStatus = 'done';          // оптимизировано
+      adaptationStatus = 'done';
     }
 
     return {
@@ -1124,7 +1092,7 @@
         percent: adaptationPercent,
         status: adaptationStatus,
         adaptedBlocks,
-        totalBlocks
+        totalBlocks: TOTAL_BLOCKS
       },
       breakdown: {
         cpu: cpuScore,
@@ -1136,17 +1104,19 @@
       },
       raw: {
         cores,
-        memoryGB: memValue,
+        memoryGB,
+        memoryEstimated: (navigator.deviceMemory || 0) === 0,
         gpuRenderer: gpuRenderer || 'unknown',
+        gpuEstimated: !gpuRenderer,
         gpuVendor: gpuVendor || 'unknown',
         fpsAvg,
         jitter: Math.round(jit * 100) / 100,
-        blocksCount
+        blocksCount,
+        blocksWithSamples
       }
     };
   }
 
-  // Публичная функция с кэшем на 10 секунд
   function getDeviceScore(forceRefresh) {
     if (!forceRefresh && deviceScoreCache && (Date.now() - deviceScoreCache._t) < 10000) {
       return deviceScoreCache;
@@ -1154,7 +1124,6 @@
     const result = computeDeviceScore();
     result._t = Date.now();
     deviceScoreCache = result;
-    // Сохраняем в память
     if (memory) {
       memory.deviceScore = {
         score: result.score,
@@ -1166,21 +1135,20 @@
     return result;
   }
 
-  // ★ Ярлыки для settings (переводы)
   function getDeviceScoreLabels() {
     return {
       tiers: {
-        weak:     { ru: 'Слабое',   en: 'Weak',     fr: 'Faible',    es: 'Débil' },
-        normal:   { ru: 'Нормальное', en: 'Normal',  fr: 'Normal',    es: 'Normal' },
-        good:     { ru: 'Хорошее',  en: 'Good',     fr: 'Bon',       es: 'Bueno' },
-        powerful: { ru: 'Мощное',   en: 'Powerful', fr: 'Puissant',  es: 'Potente' }
+        weak:     { ru: 'Слабое',     en: 'Weak',     fr: 'Faible',    es: 'Débil' },
+        normal:   { ru: 'Нормальное', en: 'Normal',   fr: 'Normal',    es: 'Normal' },
+        good:     { ru: 'Хорошее',    en: 'Good',     fr: 'Bon',       es: 'Bueno' },
+        powerful: { ru: 'Мощное',     en: 'Powerful', fr: 'Puissant',  es: 'Potente' }
       },
       adaptation: {
-        none:       { ru: 'Нельзя оптимизировать',                en: 'Cannot optimize',          fr: 'Impossible d\'optimiser',      es: 'No se puede optimizar' },
-        partial:    { ru: 'Часть невозможно оптимизировать',      en: 'Partially optimizable',    fr: 'Partiellement optimisable',    es: 'Parcialmente optimizable' },
-        adapting:   { ru: 'Оптимизация',                          en: 'Optimizing',               fr: 'Optimisation',                 es: 'Optimizando' },
-        done:       { ru: 'Оптимизировано',                       en: 'Optimized',                fr: 'Optimisé',                     es: 'Optimizado' },
-        not_needed: { ru: 'Не требуется оптимизации',             en: 'No optimization needed',   fr: 'Aucune optimisation requise',  es: 'No se requiere optimización' }
+        none:       { ru: 'Нельзя оптимизировать',           en: 'Cannot optimize',        fr: 'Impossible d\'optimiser',     es: 'No se puede optimizar' },
+        partial:    { ru: 'Часть невозможно оптимизировать', en: 'Partially optimizable',  fr: 'Partiellement optimisable',   es: 'Parcialmente optimizable' },
+        adapting:   { ru: 'Оптимизация',                     en: 'Optimizing',             fr: 'Optimisation',                es: 'Optimizando' },
+        done:       { ru: 'Оптимизировано',                  en: 'Optimized',              fr: 'Optimisé',                    es: 'Optimizado' },
+        not_needed: { ru: 'Не требуется оптимизации',        en: 'No optimization needed', fr: 'Aucune optimisation requise', es: 'No se requiere optimización' }
       }
     };
   }
@@ -1498,10 +1466,6 @@
     tickTimer = setInterval(tick, TICK_MS);
   }
 
-  function stopTick() {
-    if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
-  }
-
   // ============================================================
   // VISIBILITY
   // ============================================================
@@ -1562,7 +1526,6 @@
     startTick();
     renderHUD();
 
-    // ★ Прогреваем оценку устройства в фоне
     setTimeout(() => { try { getDeviceScore(true); } catch (e) {} }, 2000);
   }
 
@@ -1596,10 +1559,9 @@
     getRenderScale: () => scaleActual,
     getRenderScaleTarget: () => scaleTarget,
     predictFPS,
-    // ★ Новое — оценка устройства
     getDeviceScore,
     getDeviceScoreLabels,
-    // HUD
+    setTotalBlocks,      // ★ новый
     show: () => { const h = document.getElementById(HUD_ID); if (h) { h.dataset.userHidden = '0'; renderHUD(); } },
     hide: () => { const h = document.getElementById(HUD_ID); if (h) { h.dataset.userHidden = '1'; renderHUD(); } },
     setVisible: (v) => v ? window.Troll.show() : window.Troll.hide(),

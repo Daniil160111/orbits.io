@@ -3,7 +3,6 @@
   "short_name": "ORBITS.IO",
   "description": "ORBITS.IO — гонки на массе. 50 шаров. Мобильная 3D-игра.",
   "start_url": "./index.html",
-  "id": "./",
   "scope": "./",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone", "minimal-ui"],

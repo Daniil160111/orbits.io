@@ -1,5 +1,5 @@
 /* =====================================================================
-   ORBITS.IO — TROLL v4 (полная адаптивная ИИ-система с скелетами)
+   ORBITS.IO — TROLL v5 (полная адаптивная ИИ-система + оценка устройства)
    Путь: troll.js
 
    Самообучающаяся система управления производительностью.
@@ -12,13 +12,7 @@
    - Action      — плавное изменение FPS и renderScale
    - Reflection  — проверка результата, откат ошибочных решений
    - Feedback    — обновление весов, затухание, перепривязка сирот
-
-   Скелеты:
-   - База (base) — полный контекст + метрики
-   - Ребёнок (child) — только diff от базы + метрики
-   - Экономия 3-5x по памяти
-   - Функциональность 1:1 (с реконструкцией)
-   - Перепривязка сирот при удалении базы
+   - DeviceScore — оценка устройства (баллы, мощность, статус адаптации)
 
    API:
      Troll.setBlock('map1');
@@ -28,6 +22,7 @@
      Troll.markMin(ctx); Troll.markMax(ctx);
      Troll.subscribe(cb);
      Troll.getProfile('map1');
+     Troll.getDeviceScore();       ← ★ новый
      Troll.getStats();
      Troll.resetAll();
      Troll.show(); Troll.hide();
@@ -41,7 +36,7 @@
 
   const HUD_ID = 'orbits-troll-hud';
   const STORAGE_KEY = 'orbits_troll_ai';
-  const STORAGE_VERSION = 4;
+  const STORAGE_VERSION = 5;   // ★ версия поднята
 
   // Границы
   const FPS_MIN = 30;
@@ -78,11 +73,11 @@
 
   // Fuzzy match
   const FUZZY_THRESHOLD = 0.60;
-  const BASE_CREATE_SIMILARITY = 0.50;   // порог для привязки к базе
-  const BASE_REBIND_THRESHOLD = 0.50;    // порог для перепривязки сироты
+  const BASE_CREATE_SIMILARITY = 0.50;
+  const BASE_REBIND_THRESHOLD = 0.50;
 
   // Скелеты
-  const CHILDREN_PER_BASE_MAX = 3;       // до 3 детей на базу
+  const CHILDREN_PER_BASE_MAX = 3;
 
   // Затухание
   const DECAY_PER_DAY = 0.99;
@@ -96,6 +91,9 @@
   const MAX_HISTORY = 100;
   const MAX_LOAD_TYPES = 50;
 
+  // ★ Device Score: максимум баллов
+  const SCORE_MAX = 1000000;
+
   // ============================================================
   // СОСТОЯНИЕ
   // ============================================================
@@ -107,13 +105,11 @@
 
   let memory = null;
 
-  // Текущие фактические
   let fpsActual = 0;
   let fpsTarget = null;
   let scaleTarget = SCALE_MAX;
   let scaleActual = SCALE_MAX;
 
-  // Замеры
   let frameTimes = [];
   let lastFrameTime = 0;
   let fpsCounter = 0;
@@ -122,30 +118,26 @@
   let paused = false;
   let fpsHistory = [];
 
-  // Гистерезис
   let lastBadChange = 0;
   let lastGoodChange = 0;
 
-  // Рефлексия
   let pendingAction = null;
 
-  // Батарея
   let batteryLevel = null;
   let batteryCharging = false;
 
-  // Подписчики
   const subscribers = [];
 
-  // Таймеры
   let tickTimer = null;
   let rAFId = null;
 
-  // Кэш реконструкции контекстов (WeakMap для GC)
   let ctxCache = new WeakMap();
 
-  // Флаги оптимизации
   let lastHudRender = 0;
   let lastSaveTime = 0;
+
+  // ★ Кэш оценки устройства
+  let deviceScoreCache = null;
 
   // ============================================================
   // УТИЛИТЫ
@@ -199,7 +191,8 @@
       stats: {
         totalActions: 0, totalSuccesses: 0, totalFailures: 0,
         sessionsCount: 0, firstSeen: Date.now(), lastSeen: Date.now()
-      }
+      },
+      deviceScore: null    // ★ кэш оценки устройства
     };
   }
 
@@ -210,9 +203,7 @@
       const parsed = JSON.parse(raw);
       if (!parsed || parsed.version !== STORAGE_VERSION) return createEmptyMemory();
       const empty = createEmptyMemory();
-      // Мягкое слияние: если чего-то нет — берём из empty
       const result = Object.assign(empty, parsed);
-      // Гарантируем наличие вложенных объектов
       result.blocks = result.blocks || {};
       result.globalBases = result.globalBases || {};
       result.globalChildren = result.globalChildren || {};
@@ -233,7 +224,6 @@
       memory.stats.lastSeen = Date.now();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(memory));
     } catch (e) {
-      // Если места нет — чистим слабое
       try {
         cleanupWeakGlobal();
         for (const bid in memory.blocks) cleanupWeak(memory.blocks[bid]);
@@ -264,12 +254,10 @@
   }
 
   // ============================================================
-  // СКЕЛЕТЫ (базы + дети)
+  // СКЕЛЕТЫ
   // ============================================================
 
-  function makeBaseId() {
-    return 'b' + (memory._nextBaseId++);
-  }
+  function makeBaseId() { return 'b' + (memory._nextBaseId++); }
 
   function createBase(ctx, loadTypes, type) {
     return {
@@ -303,7 +291,6 @@
 
   function resolveChild(child, bases) {
     if (!child || !child.baseId) return null;
-    // Кэш
     let cached = ctxCache.get(child);
     if (cached && cached.baseId === child.baseId) return cached.ctx;
     const base = bases[child.baseId];
@@ -341,7 +328,6 @@
     }
     for (const hash of orphans) {
       const child = children[hash];
-      // Пробуем найти новую базу
       let rebind = null;
       for (const id in bases) {
         const b = bases[id];
@@ -352,11 +338,9 @@
       }
       if (rebind) {
         child.baseId = rebind.base.id;
-        // Пересчитываем diff относительно новой базы
         const fullCtx = Object.assign({}, bases[removedBaseId] ? bases[removedBaseId].ctx : {}, child.diff);
         child.diff = computeDiff(rebind.base.ctx, fullCtx);
       } else {
-        // Превращаем в базу
         const newBase = createBase(child.diff, child.loadTypes, child.type);
         newBase.fpsDelta = child.fpsDelta;
         newBase.scaleDelta = child.scaleDelta;
@@ -379,10 +363,8 @@
     const keysB = Object.keys(b);
     if (!keysA.length && !keysB.length) return 1;
     if (!keysA.length || !keysB.length) return 0;
-
     let matches = 0;
     let total = 0;
-    // Все ключи
     const seen = {};
     for (let i = 0; i < keysA.length; i++) {
       const k = keysA[i];
@@ -408,12 +390,11 @@
   }
 
   // ============================================================
-  // ПОИСК ПОХОЖИХ
+  // ПОИСК
   // ============================================================
 
   function findSimilarInContainer(container, ctx, loadTypes) {
     const results = [];
-    // Базы
     for (const id in container.bases) {
       const b = container.bases[id];
       const sim = contextSimilarity(b.ctx, ctx);
@@ -422,7 +403,6 @@
         results.push({ point: b, similarity: sim * 0.7 + loadSim * 0.3, source: 'base', strength: b.strength });
       }
     }
-    // Дети
     for (const hash in container.children) {
       const c = container.children[hash];
       const fullCtx = resolveChild(c, container.bases);
@@ -449,20 +429,14 @@
     );
   }
 
-  // ============================================================
-  // UPSERT ТОЧКИ
-  // ============================================================
-
   function upsertPoint(container, ctx, loadTypes, type) {
     const hash = hashContext(ctx);
     if (!hash) return null;
 
-    // 1. Ребёнок с таким хэшем?
     if (container.children[hash]) {
       container.children[hash].lastSeen = Date.now();
       return container.children[hash];
     }
-    // 2. База с точно таким же контекстом?
     for (const id in container.bases) {
       const b = container.bases[id];
       if (hashContext(b.ctx) === hash) {
@@ -470,10 +444,8 @@
         return b;
       }
     }
-    // 3. Найти подходящую базу
     const found = findBaseFor(container.bases, ctx);
     if (found && found.base) {
-      // Проверяем: не слишком ли много детей у базы
       let childCount = 0;
       for (const h in container.children) {
         if (container.children[h].baseId === found.base.id) childCount++;
@@ -484,19 +456,17 @@
         container.children[hash] = child;
         return child;
       }
-      // Слишком много — усиливаем базу вместо создания ребёнка
       found.base.hits++;
       found.base.strength = Math.min(1.0, found.base.strength + 0.02);
       return found.base;
     }
-    // 4. Новая база
     const newBase = createBase(ctx, loadTypes, type);
     container.bases[newBase.id] = newBase;
     return newBase;
   }
 
   // ============================================================
-  // ЗАТУХАНИЕ И ОЧИСТКА
+  // ЗАТУХАНИЕ
   // ============================================================
 
   function decayPoints() {
@@ -511,7 +481,6 @@
       }
     };
 
-    // Локальные
     for (const blockId in memory.blocks) {
       const p = memory.blocks[blockId];
       const toRemoveBases = [];
@@ -529,7 +498,6 @@
       }
     }
 
-    // Глобальные
     const toRemoveGlobal = [];
     for (const id in memory.globalBases) {
       decay(memory.globalBases[id]);
@@ -553,7 +521,6 @@
   }
 
   function cleanupWeak(p) {
-    // Слабые базы
     const toRemoveBases = [];
     for (const id in p.bases) {
       const b = p.bases[id];
@@ -563,7 +530,6 @@
       delete p.bases[id];
       rebindOrphans(p, id);
     }
-    // Слабые дети
     const toRemoveChildren = [];
     for (const hash in p.children) {
       const c = p.children[hash];
@@ -571,7 +537,6 @@
     }
     for (const h of toRemoveChildren) delete p.children[h];
 
-    // Лимит баз
     const baseIds = Object.keys(p.bases);
     if (baseIds.length > MAX_BASES_PER_BLOCK) {
       baseIds.sort((a, b) => p.bases[a].strength - p.bases[b].strength);
@@ -582,7 +547,6 @@
         rebindOrphans(p, id);
       }
     }
-    // Лимит детей
     const childHashes = Object.keys(p.children);
     if (childHashes.length > MAX_CHILDREN_PER_BLOCK) {
       childHashes.sort((a, b) => p.children[a].strength - p.children[b].strength);
@@ -873,10 +837,7 @@
 
   function lerpScale() {
     const dist = scaleTarget - scaleActual;
-    if (Math.abs(dist) < 0.001) {
-      scaleActual = scaleTarget;
-      return;
-    }
+    if (Math.abs(dist) < 0.001) { scaleActual = scaleTarget; return; }
     const speed = clamp(Math.abs(dist) * 0.5, 0.005, 0.05);
     scaleActual += Math.sign(dist) * speed;
     if ((dist > 0 && scaleActual > scaleTarget) || (dist < 0 && scaleActual < scaleTarget)) {
@@ -968,9 +929,7 @@
       p.optimalFPS = Math.max(p.optimalFPS || 0, fpsActual);
       if (p.optimalFPS >= nativeFPS()) p.optimalFPS = null;
     }
-    if (p.samples > 30) {
-      p.optimalScale = p.avgScale;
-    }
+    if (p.samples > 30) p.optimalScale = p.avgScale;
     p.lastUpdate = now();
   }
 
@@ -980,7 +939,6 @@
       const type = currentLoadTypes[i];
       if (!memory.loadTypes[type]) {
         if (Object.keys(memory.loadTypes).length >= MAX_LOAD_TYPES) {
-          // Удаляем самый слабый
           let weakest = null, minS = Infinity;
           for (const k in memory.loadTypes) {
             if (memory.loadTypes[k].samples < minS) { minS = memory.loadTypes[k].samples; weakest = k; }
@@ -1035,12 +993,196 @@
     applyLevel(pt);
     applyLevel(gpt);
 
-    // Чистим слабые не на каждом тике — раз в 5 сек
     if (now() - (updatePoint._lastClean || 0) > 5000) {
       cleanupWeak(p);
       cleanupWeakGlobal();
       updatePoint._lastClean = now();
     }
+  }
+
+  // ============================================================
+  // ★ DEVICE SCORE — оценка устройства
+  // ============================================================
+
+  // Возвращает объект:
+  // {
+  //   score: 0..1000000,
+  //   tier: 'weak' | 'normal' | 'good' | 'powerful',
+  //   tierLabel: { ru, en, fr, es },
+  //   adaptation: { percent, status, statusLabel: {ru,en,fr,es} },
+  //   breakdown: { cpu, gpu, memory, fps, stability, blocks }
+  // }
+  function computeDeviceScore() {
+    // ---- CPU ----
+    const cores = navigator.hardwareConcurrency || 1;
+    // 1 core → 0, 8+ cores → max
+    const cpuScore = Math.round(clamp((cores - 1) / 7, 0, 1) * 250000);
+
+    // ---- Memory ----
+    const memoryGB = navigator.deviceMemory || 0;
+    // 0.5 GB → 0, 8+ GB → max. Если 0 — считаем 2 GB (средний дефолт)
+    const memValue = memoryGB > 0 ? memoryGB : 2;
+    const memScore = Math.round(clamp((memValue - 0.5) / 7.5, 0, 1) * 150000);
+
+    // ---- GPU ----
+    let gpuRenderer = '';
+    let gpuVendor = '';
+    try {
+      const c = document.createElement('canvas');
+      const g = c.getContext('webgl') || c.getContext('experimental-webgl');
+      if (g) {
+        const dbg = g.getExtension('WEBGL_debug_renderer_info');
+        if (dbg) {
+          gpuRenderer = (g.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || '').toLowerCase();
+          gpuVendor = (g.getParameter(dbg.UNMASKED_VENDOR_WEBGL) || '').toLowerCase();
+        } else {
+          gpuRenderer = (g.getParameter(g.RENDERER) || '').toLowerCase();
+          gpuVendor = (g.getParameter(g.VENDOR) || '').toLowerCase();
+        }
+      }
+    } catch (e) {}
+
+    // Эвристики по GPU
+    let gpuScore = 100000; // базовый
+    if (/apple m[1-9]|apple gpu/.test(gpuRenderer)) gpuScore = 400000;
+    else if (/adreno \(tm\) (6|7|8)|adreno 6|adreno 7|adreno 8/.test(gpuRenderer)) gpuScore = 350000;
+    else if (/mali-g[7-9]|mali-g1[0-9]|immortalis/.test(gpuRenderer)) gpuScore = 320000;
+    else if (/mali-g[5-6]/.test(gpuRenderer)) gpuScore = 220000;
+    else if (/powervr/.test(gpuRenderer)) gpuScore = 150000;
+    else if (/adreno \(tm\) [1-4]|adreno 2|adreno 3|adreno 4|adreno 5/.test(gpuRenderer)) gpuScore = 90000;
+    else if (/mali-4|mali-t[1-6]|videocore/.test(gpuRenderer)) gpuScore = 40000;
+    else if (/nvidia|geforce|radeon|intel iris|intel uhd/.test(gpuRenderer)) gpuScore = 280000;
+    else if (/swiftshader|software|llvmpipe/.test(gpuRenderer)) gpuScore = 10000;
+
+    // ---- FPS ----
+    // Если играли — оценим по среднему FPS на последнем блоке
+    // 30 FPS → половина, 60 FPS → максимум, 120 FPS → максимум с бонусом
+    let fpsAvg = 0;
+    let blocksCount = 0;
+    for (const id in memory.blocks) {
+      const b = memory.blocks[id];
+      if (b.samples > 20) {
+        fpsAvg = Math.max(fpsAvg, b.avgFPS || 0);
+        blocksCount++;
+      }
+    }
+    // Если нет данных — считаем 60 (базовое предположение)
+    const fpsForScore = fpsAvg > 0 ? fpsAvg : 60;
+    const fpsScore = Math.round(clamp(fpsForScore / 60, 0, 1) * 150000);
+
+    // ---- Stability ----
+    // Если jitter мал — стабильно, бонус
+    const jit = frameTimeJitter();
+    const stabilityScore = Math.round(clamp(1 - jit / 20, 0, 1) * 50000);
+
+    // ---- Blocks adapted ----
+    // Бонус за то, сколько блоков уже адаптировано (есть точки с hits > 2)
+    let adaptedBlocks = 0;
+    for (const id in memory.blocks) {
+      const b = memory.blocks[id];
+      let hasAdapted = false;
+      for (const bid in b.bases) if (b.bases[bid].hits > 2) { hasAdapted = true; break; }
+      if (!hasAdapted) for (const hid in b.children) if (b.children[hid].hits > 2) { hasAdapted = true; break; }
+      if (hasAdapted) adaptedBlocks++;
+    }
+    const blocksScore = Math.round(clamp(adaptedBlocks / 12, 0, 1) * 50000);
+
+    // ---- Сумма ----
+    const totalScore = clamp(
+      cpuScore + memScore + gpuScore + fpsScore + stabilityScore + blocksScore,
+      0, SCORE_MAX
+    );
+
+    // ---- Tier ----
+    let tier = 'weak';
+    if (totalScore >= 700000) tier = 'powerful';
+    else if (totalScore >= 400000) tier = 'good';
+    else if (totalScore >= 200000) tier = 'normal';
+
+    // ---- Adaptation ----
+    // Процент адаптации: сколько блоков уже имеют рабочие точки
+    const totalBlocks = 25; // ожидаем 25 блоков в игре
+    const adaptationPercent = Math.round(clamp(adaptedBlocks / totalBlocks, 0, 1) * 100);
+
+    let adaptationStatus = 'none';        // нельзя оптимизировать
+    if (totalScore >= 800000 && adaptationPercent === 0) {
+      adaptationStatus = 'not_needed';    // не требуется оптимизации
+    } else if (adaptationPercent === 0) {
+      adaptationStatus = 'partial';       // часть невозможно оптимизировать
+    } else if (adaptationPercent < 60) {
+      adaptationStatus = 'partial';       // частично
+    } else if (adaptationPercent < 95) {
+      adaptationStatus = 'adapting';      // оптимизация
+    } else {
+      adaptationStatus = 'done';          // оптимизировано
+    }
+
+    return {
+      score: totalScore,
+      tier,
+      adaptation: {
+        percent: adaptationPercent,
+        status: adaptationStatus,
+        adaptedBlocks,
+        totalBlocks
+      },
+      breakdown: {
+        cpu: cpuScore,
+        memory: memScore,
+        gpu: gpuScore,
+        fps: fpsScore,
+        stability: stabilityScore,
+        blocks: blocksScore
+      },
+      raw: {
+        cores,
+        memoryGB: memValue,
+        gpuRenderer: gpuRenderer || 'unknown',
+        gpuVendor: gpuVendor || 'unknown',
+        fpsAvg,
+        jitter: Math.round(jit * 100) / 100,
+        blocksCount
+      }
+    };
+  }
+
+  // Публичная функция с кэшем на 10 секунд
+  function getDeviceScore(forceRefresh) {
+    if (!forceRefresh && deviceScoreCache && (Date.now() - deviceScoreCache._t) < 10000) {
+      return deviceScoreCache;
+    }
+    const result = computeDeviceScore();
+    result._t = Date.now();
+    deviceScoreCache = result;
+    // Сохраняем в память
+    if (memory) {
+      memory.deviceScore = {
+        score: result.score,
+        tier: result.tier,
+        adaptation: result.adaptation,
+        _t: Date.now()
+      };
+    }
+    return result;
+  }
+
+  // ★ Ярлыки для settings (переводы)
+  function getDeviceScoreLabels() {
+    return {
+      tiers: {
+        weak:     { ru: 'Слабое',   en: 'Weak',     fr: 'Faible',    es: 'Débil' },
+        normal:   { ru: 'Нормальное', en: 'Normal',  fr: 'Normal',    es: 'Normal' },
+        good:     { ru: 'Хорошее',  en: 'Good',     fr: 'Bon',       es: 'Bueno' },
+        powerful: { ru: 'Мощное',   en: 'Powerful', fr: 'Puissant',  es: 'Potente' }
+      },
+      adaptation: {
+        none:       { ru: 'Нельзя оптимизировать',                en: 'Cannot optimize',          fr: 'Impossible d\'optimiser',      es: 'No se puede optimizar' },
+        partial:    { ru: 'Часть невозможно оптимизировать',      en: 'Partially optimizable',    fr: 'Partiellement optimisable',    es: 'Parcialmente optimizable' },
+        adapting:   { ru: 'Оптимизация',                          en: 'Optimizing',               fr: 'Optimisation',                 es: 'Optimizando' },
+        done:       { ru: 'Оптимизировано',                       en: 'Optimized',                fr: 'Optimisé',                     es: 'Optimizado' },
+        not_needed: { ru: 'Не требуется оптимизации',             en: 'No optimization needed',   fr: 'Aucune optimisation requise',  es: 'No se requiere optimización' }
+      }
+    };
   }
 
   // ============================================================
@@ -1082,13 +1224,11 @@
 
     notifySubscribers();
 
-    // HUD — не чаще 4 раз в секунду
     if (now() - lastHudRender > 250) {
       renderHUD();
       lastHudRender = now();
     }
 
-    // Сохранение — не чаще раза в 5 сек
     if (now() - lastSaveTime > 5000) {
       saveMemory();
       lastSaveTime = now();
@@ -1371,7 +1511,7 @@
       paused = true;
       frameTimes = [];
       fpsHistory = [];
-      saveMemory(); // сохранить перед уходом
+      saveMemory();
     } else {
       paused = false;
       warmupCounter = WARMUP_FRAMES;
@@ -1398,6 +1538,7 @@
     fpsHistory = [];
     pendingAction = null;
     ctxCache = new WeakMap();
+    deviceScoreCache = null;
     notifySubscribers();
   }
 
@@ -1414,14 +1555,15 @@
     initBattery();
 
     document.addEventListener('visibilitychange', onVisibility);
-
-    // При закрытии страницы — сохранить
     window.addEventListener('pagehide', saveMemory);
     window.addEventListener('beforeunload', saveMemory);
 
     rAFId = requestAnimationFrame(frameLoop);
     startTick();
     renderHUD();
+
+    // ★ Прогреваем оценку устройства в фоне
+    setTimeout(() => { try { getDeviceScore(true); } catch (e) {} }, 2000);
   }
 
   // ============================================================
@@ -1454,6 +1596,10 @@
     getRenderScale: () => scaleActual,
     getRenderScaleTarget: () => scaleTarget,
     predictFPS,
+    // ★ Новое — оценка устройства
+    getDeviceScore,
+    getDeviceScoreLabels,
+    // HUD
     show: () => { const h = document.getElementById(HUD_ID); if (h) { h.dataset.userHidden = '0'; renderHUD(); } },
     hide: () => { const h = document.getElementById(HUD_ID); if (h) { h.dataset.userHidden = '1'; renderHUD(); } },
     setVisible: (v) => v ? window.Troll.show() : window.Troll.hide(),

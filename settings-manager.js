@@ -1,11 +1,22 @@
 /* =====================================================================
    ORBITS.IO — SETTINGS MANAGER
-   Путь: Блоки/settings-manager.js
+   Путь: settings-manager.js
    ===================================================================== */
 (function (global) {
   'use strict';
 
   const STORAGE_KEY = 'orbits_settings';
+  const LANGUAGES = ['ru', 'en', 'fr', 'es'];
+
+  // ★ Автоопределение языка при первом запуске
+  function detectInitialLanguage() {
+    try {
+      const nav = (navigator.language || navigator.userLanguage || 'ru').toLowerCase();
+      const code = nav.slice(0, 2);
+      if (LANGUAGES.includes(code)) return code;
+    } catch (e) {}
+    return 'ru';
+  }
 
   const DEFAULTS = {
     sfxVolume:   0.8,
@@ -13,10 +24,8 @@
     vibration:   true,
     nickname:    '',
     brightness:  100,
-    language:    'ru'
+    language:    detectInitialLanguage()
   };
-
-  const LANGUAGES = ['ru', 'en', 'fr', 'es'];
 
   const VALIDATORS = {
     sfxVolume:   (v) => typeof v === 'number' && v >= 0 && v <= 1,

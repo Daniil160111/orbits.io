@@ -72,7 +72,6 @@
   const RIPPLE_FADE_MS = 1300;
   const SUB_APPEAR_MS  = 1000;
 
-  // ★ Длительность блокировки кнопок (мс) — пока звук играет
   const SOUND_LOCK_MS = 350;
 
   let container = null;
@@ -85,11 +84,9 @@
   let subLock = false;
   let musicPlayedOnce = false;
 
-  // ★ Глобальная блокировка кнопок при звуке
   let soundLockActive = false;
   let soundLockTimer = null;
 
-  // ★ Флаг «первый запуск после index» — нужно белое появление 1.5 сек
   let isFirstAppearance = false;
 
   let rippleCanvas = null, rippleGl = null, rippleProgram = null,
@@ -112,7 +109,6 @@
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
   function vibeEnabled() { const v = getS('vibration');   return (typeof v === 'boolean') ? v : true; }
 
-  // ★ Вибрация усилена на 30% в игре — но в меню умеренная
   const VIBE_MULT = 1.0;
 
   function sfx(name, baseVolume = 1.0) {
@@ -124,7 +120,6 @@
     } catch (e) { return false; }
   }
 
-  // ★ Звук + блокировка кнопок на время звучания
   function sfxAndLock(name, baseVolume = 1.0, lockMs = SOUND_LOCK_MS) {
     if (soundLockActive) return false;
     const played = sfx(name, baseVolume);
@@ -254,20 +249,6 @@
     whiteOverlay = el('div', 'orbits-white-overlay');
     container.appendChild(whiteOverlay);
     return whiteOverlay;
-  }
-
-  // ★ Показать белый оверлей и плавно убрать (1.5 сек)
-  async function whiteFadeOut(durationMs = 1500) {
-    const ov = getWhiteOverlay();
-    ov.style.transition = 'none';
-    ov.style.opacity = '1';
-    void ov.offsetWidth;
-    ov.style.transition = 'opacity ' + durationMs + 'ms ease';
-    ov.classList.add('show');
-    await sleep(30);
-    ov.style.opacity = '0';
-    await sleep(durationMs);
-    ov.classList.remove('show');
   }
 
   // ===== РЯБЬ =====
@@ -498,7 +479,7 @@
     const onTap = async (e) => {
       if (titleLock) return;
       if (currentScreen !== 'title') return;
-      if (soundLockActive) return;  // ★ блокировка
+      if (soundLockActive) return;
       titleLock = true;
       vibrateWave();
       sfxAndLock('sys_tap_screen', 1.0, 400);
@@ -598,15 +579,12 @@
       const doOpen = (e) => {
         if (e) e.preventDefault();
         if (subLock || anyClicked) return;
-        if (soundLockActive) return;  // ★ блокировка
+        if (soundLockActive) return;
         lockAll();
         subLock = true;
         vibrateButton();
 
         const blockName = BLOCK_MAP[btn.dataset.id];
-        // ★ Звук: menu → settings/select/score/shop = start_race
-        //          онлайн = online_unavailable (обрабатывается в select)
-        //          solo = start_race
         sfxAndLock('sys_start_race', 1.0, 500);
         btn.classList.add('clicked');
 
@@ -641,11 +619,10 @@
     const goBack = (e) => {
       if (e) e.preventDefault();
       if (subLock || anyClicked) return;
-      if (soundLockActive) return;  // ★ блокировка
+      if (soundLockActive) return;
       lockAll();
       subLock = true;
       vibrateButton();
-      // ★ Назад к титульному — звук Back
       sfxAndLock('sys_back', 0.9, 350);
       goToTitleScreen();
     };
@@ -828,8 +805,9 @@
 
     // ★ Уведомляем Troll
     try { if (window.Troll) Troll.setBlock('menu'); } catch (e) {}
+    // ★ Патч: сообщаем типы нагрузки
+    try { if (window.Troll && Troll.setLoadTypes) Troll.setLoadTypes(['webgl', 'flag']); } catch (e) {}
 
-    // ★ При первом запуске после index — белый оверлей плавно убирается (1.5 сек)
     if (!returning && !window.__ORBITS_MENU_SEEN__) {
       window.__ORBITS_MENU_SEEN__ = true;
       isFirstAppearance = true;

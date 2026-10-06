@@ -1,6 +1,17 @@
 /* =====================================================================
    ORBITS.IO — SETTINGS BLOCK
    Путь: settings.js
+
+   Что нового:
+   - Блокировка кнопок во время звука (SOUND_LOCK_MS)
+   - Правильные звуки:
+     • settings → menu = sys_back_select_menu
+     • назад внутри блока = sys_back
+     • кнопки (стрелки, тумблеры, сброс) = sys_button
+     • сохранение = sys_save
+     • изменение настройки = sys_setting
+   - Вторая страница: статус мощности устройства (баллы, мощность, адаптация)
+   - Troll.setBlock('settings') при входе
    ===================================================================== */
 (function () {
   'use strict';
@@ -13,7 +24,8 @@
     sfxBtn:   './Звуки/Система/Button.wav',
     sfxSet:   './Звуки/Система/Setting.wav',
     sfxSave:  './Звуки/Система/Save.wav',
-    sfxBack:  './Звуки/Система/Back.wav'
+    sfxBack:  './Звуки/Система/Back.wav',
+    sfxBackMenu: './Звуки/Система/Back-select-menu.wav'
   };
 
   if (window.ORBITS && ORBITS.registerAssets) {
@@ -46,7 +58,12 @@
       reset_confirm2_title: 'Вы уверены?',
       reset_confirm2_text: 'Это действие нельзя отменить.',
       reset_confirm2_yes: 'Стереть навсегда',
-      reset_doing: 'Очистка...'
+      reset_doing: 'Очистка...',
+      // Статус устройства
+      device_title: 'Устройство',
+      device_score: 'Баллы',
+      device_power: 'Мощность',
+      device_adapt: 'Адаптирование системы'
     },
     en: {
       title: 'Settings', back: 'Back', save: 'Save',
@@ -66,7 +83,11 @@
       reset_confirm2_title: 'Are you sure?',
       reset_confirm2_text: 'This action cannot be undone.',
       reset_confirm2_yes: 'Erase forever',
-      reset_doing: 'Erasing...'
+      reset_doing: 'Erasing...',
+      device_title: 'Device',
+      device_score: 'Score',
+      device_power: 'Power',
+      device_adapt: 'System adaptation'
     },
     fr: {
       title: 'Paramètres', back: 'Retour', save: 'Enregistrer',
@@ -86,7 +107,11 @@
       reset_confirm2_title: 'Êtes-vous sûr ?',
       reset_confirm2_text: 'Cette action est irréversible.',
       reset_confirm2_yes: 'Effacer définitivement',
-      reset_doing: 'Suppression...'
+      reset_doing: 'Suppression...',
+      device_title: 'Appareil',
+      device_score: 'Score',
+      device_power: 'Puissance',
+      device_adapt: 'Adaptation système'
     },
     es: {
       title: 'Ajustes', back: 'Atrás', save: 'Guardar',
@@ -106,7 +131,11 @@
       reset_confirm2_title: '¿Estás seguro?',
       reset_confirm2_text: 'Esta acción no se puede deshacer.',
       reset_confirm2_yes: 'Borrar para siempre',
-      reset_doing: 'Borrando...'
+      reset_doing: 'Borrando...',
+      device_title: 'Dispositivo',
+      device_score: 'Puntuación',
+      device_power: 'Potencia',
+      device_adapt: 'Adaptación del sistema'
     }
   };
   function lang() {
@@ -131,6 +160,11 @@
   let currentPage = 'main';
   let vibeTimeouts = [];
 
+  // ★ Блокировка кнопок при звуке
+  const SOUND_LOCK_MS = 350;
+  let soundLockActive = false;
+  let soundLockTimer = null;
+
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const el = (tag, cls, html) => {
     const e = document.createElement(tag);
@@ -140,9 +174,15 @@
   };
 
   function getS(key) { return (window.Settings && window.Settings.get) ? window.Settings.get(key) : undefined; }
+  function sfxVolume() { const v = getS('sfxVolume'); return (typeof v === 'number') ? v : 0.8; }
+  function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
 
   function vibeEnabled() { const v = getS('vibration'); return (typeof v === 'boolean') ? v : true; }
   const canVibrate = () => !!navigator.vibrate && vibeEnabled();
+
+  // ★ Вибрация усилена на 30% в игре — в настройках обычная
+  const VIBE_MULT = 1.0;
+
   function stopVibrate() {
     vibeTimeouts.forEach(t => clearTimeout(t));
     vibeTimeouts = [];
@@ -155,7 +195,7 @@
     if (now - lastVibeTime < 40) return;
     lastVibeTime = now;
     const strength = Math.max(1, Math.min(12, Math.round(speedPxPerSec / 180)));
-    try { navigator.vibrate(strength); } catch (e) {}
+    try { navigator.vibrate(Math.round(strength * VIBE_MULT)); } catch (e) {}
   }
   function vibrateButton() {
     if (!canVibrate()) return;
@@ -167,7 +207,7 @@
     let t = 0;
     pulses.forEach((p) => {
       const id = setTimeout(() => {
-        if (canVibrate()) { try { navigator.vibrate(p.dur); } catch (e) {} }
+        if (canVibrate()) { try { navigator.vibrate(Math.round(p.dur * VIBE_MULT)); } catch (e) {} }
       }, t);
       vibeTimeouts.push(id);
       t += p.dur + p.pause;
@@ -183,7 +223,7 @@
     let t = 0;
     pulses.forEach((p) => {
       const id = setTimeout(() => {
-        if (canVibrate()) { try { navigator.vibrate(p.dur); } catch (e) {} }
+        if (canVibrate()) { try { navigator.vibrate(Math.round(p.dur * VIBE_MULT)); } catch (e) {} }
       }, t);
       vibeTimeouts.push(id);
       t += p.dur + p.pause;
@@ -193,20 +233,33 @@
   async function loadSounds() {
     if (!window.Sound) return;
     await Promise.all([
-      Sound.loadBuffer('set_sfx_btn',  ASSETS.sfxBtn).catch(() => {}),
-      Sound.loadBuffer('set_sfx_set',  ASSETS.sfxSet).catch(() => {}),
-      Sound.loadBuffer('set_sfx_save', ASSETS.sfxSave).catch(() => {}),
-      Sound.loadBuffer('set_sfx_back', ASSETS.sfxBack).catch(() => {})
+      Sound.loadBuffer('set_sfx_btn',      ASSETS.sfxBtn).catch(() => {}),
+      Sound.loadBuffer('set_sfx_set',      ASSETS.sfxSet).catch(() => {}),
+      Sound.loadBuffer('set_sfx_save',     ASSETS.sfxSave).catch(() => {}),
+      Sound.loadBuffer('set_sfx_back',     ASSETS.sfxBack).catch(() => {}),
+      Sound.loadBuffer('set_sfx_backMenu', ASSETS.sfxBackMenu).catch(() => {})
     ]);
   }
-  function playSFX(key, base = 1.0) {
-    if (!window.Sound) return;
+
+  // ★ Играем звук и блокируем кнопки на SOUND_LOCK_MS
+  function playSFX(key, base = 1.0, lockMs = SOUND_LOCK_MS) {
+    if (!window.Sound) return false;
+    if (soundLockActive) return false;
     try {
-      if (!Sound.hasBuffer(key)) return;
-      const v = (typeof getS('sfxVolume') === 'number') ? getS('sfxVolume') : 0.8;
-      Sound.playSFX(key, { volume: base * v, fadeIn: 0 });
-    } catch (e) {}
+      if (!Sound.hasBuffer(key)) return false;
+      Sound.playSFX(key, { volume: base * sfxVolume(), fadeIn: 0 });
+      soundLockActive = true;
+      if (soundLockTimer) clearTimeout(soundLockTimer);
+      soundLockTimer = setTimeout(() => {
+        soundLockActive = false;
+        soundLockTimer = null;
+      }, lockMs);
+      return true;
+    } catch (e) { return false; }
   }
+
+  // ★ Проверка блокировки
+  function isLocked() { return soundLockActive; }
 
   async function loadBlockMusicWithFallback() {
     if (!window.Sound) throw new Error('Sound не загружен');
@@ -224,7 +277,7 @@
     try {
       try { Sound.stopMusic(0); } catch (e) {}
       await loadBlockMusicWithFallback();
-      const v = 0.7 * ((typeof getS('musicVolume') === 'number') ? getS('musicVolume') : 0.8);
+      const v = 0.7 * musicVolume();
       await Sound.playMusic('set_music', { loop: true, volume: v, fadeIn: 0.3 });
     } catch (e) {}
   }
@@ -266,6 +319,7 @@
     document.documentElement.style.filter = 'brightness(' + b + ')';
   }
 
+  // ============ SLIDER ============
   function buildSlider(key, label, min, max, uiValue, formatter) {
     const row = el('div', 'st-row st-slider-row');
     row.dataset.key = key;
@@ -302,6 +356,7 @@
       return Math.round(min + (x / rect.width) * (max - min));
     }
     function onStart(e) {
+      if (isLocked()) return;
       dragging = true;
       previewUiValue = working[key];
       knob.classList.add('st-knob-active');
@@ -333,7 +388,8 @@
       updateUI(previewUiValue);
       revertToSaved(key);
       recomputeDirty();
-      playSFX('set_sfx_set', 0.7);
+      // ★ Звук изменения настройки
+      playSFX('set_sfx_set', 0.7, 250);
       if (e) e.preventDefault();
     }
 
@@ -349,6 +405,7 @@
     return row;
   }
 
+  // ============ MINI TOGGLE ============
   function buildMiniToggle(key, label, value) {
     const row = el('div', 'st-row st-mini-row');
     row.dataset.key = key;
@@ -384,10 +441,12 @@
       const changed = working[key] !== v;
       working[key] = v;
       if (v) vibrateToggle();
-      playSFX('set_sfx_set', 1.0);
+      // ★ Звук изменения настройки
+      playSFX('set_sfx_set', 1.0, 250);
       if (changed) recomputeDirty();
     }
     function onStart(e) {
+      if (isLocked()) return;
       dragging = true;
       trackWrap.classList.add('st-mini-hold');
       knob.classList.add('st-mini-knob-active');
@@ -423,6 +482,7 @@
     }
     let tapStart = 0;
     trackWrap.addEventListener('touchstart', (e) => {
+      if (isLocked()) return;
       tapStart = performance.now();
       onStart(e);
     }, { passive: false });
@@ -444,7 +504,10 @@
     });
     trackWrap.addEventListener('touchcancel', onEnd);
 
-    trackWrap.addEventListener('mousedown', (e) => { tapStart = performance.now(); onStart(e); });
+    trackWrap.addEventListener('mousedown', (e) => {
+      if (isLocked()) return;
+      tapStart = performance.now(); onStart(e);
+    });
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', (e) => {
       const dt = performance.now() - tapStart;
@@ -465,6 +528,7 @@
     return row;
   }
 
+  // ============ MULTI TOGGLE (язык) ============
   function buildMultiToggle(key, labels, value) {
     const row = el('div', 'st-row st-multi-row');
     row.dataset.key = key;
@@ -542,10 +606,12 @@
       const newLangKey = LANG_LIST[idx];
       const changed = working[key] !== newLangKey;
       working[key] = newLangKey;
-      playSFX('set_sfx_set', 1.0);
+      // ★ Звук изменения настройки
+      playSFX('set_sfx_set', 1.0, 250);
       if (changed) recomputeDirty();
     }
     function onStart(e) {
+      if (isLocked()) return;
       dragging = true;
       movedFar = false;
       trackWrap.classList.add('st-multi-hold');
@@ -581,6 +647,7 @@
     }
     let tapStart = 0;
     trackWrap.addEventListener('touchstart', (e) => {
+      if (isLocked()) return;
       tapStart = performance.now();
       movedFar = false;
       onStart(e);
@@ -604,6 +671,7 @@
     trackWrap.addEventListener('touchcancel', onEnd);
     labelEls.forEach((lb, i) => {
       lb.addEventListener('click', () => {
+        if (isLocked()) return;
         setPos(i / (N - 1), true);
         commitIndex(i);
       });
@@ -613,6 +681,7 @@
     return row;
   }
 
+  // ============ NICK INPUT ============
   function buildNickInput(value) {
     const row = el('div', 'st-row st-nick-row');
     row.appendChild(el('div', 'st-label', T('nickname')));
@@ -678,15 +747,23 @@
     const btnNoSave = buildGlassButton(T('unsaved_discard'), 'st-btn-danger');
     const btnCancel = buildGlassButton(T('unsaved_cancel'), 'st-btn-secondary');
     btnSave.addEventListener('click', () => {
-      playSFX('set_sfx_save', 0.9); vibrateButton();
-      commit(); hideModalOverlay(); exitToMenu();
+      if (isLocked()) return;
+      playSFX('set_sfx_save', 0.9, 400); vibrateButton();
+      commit(); hideModalOverlay();
+      // ★ Выход в menu → back_select_menu
+      setTimeout(() => { playSFX('set_sfx_backMenu', 0.9, 500); }, 200);
+      exitToMenu();
     });
     btnNoSave.addEventListener('click', () => {
-      playSFX('set_sfx_back', 0.9); vibrateButton();
-      rollback(); hideModalOverlay(); exitToMenu();
+      if (isLocked()) return;
+      playSFX('set_sfx_back', 0.9, 400); vibrateButton();
+      rollback(); hideModalOverlay();
+      setTimeout(() => { playSFX('set_sfx_backMenu', 0.9, 500); }, 200);
+      exitToMenu();
     });
     btnCancel.addEventListener('click', () => {
-      playSFX('set_sfx_btn', 1.0); vibrateButton();
+      if (isLocked()) return;
+      playSFX('set_sfx_btn', 1.0, 350); vibrateButton();
       hideModalOverlay();
     });
     box.appendChild(btnSave);
@@ -713,8 +790,9 @@
     const btnYes = buildGlassButton(T('reset_yes'), 'st-btn-danger');
     const btnNo  = buildGlassButton(T('reset_no'),  'st-btn-secondary');
     btnYes.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_back', 0.9);
+      playSFX('set_sfx_back', 0.9, 400);
       overlay.classList.remove('show');
       setTimeout(() => {
         overlay.remove();
@@ -723,8 +801,9 @@
       }, 400);
     });
     btnNo.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 1.0);
+      playSFX('set_sfx_btn', 1.0, 350);
       overlay.classList.remove('show');
       setTimeout(() => { overlay.remove(); modalOpen = false; }, 500);
     });
@@ -744,14 +823,16 @@
     const btnYes = buildGlassButton(T('reset_confirm2_yes'), 'st-btn-danger');
     const btnNo  = buildGlassButton(T('reset_no'), 'st-btn-secondary');
     btnYes.addEventListener('click', async () => {
+      if (isLocked()) return;
       vibrateButton();
       box.innerHTML = '<h3>' + T('reset_doing') + '</h3><p>...</p>';
-      try { playSFX('set_sfx_save', 1.0); } catch (e) {}
+      try { playSFX('set_sfx_save', 1.0, 500); } catch (e) {}
       await doFullReset();
     });
     btnNo.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 1.0);
+      playSFX('set_sfx_btn', 1.0, 350);
       overlay.classList.remove('show');
       setTimeout(() => { overlay.remove(); modalOpen = false; }, 500);
     });
@@ -766,6 +847,8 @@
     try { if (window.Sound) Sound.stopMusic(0); } catch (e) {}
     try { if (window.Sound && Sound.unloadAll) Sound.unloadAll(); } catch (e) {}
     try { if (window.Sound && Sound.pauseAll)  Sound.pauseAll();  } catch (e) {}
+    // ★ Сбрасываем Troll
+    try { if (window.Troll && Troll.resetAll) Troll.resetAll(); } catch (e) {}
     try { localStorage.clear(); } catch (e) {}
     try { sessionStorage.clear(); } catch (e) {}
     try {
@@ -808,9 +891,9 @@
     if (window.ORBITS && ORBITS.back) await ORBITS.back();
   }
 
-  // CSS (вставлен полностью)
+  // ============ CSS ============
   function injectStyles() {
-    if (document.getElementById('orbits-settings-styles-v7')) return;
+    if (document.getElementById('orbits-settings-styles-v8')) return;
     const css = `
       .st-root { position: absolute; inset: 0; z-index: 50; overflow: hidden; opacity: 0;
         transition: opacity 0.85s cubic-bezier(0.16,1,0.3,1); pointer-events: auto; color: #fff; }
@@ -867,8 +950,6 @@
       .st-row::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 25%;
         background: linear-gradient(0deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 100%); pointer-events: none; }
       .st-row.show { opacity: 1; transform: translateX(0) scale(1); }
-      .st-row:active { box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.75), inset 0 -1px 0 rgba(0,0,0,0.32),
-        0 18px 54px rgba(0,0,0,0.6), 0 6px 20px rgba(60,20,120,0.52), 0 0 32px rgba(160,100,255,0.35); }
       .st-label { flex: 0 0 26%; font-size: 14px; letter-spacing: 2.4px; text-transform: uppercase; color: #f0eaff;
         text-shadow: 0 0 10px rgba(180,120,255,0.85), 0 1px 0 rgba(0,0,0,0.45); position: relative; z-index: 2; font-weight: 800; }
       .st-slider-track { position: relative; flex: 1 1 auto; height: 46px; display: flex; align-items: center; padding: 0 22px; touch-action: none; }
@@ -995,6 +1076,23 @@
         background: linear-gradient(135deg, rgba(255,50,50,0.95) 0%, rgba(180,30,30,0.95) 100%);
         color: #fff; box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.5),
           0 10px 30px rgba(255,40,40,0.75), 0 0 60px rgba(255,60,60,0.55); }
+
+      /* ★ Статус устройства */
+      .st-device-box { padding: 1.6vh 2.4vh; display: flex; flex-direction: column; gap: 0.8vh;
+        background: linear-gradient(155deg, rgba(120,90,255,0.16) 0%, rgba(60,40,140,0.10) 50%, rgba(40,20,100,0.14) 100%);
+        border: 1px solid rgba(180,140,255,0.42); }
+      .st-device-title { font-size: 13px; letter-spacing: 3px; text-transform: uppercase;
+        color: rgba(255,255,255,0.7); text-shadow: 0 0 10px rgba(180,120,255,0.7);
+        font-weight: 800; margin-bottom: 0.4vh; }
+      .st-device-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .st-device-key { font-size: 13px; letter-spacing: 1.6px; color: rgba(255,255,255,0.75); font-weight: 700; }
+      .st-device-val { font-size: 15px; letter-spacing: 1px; color: #fff; font-weight: 800;
+        text-shadow: 0 0 12px rgba(180,120,255,0.85); font-variant-numeric: tabular-nums; }
+      .st-device-val.good { color: #4ade80; text-shadow: 0 0 12px rgba(74,222,128,0.85); }
+      .st-device-val.normal { color: #fbbf24; text-shadow: 0 0 12px rgba(251,191,36,0.85); }
+      .st-device-val.weak { color: #ef4444; text-shadow: 0 0 12px rgba(239,68,68,0.85); }
+      .st-device-val.powerful { color: #a78bfa; text-shadow: 0 0 12px rgba(167,139,250,0.85); }
+
       .st-modal { position: absolute; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
         background: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px);
         opacity: 0; transition: opacity 0.55s ease, background 0.55s ease, backdrop-filter 0.55s ease; }
@@ -1029,16 +1127,12 @@
       .st-btn:active { transform: scale(0.95) translateY(1px); background: rgba(190,150,255,0.35); }
       .st-btn-primary { background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
         border-color: rgba(220,180,255,0.8); }
-      .st-btn-primary:active { box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.85),
-        0 10px 30px rgba(130,60,255,0.85), 0 0 50px rgba(180,100,255,0.6); }
       .st-btn-danger { background: linear-gradient(135deg, rgba(255,80,80,0.92), rgba(210,50,50,0.92));
         border-color: rgba(255,170,170,0.75); }
-      .st-btn-danger:active { box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.75),
-        0 10px 30px rgba(255,60,60,0.7), 0 0 50px rgba(255,80,80,0.5); }
       .st-btn-secondary { background: rgba(255,255,255,0.10); }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-settings-styles-v7';
+    style.id = 'orbits-settings-styles-v8';
     style.textContent = css;
     document.head.appendChild(style);
   }
@@ -1054,8 +1148,10 @@
     const header = el('div', 'st-header');
     const arrowLeft = el('div', 'st-arrow st-arrow-left', '‹');
     arrowLeft.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_back', 0.9);
+      // ★ Стрелка = кнопка
+      playSFX('set_sfx_btn', 0.9, 350);
       goToPage('main');
     });
     header.appendChild(arrowLeft);
@@ -1064,8 +1160,9 @@
     header.appendChild(title);
     const arrowRight = el('div', 'st-arrow st-arrow-right', '›');
     arrowRight.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 0.9);
+      playSFX('set_sfx_btn', 0.9, 350);
       goToPage('lang');
     });
     header.appendChild(arrowRight);
@@ -1101,26 +1198,123 @@
     rows.forEach((r, i) => setTimeout(() => r.classList.add('show'), 100 + i * 130));
   }
 
+  // ★ Вторая страница: язык + статус устройства
   function buildLangPageInto(pageEl) {
     const list = el('div', 'st-list');
     pageEl.appendChild(list);
+
+    // Выбор языка
     const rowLang = buildMultiToggle('language', LANG_LABELS, working.language);
     list.appendChild(rowLang);
+
+    // ★ Статус устройства
+    const deviceBox = buildDeviceStatusBox();
+    list.appendChild(deviceBox);
+
+    // Кнопка сброса
     const rowReset = el('div', 'st-row st-reset-row');
     const resetBtn = el('button', 'st-reset-btn');
     resetBtn.type = 'button';
     resetBtn.textContent = T('reset_btn');
     resetBtn.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 1.0);
+      playSFX('set_sfx_btn', 1.0, 350);
       showResetModal1();
     });
     rowReset.appendChild(resetBtn);
     list.appendChild(rowReset);
+
     setTimeout(() => {
       rowLang.classList.add('show');
-      setTimeout(() => rowReset.classList.add('show'), 140);
+      setTimeout(() => deviceBox.classList.add('show'), 140);
+      setTimeout(() => rowReset.classList.add('show'), 280);
     }, 100);
+  }
+
+  // ★ Блок со статусом устройства
+  function buildDeviceStatusBox() {
+    const box = el('div', 'st-row st-device-box');
+    // Заголовок
+    box.appendChild(el('div', 'st-device-title', T('device_title')));
+
+    // Получаем данные
+    let score = 0, tier = 'normal', adaptationStatus = 'none', adaptationPercent = 0, adaptedBlocks = 0, totalBlocks = 25;
+    let labels = null;
+
+    try {
+      if (window.Troll && Troll.getDeviceScore && Troll.getDeviceScoreLabels) {
+        const ds = Troll.getDeviceScore();
+        labels = Troll.getDeviceScoreLabels();
+        score = ds.score;
+        tier = ds.tier;
+        adaptationStatus = ds.adaptation.status;
+        adaptationPercent = ds.adaptation.percent;
+        adaptedBlocks = ds.adaptation.adaptedBlocks;
+        totalBlocks = ds.adaptation.totalBlocks;
+      }
+    } catch (e) {
+      console.warn('[settings] Troll недоступен:', e.message);
+    }
+
+    // Баллы
+    const scoreRow = el('div', 'st-device-row');
+    scoreRow.appendChild(el('div', 'st-device-key', T('device_score')));
+    const scoreVal = el('div', 'st-device-val', score.toLocaleString('ru-RU'));
+    scoreRow.appendChild(scoreVal);
+    box.appendChild(scoreRow);
+
+    // Мощность
+    const powerRow = el('div', 'st-device-row');
+    powerRow.appendChild(el('div', 'st-device-key', T('device_power')));
+    const powerLabel = (labels && labels.tiers[tier])
+      ? (labels.tiers[tier][lang()] || labels.tiers[tier].ru)
+      : tier;
+    const powerVal = el('div', 'st-device-val ' + tier, powerLabel);
+    powerRow.appendChild(powerVal);
+    box.appendChild(powerRow);
+
+    // Адаптация
+    const adaptRow = el('div', 'st-device-row');
+    adaptRow.appendChild(el('div', 'st-device-key', T('device_adapt')));
+    let adaptText = '';
+    if (labels && labels.adaptation[adaptationStatus]) {
+      adaptText = labels.adaptation[adaptationStatus][lang()] || labels.adaptation[adaptationStatus].ru;
+      if (adaptationStatus === 'partial' || adaptationStatus === 'adapting') {
+        adaptText += ' (~' + adaptationPercent + '%)';
+      }
+    } else {
+      adaptText = adaptationStatus;
+    }
+    const adaptVal = el('div', 'st-device-val', adaptText);
+    adaptRow.appendChild(adaptVal);
+    box.appendChild(adaptRow);
+
+    // Периодическое обновление (каждые 5 сек)
+    const updateInterval = setInterval(() => {
+      try {
+        if (!window.Troll || !Troll.getDeviceScore) return;
+        const ds = Troll.getDeviceScore(true);
+        scoreVal.textContent = ds.score.toLocaleString('ru-RU');
+        const newPowerLabel = (labels && labels.tiers[ds.tier])
+          ? (labels.tiers[ds.tier][lang()] || labels.tiers[ds.tier].ru)
+          : ds.tier;
+        powerVal.textContent = newPowerLabel;
+        powerVal.className = 'st-device-val ' + ds.tier;
+        if (labels && labels.adaptation[ds.adaptation.status]) {
+          let at = labels.adaptation[ds.adaptation.status][lang()] || labels.adaptation[ds.adaptation.status].ru;
+          if (ds.adaptation.status === 'partial' || ds.adaptation.status === 'adapting') {
+            at += ' (~' + ds.adaptation.percent + '%)';
+          }
+          adaptVal.textContent = at;
+        }
+      } catch (e) {}
+    }, 5000);
+
+    // Очистка при удалении
+    box._cleanup = () => clearInterval(updateInterval);
+
+    return box;
   }
 
   function buildBottomButtons() {
@@ -1133,17 +1327,22 @@
     btnSave.textContent = T('save');
     root.appendChild(btnSave);
     btnBack.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
       if (dirty) {
-        playSFX('set_sfx_btn', 1.0);
+        // ★ Не сохранять — открыть окно, звук выбора = button
+        playSFX('set_sfx_btn', 1.0, 350);
         showUnsavedModal();
       } else {
-        playSFX('set_sfx_back', 0.9);
+        // ★ Выход в menu → back_select_menu
+        playSFX('set_sfx_backMenu', 0.9, 500);
         exitToMenu();
       }
     });
     btnSave.addEventListener('click', () => {
-      playSFX('set_sfx_save', 1.0);
+      if (isLocked()) return;
+      // ★ Сохранение → save
+      playSFX('set_sfx_save', 1.0, 450);
       vibrateButton();
       commit();
       btnSave.style.transform = 'scale(0.9) translateY(2px)';
@@ -1168,6 +1367,10 @@
   }
   async function rebuildPagesContent() {
     if (!viewportEl) return;
+    // Очищаем старые боксы
+    const oldBoxes = root.querySelectorAll('.st-device-box');
+    oldBoxes.forEach(b => { if (b._cleanup) b._cleanup(); });
+
     const main = viewportEl.querySelector('.st-page-main');
     const lang = viewportEl.querySelector('.st-page-lang');
     if (!main || !lang) return;
@@ -1202,13 +1405,18 @@
 
   async function start() {
     ['orbits-settings-styles', 'orbits-settings-styles-v2', 'orbits-settings-styles-v3',
-     'orbits-settings-styles-v4', 'orbits-settings-styles-v5', 'orbits-settings-styles-v6'].forEach(id => {
+     'orbits-settings-styles-v4', 'orbits-settings-styles-v5', 'orbits-settings-styles-v6',
+     'orbits-settings-styles-v7'].forEach(id => {
       const old = document.getElementById(id);
       if (old) old.remove();
     });
     container = document.getElementById('game-container') || document.body;
     injectStyles();
     await loadSounds();
+
+    // ★ Уведомляем Troll
+    try { if (window.Troll) Troll.setBlock('settings'); } catch (e) {}
+
     savedSnapshot = takeSnapshot();
     working = {
       musicVolume: Math.round(savedSnapshot.musicVolume01 * 100),

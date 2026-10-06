@@ -1,17 +1,6 @@
 /* =====================================================================
    ORBITS.IO — SETTINGS BLOCK
    Путь: settings.js
-
-   Что нового:
-   - Блокировка кнопок во время звука (SOUND_LOCK_MS)
-   - Правильные звуки:
-     • settings → menu = sys_back_select_menu
-     • назад внутри блока = sys_back
-     • кнопки (стрелки, тумблеры, сброс) = sys_button
-     • сохранение = sys_save
-     • изменение настройки = sys_setting
-   - Вторая страница: статус мощности устройства (баллы, мощность, адаптация)
-   - Troll.setBlock('settings') при входе
    ===================================================================== */
 (function () {
   'use strict';
@@ -59,7 +48,6 @@
       reset_confirm2_text: 'Это действие нельзя отменить.',
       reset_confirm2_yes: 'Стереть навсегда',
       reset_doing: 'Очистка...',
-      // Статус устройства
       device_title: 'Устройство',
       device_score: 'Баллы',
       device_power: 'Мощность',
@@ -160,7 +148,6 @@
   let currentPage = 'main';
   let vibeTimeouts = [];
 
-  // ★ Блокировка кнопок при звуке
   const SOUND_LOCK_MS = 350;
   let soundLockActive = false;
   let soundLockTimer = null;
@@ -180,7 +167,6 @@
   function vibeEnabled() { const v = getS('vibration'); return (typeof v === 'boolean') ? v : true; }
   const canVibrate = () => !!navigator.vibrate && vibeEnabled();
 
-  // ★ Вибрация усилена на 30% в игре — в настройках обычная
   const VIBE_MULT = 1.0;
 
   function stopVibrate() {
@@ -241,7 +227,6 @@
     ]);
   }
 
-  // ★ Играем звук и блокируем кнопки на SOUND_LOCK_MS
   function playSFX(key, base = 1.0, lockMs = SOUND_LOCK_MS) {
     if (!window.Sound) return false;
     if (soundLockActive) return false;
@@ -258,7 +243,6 @@
     } catch (e) { return false; }
   }
 
-  // ★ Проверка блокировки
   function isLocked() { return soundLockActive; }
 
   async function loadBlockMusicWithFallback() {
@@ -388,7 +372,6 @@
       updateUI(previewUiValue);
       revertToSaved(key);
       recomputeDirty();
-      // ★ Звук изменения настройки
       playSFX('set_sfx_set', 0.7, 250);
       if (e) e.preventDefault();
     }
@@ -441,7 +424,6 @@
       const changed = working[key] !== v;
       working[key] = v;
       if (v) vibrateToggle();
-      // ★ Звук изменения настройки
       playSFX('set_sfx_set', 1.0, 250);
       if (changed) recomputeDirty();
     }
@@ -606,7 +588,6 @@
       const newLangKey = LANG_LIST[idx];
       const changed = working[key] !== newLangKey;
       working[key] = newLangKey;
-      // ★ Звук изменения настройки
       playSFX('set_sfx_set', 1.0, 250);
       if (changed) recomputeDirty();
     }
@@ -750,7 +731,6 @@
       if (isLocked()) return;
       playSFX('set_sfx_save', 0.9, 400); vibrateButton();
       commit(); hideModalOverlay();
-      // ★ Выход в menu → back_select_menu
       setTimeout(() => { playSFX('set_sfx_backMenu', 0.9, 500); }, 200);
       exitToMenu();
     });
@@ -847,7 +827,6 @@
     try { if (window.Sound) Sound.stopMusic(0); } catch (e) {}
     try { if (window.Sound && Sound.unloadAll) Sound.unloadAll(); } catch (e) {}
     try { if (window.Sound && Sound.pauseAll)  Sound.pauseAll();  } catch (e) {}
-    // ★ Сбрасываем Troll
     try { if (window.Troll && Troll.resetAll) Troll.resetAll(); } catch (e) {}
     try { localStorage.clear(); } catch (e) {}
     try { sessionStorage.clear(); } catch (e) {}
@@ -1076,8 +1055,6 @@
         background: linear-gradient(135deg, rgba(255,50,50,0.95) 0%, rgba(180,30,30,0.95) 100%);
         color: #fff; box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.5),
           0 10px 30px rgba(255,40,40,0.75), 0 0 60px rgba(255,60,60,0.55); }
-
-      /* ★ Статус устройства */
       .st-device-box { padding: 1.6vh 2.4vh; display: flex; flex-direction: column; gap: 0.8vh;
         background: linear-gradient(155deg, rgba(120,90,255,0.16) 0%, rgba(60,40,140,0.10) 50%, rgba(40,20,100,0.14) 100%);
         border: 1px solid rgba(180,140,255,0.42); }
@@ -1092,7 +1069,6 @@
       .st-device-val.normal { color: #fbbf24; text-shadow: 0 0 12px rgba(251,191,36,0.85); }
       .st-device-val.weak { color: #ef4444; text-shadow: 0 0 12px rgba(239,68,68,0.85); }
       .st-device-val.powerful { color: #a78bfa; text-shadow: 0 0 12px rgba(167,139,250,0.85); }
-
       .st-modal { position: absolute; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
         background: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px);
         opacity: 0; transition: opacity 0.55s ease, background 0.55s ease, backdrop-filter 0.55s ease; }
@@ -1150,7 +1126,6 @@
     arrowLeft.addEventListener('click', () => {
       if (isLocked()) return;
       vibrateButton();
-      // ★ Стрелка = кнопка
       playSFX('set_sfx_btn', 0.9, 350);
       goToPage('main');
     });
@@ -1198,20 +1173,16 @@
     rows.forEach((r, i) => setTimeout(() => r.classList.add('show'), 100 + i * 130));
   }
 
-  // ★ Вторая страница: язык + статус устройства
   function buildLangPageInto(pageEl) {
     const list = el('div', 'st-list');
     pageEl.appendChild(list);
 
-    // Выбор языка
     const rowLang = buildMultiToggle('language', LANG_LABELS, working.language);
     list.appendChild(rowLang);
 
-    // ★ Статус устройства
     const deviceBox = buildDeviceStatusBox();
     list.appendChild(deviceBox);
 
-    // Кнопка сброса
     const rowReset = el('div', 'st-row st-reset-row');
     const resetBtn = el('button', 'st-reset-btn');
     resetBtn.type = 'button';
@@ -1232,14 +1203,11 @@
     }, 100);
   }
 
-  // ★ Блок со статусом устройства
   function buildDeviceStatusBox() {
     const box = el('div', 'st-row st-device-box');
-    // Заголовок
     box.appendChild(el('div', 'st-device-title', T('device_title')));
 
-    // Получаем данные
-    let score = 0, tier = 'normal', adaptationStatus = 'none', adaptationPercent = 0, adaptedBlocks = 0, totalBlocks = 25;
+    let score = 0, tier = 'normal', adaptationStatus = 'none', adaptationPercent = 0;
     let labels = null;
 
     try {
@@ -1250,21 +1218,17 @@
         tier = ds.tier;
         adaptationStatus = ds.adaptation.status;
         adaptationPercent = ds.adaptation.percent;
-        adaptedBlocks = ds.adaptation.adaptedBlocks;
-        totalBlocks = ds.adaptation.totalBlocks;
       }
     } catch (e) {
       console.warn('[settings] Troll недоступен:', e.message);
     }
 
-    // Баллы
     const scoreRow = el('div', 'st-device-row');
     scoreRow.appendChild(el('div', 'st-device-key', T('device_score')));
     const scoreVal = el('div', 'st-device-val', score.toLocaleString('ru-RU'));
     scoreRow.appendChild(scoreVal);
     box.appendChild(scoreRow);
 
-    // Мощность
     const powerRow = el('div', 'st-device-row');
     powerRow.appendChild(el('div', 'st-device-key', T('device_power')));
     const powerLabel = (labels && labels.tiers[tier])
@@ -1274,7 +1238,6 @@
     powerRow.appendChild(powerVal);
     box.appendChild(powerRow);
 
-    // Адаптация
     const adaptRow = el('div', 'st-device-row');
     adaptRow.appendChild(el('div', 'st-device-key', T('device_adapt')));
     let adaptText = '';
@@ -1290,7 +1253,6 @@
     adaptRow.appendChild(adaptVal);
     box.appendChild(adaptRow);
 
-    // Периодическое обновление (каждые 5 сек)
     const updateInterval = setInterval(() => {
       try {
         if (!window.Troll || !Troll.getDeviceScore) return;
@@ -1311,7 +1273,6 @@
       } catch (e) {}
     }, 5000);
 
-    // Очистка при удалении
     box._cleanup = () => clearInterval(updateInterval);
 
     return box;
@@ -1330,18 +1291,15 @@
       if (isLocked()) return;
       vibrateButton();
       if (dirty) {
-        // ★ Не сохранять — открыть окно, звук выбора = button
         playSFX('set_sfx_btn', 1.0, 350);
         showUnsavedModal();
       } else {
-        // ★ Выход в menu → back_select_menu
         playSFX('set_sfx_backMenu', 0.9, 500);
         exitToMenu();
       }
     });
     btnSave.addEventListener('click', () => {
       if (isLocked()) return;
-      // ★ Сохранение → save
       playSFX('set_sfx_save', 1.0, 450);
       vibrateButton();
       commit();
@@ -1367,7 +1325,6 @@
   }
   async function rebuildPagesContent() {
     if (!viewportEl) return;
-    // Очищаем старые боксы
     const oldBoxes = root.querySelectorAll('.st-device-box');
     oldBoxes.forEach(b => { if (b._cleanup) b._cleanup(); });
 
@@ -1416,6 +1373,8 @@
 
     // ★ Уведомляем Troll
     try { if (window.Troll) Troll.setBlock('settings'); } catch (e) {}
+    // ★ Патч: сообщаем типы нагрузки
+    try { if (window.Troll && Troll.setLoadTypes) Troll.setLoadTypes(['blur', 'glass']); } catch (e) {}
 
     savedSnapshot = takeSnapshot();
     working = {

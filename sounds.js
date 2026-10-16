@@ -1,10 +1,40 @@
 /* =====================================================================
-   ORBITS.IO — SOUND ENGINE v3
+   ORBITS.IO — SOUND ENGINE v4
    Путь: sounds.js
+
+   Возможности:
+   - Моно / Стерео / Пространство
+   - Spatial 3D: HRTF (наушники) + Ambisonics + Crossfeed (динамики)
+   - Head tracking (через HeadTracking модуль)
+   - Калибровка (сохраняется, применяется к spatial)
+   - Music crossfade при повторе (исправлен баг setTimeout)
+   - Без внешних библиотек
+
+   API:
+     Sound.init()
+     Sound.unlock()
+     Sound.setAudioMode('mono'|'stereo'|'spatial')
+     Sound.getAudioMode()
+     Sound.enableSpatialNoHeadphones(bool)
+     Sound.enableSpatialHeadphones(bool)
+     Sound.enableHeadTracking(bool)
+     Sound.loadBuffer(key, source)
+     Sound.playMusic(key, opts)
+     Sound.playMusicIntroLoop(key, opts)
+     Sound.playMusicCrossfade(key, opts)
+     Sound.stopMusic(fadeOut)
+     Sound.playSFX(key, opts)
+     Sound.playSpatial(key, position, opts)
+     Sound.playSys(name, vol)
+     Sound.setListenerOrientation(yaw, pitch, roll)
+     Sound.setListenerPosition(x, y, z)
+     Sound.applyCalibration(calibration)
+     Sound.preloadAllSys()
    ===================================================================== */
 (function (global) {
   'use strict';
 
+  // ============ КОНСТАНТЫ ============
   const SYS_SOUNDS = {
     back_select_menu: './Звуки/Система/Back-select-menu.wav',
     back:             './Звуки/Система/Back.wav',
@@ -21,8 +51,16 @@
   };
   const SYS_PREFIX = 'sys_';
 
-  const CROSSFADE_TAIL = 0.015;
-  const FADE_SMOOTH = 0.02;
+  const CROSSFADE_TAIL = 0.015;   // 15 мс наложение в музыке
+  const FADE_SMOOTH = 0.02;       // 20 мс для setTargetAtTime
+
+  // Crossfeed для динамиков
+  const CROSSFEED_DELAY_MS = 0.30;  // задержка L→R / R→L
+  const CROSSFEED_GAIN = 0.28;      // 28% уровень перекрёстной связи
+
+  // Ambisonics первого порядка — 8 виртуальных динамиков
+  const AMBI_SPEAKER_ANGLES = [-135, -90, -45, 0, 45, 90, 135, 180];
+  const AMBI_SPEAKER_GAIN = 1 / Math.sqrt(8);
 
   const Sound = {
     ctx: null,
@@ -31,14 +69,22 @@
     sfxGain: null,
     unlocked: false,
 
-    _audioMode: 'stereo',
-    _spatialNoHeadphones: false,
-    _spatialHeadphones: false,
+    // ============ РЕЖИМЫ ============
+    _audioMode: 'stereo',              // 'mono' | 'stereo' | 'spatial'
+    _spatialNoHeadphones: false,       // динамики
+    _spatialHeadphones: false,         // наушники (HRTF)
+
+    // ============ LISTENER ============
     _listenerOrientation: { yaw: 0, pitch: 0, roll: 0 },
     _listenerPosition: { x: 0, y: 0, z: 0 },
 
+    // ============ КАЛИБРОВКА ============
+    _calibration: null,                // { centerYaw, centerPitch, earDistancePx, sceneWidth }
+
+    // ============ BUFFERS ============
     _buffers: {},
     _musicNodes: null,
+    _musicTimers: [],                  // ★ все setTimeout для отмены
     _sfxPool: [],
     _poolSize: 20,
     _securityInstalled: false,
@@ -49,9 +95,10 @@
     init() {
       if (this.ctx) return this.ctx;
       const AC = global.AudioContext || global.webkitAudioContext;
-      if (!AC) { console.warn('Web Audio API недоступен'); return null; }
+      if (!AC) { console.warn('[Sound] Web Audio API недоступен'); return null; }
 
       this._readSettings();
+
       this.ctx = new AC({ latencyHint: 'interactive' });
 
       this.masterGain = this.ctx.createGain();
@@ -70,9 +117,10 @@
       for (let i = 0; i < this._poolSize; i++) {
         const g = this.ctx.createGain();
         g.connect(this.sfxGain);
-        this._sfxPool.push({ gain: g, busy: false, source: null, panner: null });
+        this._sfxPool.push({ gain: g, busy: false, source: null, nodes: [] });
       }
 
+      // Подписка на смену настроек
       if (global.Settings && global.Settings.onChange) {
         global.Settings.onChange((key) => {
           if (key === 'audioMode' || key === 'spatialNoHeadphones' ||
@@ -86,6 +134,9 @@
         });
       }
 
+      // Автокалибровка из localStorage
+      this._loadCalibration();
+
       this.installSecurity();
       return this.ctx;
     },
@@ -97,6 +148,17 @@
       if (mode) this._audioMode = mode;
       this._spatialNoHeadphones = !!s.get('spatialNoHeadphones');
       this._spatialHeadphones = !!s.get('spatialHeadphones');
+    },
+
+    _loadCalibration() {
+      try {
+        const raw = localStorage.getItem('orbits_head_tracking');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.done) {
+          this._calibration = parsed;
+        }
+      } catch (e) {}
     },
 
     _applyAudioMode() {
@@ -150,6 +212,12 @@
 
     isHeadTrackingEnabled() {
       return !!this._headTrackingUnsub;
+    },
+
+    // ============ CALIBRATION ============
+    applyCalibration(calibration) {
+      this._calibration = calibration || null;
+      this._updateListener();
     },
 
     // ============ SECURITY ============
@@ -251,6 +319,14 @@
 
     _stopNode(node, when) { try { node.stop(when); } catch (e) {} },
 
+    // ★ Отмена всех запланированных setTimeout
+    _clearMusicTimers() {
+      for (let i = 0; i < this._musicTimers.length; i++) {
+        clearTimeout(this._musicTimers[i]);
+      }
+      this._musicTimers = [];
+    },
+
     // ============ MUSIC ============
     async playMusic(key, opts = {}) {
       this.init();
@@ -343,20 +419,23 @@
       return this._musicNodes;
     },
 
+    // ★ Crossfade — ИСПРАВЛЕН баг с setTimeout
     async playMusicCrossfade(key, opts = {}) {
       this.init();
       if (!this.ctx) return null;
       if (this.ctx.state === 'suspended') { try { await this.ctx.resume(); } catch (e) {} }
       this.stopMusic(0);
+      this._clearMusicTimers();
 
       const buffer = this._buffers[key];
       if (!buffer) throw new Error('playMusicCrossfade: буфер "' + key + '" не загружен');
 
       const volume = opts.volume != null ? opts.volume : 1.0;
       const fadeIn = opts.fadeIn != null ? opts.fadeIn : 0.3;
+      const tailTrim = opts.tailTrim != null ? opts.tailTrim : 0;
 
       const now = this.ctx.currentTime;
-      const dur = buffer.duration;
+      const dur = buffer.duration - tailTrim;
       const cf = CROSSFADE_TAIL;
 
       const first = this.ctx.createBufferSource();
@@ -375,8 +454,10 @@
 
       let currentSrc = first;
       let currentStart = now;
+      let isStopped = false;
 
       const scheduleNextLoop = () => {
+        if (isStopped) return;
         const cfTime = currentStart + dur - cf;
         const next = this.ctx.createBufferSource();
         next.buffer = buffer;
@@ -387,18 +468,34 @@
         currentSrc = next;
         currentStart = cfTime;
         const delay = Math.max(0, (dur - cf) * 1000 - 100);
-        setTimeout(scheduleNextLoop, delay);
+        const t = setTimeout(scheduleNextLoop, delay);
+        this._musicTimers.push(t);
       };
-      setTimeout(scheduleNextLoop, Math.max(0, (dur - cf) * 1000 - 100));
+      const t0 = setTimeout(scheduleNextLoop, Math.max(0, (dur - cf) * 1000 - 100));
+      this._musicTimers.push(t0);
 
-      this._musicNodes = { crossfade: true, src: first };
+      this._musicNodes = {
+        crossfade: true,
+        src: first,
+        stopAll: () => {
+          isStopped = true;
+          try { currentSrc.stop(); } catch (e) {}
+          this._clearMusicTimers();
+        }
+      };
       return this._musicNodes;
     },
 
     stopMusic(fadeOut = 0) {
+      this._clearMusicTimers();
+
       if (!this._musicNodes || !this.ctx) return;
       const src = this._musicNodes;
       const now = this.ctx.currentTime;
+
+      if (src.stopAll) {
+        try { src.stopAll(); } catch (e) {}
+      }
 
       if (fadeOut > 0) {
         this.musicGain.gain.cancelScheduledValues(now);
@@ -408,8 +505,6 @@
         if (src.intro && src.loop) {
           this._stopNode(src.intro, stopTime);
           this._stopNode(src.loop, stopTime);
-        } else if (src.crossfade) {
-          this._stopNode(src.src, stopTime);
         } else {
           this._stopNode(src, stopTime);
         }
@@ -417,8 +512,6 @@
         if (src.intro && src.loop) {
           this._stopNode(src.intro, now);
           this._stopNode(src.loop, now);
-        } else if (src.crossfade) {
-          this._stopNode(src.src, now);
         } else {
           this._stopNode(src, now);
         }
@@ -426,55 +519,17 @@
       this._musicNodes = null;
     },
 
-    // ============ SFX ============
-    async playSFX(key, opts = {}) {
-      this.init();
-      if (!this.ctx) return;
-      if (this.ctx.state === 'suspended') { try { await this.ctx.resume(); } catch (e) {} }
-
-      const buffer = this._buffers[key];
-      if (!buffer) { console.warn('playSFX: буфер "' + key + '" не загружен'); return; }
-
-      let slot = null;
-      for (let i = 0; i < this._sfxPool.length; i++) {
-        if (!this._sfxPool[i].busy) { slot = this._sfxPool[i]; break; }
-      }
-      if (!slot) {
-        slot = this._sfxPool[0];
-        try { slot.source && slot.source.stop(); } catch (e) {}
-      }
-      slot.busy = true;
-
-      const src = this.ctx.createBufferSource();
-      src.buffer = buffer;
-
-      if (this._audioMode === 'mono') {
-        src.connect(slot.gain);
-      } else {
-        if (opts.position && this._audioMode === 'spatial') {
-          const panner = this._createPanner(opts.position);
-          src.connect(panner);
-          panner.connect(slot.gain);
-          slot.panner = panner;
-        } else {
-          src.connect(slot.gain);
-        }
-      }
-
-      slot.gain.gain.cancelScheduledValues(this.ctx.currentTime);
-      slot.gain.gain.setValueAtTime(opts.volume != null ? opts.volume : 1.0, this.ctx.currentTime);
-
-      if (opts.rate) src.playbackRate.value = opts.rate;
-
-      src.onended = () => { slot.busy = false; slot.source = null; slot.panner = null; };
-      src.start(0);
-      slot.source = src;
-    },
-
+    // ============ SPATIAL PANNER ============
     _createPanner(position) {
       const panner = this.ctx.createPanner();
-      if (this._spatialHeadphones) panner.panningModel = 'HRTF';
-      else panner.panningModel = 'equalpower';
+
+      // ★ Выбор panning model
+      if (this._spatialHeadphones) {
+        panner.panningModel = 'HRTF';
+      } else {
+        panner.panningModel = 'equalpower';
+      }
+
       panner.distanceModel = 'inverse';
       panner.refDistance = 1;
       panner.maxDistance = 10000;
@@ -512,17 +567,25 @@
         try { l.setPosition(p.x, p.y, p.z); } catch (e) {}
       }
 
-      const yaw = o.yaw * Math.PI / 180;
-      const pitch = o.pitch * Math.PI / 180;
-      const roll = o.roll * Math.PI / 180;
+      // ★ Применяем калибровку — вычитаем «центр» головы
+      let yaw = o.yaw, pitch = o.pitch, roll = o.roll;
+      if (this._calibration && this._calibration.center) {
+        yaw -= this._calibration.center.yaw || 0;
+        pitch -= this._calibration.center.pitch || 0;
+        roll -= this._calibration.center.roll || 0;
+      }
 
-      const fx = Math.sin(yaw) * Math.cos(pitch);
-      const fy = Math.sin(pitch);
-      const fz = -Math.cos(yaw) * Math.cos(pitch);
+      const yawR = yaw * Math.PI / 180;
+      const pitchR = pitch * Math.PI / 180;
+      const rollR = roll * Math.PI / 180;
 
-      const ux = Math.sin(roll) * Math.cos(yaw);
-      const uy = Math.cos(roll);
-      const uz = Math.sin(roll) * Math.sin(yaw);
+      const fx = Math.sin(yawR) * Math.cos(pitchR);
+      const fy = Math.sin(pitchR);
+      const fz = -Math.cos(yawR) * Math.cos(pitchR);
+
+      const ux = Math.sin(rollR) * Math.cos(yawR);
+      const uy = Math.cos(rollR);
+      const uz = Math.sin(rollR) * Math.sin(yawR);
 
       if (l.forwardX) {
         l.forwardX.setTargetAtTime(fx, now, FADE_SMOOTH);
@@ -550,6 +613,152 @@
       this._updateListener();
     },
 
+    // ============ SURROUND CROSSFEED (для динамиков) ============
+    // ★ Собственный crossfeed + Haas delay — даёт объём на 2 динамиках
+    _buildSpatialChain(sourceNode, position) {
+      const now = this.ctx.currentTime;
+      const px = position.x || 0, py = position.y || 0, pz = position.z || 0;
+
+      // Нормализуем вектор
+      const len = Math.sqrt(px*px + py*py + pz*pz) || 1;
+      const nx = px / len, ny = py / len, nz = pz / len;
+
+      // Угол в горизонтальной плоскости (0 = спереди, + = справа)
+      const angle = Math.atan2(nx, -nz);   // радианы
+      const angleDeg = angle * 180 / Math.PI;
+
+      // Панорама — базовый L/R
+      const pan = Math.sin(angle);         // -1..1
+
+      // ★ Режим: наушники → HRTF через PannerNode
+      if (this._spatialHeadphones) {
+        const panner = this.ctx.createPanner();
+        panner.panningModel = 'HRTF';
+        panner.distanceModel = 'inverse';
+        panner.refDistance = 1;
+        panner.maxDistance = 10000;
+        panner.rolloffFactor = 1;
+        if (panner.positionX) {
+          panner.positionX.setValueAtTime(px, now);
+          panner.positionY.setValueAtTime(py, now);
+          panner.positionZ.setValueAtTime(pz, now);
+        } else {
+          panner.setPosition(px, py, pz);
+        }
+        this._updateListener();
+        sourceNode.connect(panner);
+        return { out: panner, nodes: [panner] };
+      }
+
+      // ★ Режим: динамики → crossfeed + delay
+      // Создаём цепочку: source → split L/R (по pan) → crossfeed → merge
+
+      const merger = this.ctx.createChannelMerger(2);
+      const gainL = this.ctx.createGain();
+      const gainR = this.ctx.createGain();
+      const crossL = this.ctx.createGain();  // L → R
+      const crossR = this.ctx.createGain();  // R → L
+      const delayL = this.ctx.createDelay(0.1);
+      const delayR = this.ctx.createDelay(0.1);
+
+      // Базовая панорама
+      const gainLVal = Math.cos((pan + 1) * Math.PI / 4);  // 0..1
+      const gainRVal = Math.sin((pan + 1) * Math.PI / 4);
+      gainL.gain.value = gainLVal;
+      gainR.gain.value = gainRVal;
+
+      // Crossfeed
+      crossL.gain.value = CROSSFEED_GAIN * gainLVal;
+      crossR.gain.value = CROSSFEED_GAIN * gainRVal;
+
+      delayL.delayTime.value = CROSSFEED_DELAY_MS / 1000;
+      delayR.delayTime.value = CROSSFEED_DELAY_MS / 1000;
+
+      // Цепочка:
+      // source → gainL → merger.channel0 (left)
+      // source → gainR → merger.channel1 (right)
+      // source → crossL → delayL → merger.channel1 (crossfeed L→R с задержкой)
+      // source → crossR → delayR → merger.channel0 (crossfeed R→L с задержкой)
+
+      sourceNode.connect(gainL);
+      sourceNode.connect(gainR);
+      sourceNode.connect(crossL);
+      sourceNode.connect(crossR);
+
+      gainL.connect(merger, 0, 0);
+      gainR.connect(merger, 0, 1);
+      crossL.connect(delayL);
+      crossR.connect(delayR);
+      delayL.connect(merger, 0, 1);
+      delayR.connect(merger, 0, 0);
+
+      return {
+        out: merger,
+        nodes: [merger, gainL, gainR, crossL, crossR, delayL, delayR]
+      };
+    },
+
+    // ============ SFX ============
+    async playSFX(key, opts = {}) {
+      this.init();
+      if (!this.ctx) return;
+      if (this.ctx.state === 'suspended') { try { await this.ctx.resume(); } catch (e) {} }
+
+      const buffer = this._buffers[key];
+      if (!buffer) { console.warn('playSFX: буфер "' + key + '" не загружен'); return; }
+
+      let slot = null;
+      for (let i = 0; i < this._sfxPool.length; i++) {
+        if (!this._sfxPool[i].busy) { slot = this._sfxPool[i]; break; }
+      }
+      if (!slot) {
+        slot = this._sfxPool[0];
+        this._cleanupSlot(slot);
+      }
+      slot.busy = true;
+      slot.nodes = [];
+
+      const src = this.ctx.createBufferSource();
+      src.buffer = buffer;
+
+      const isMono = this._audioMode === 'mono';
+
+      if (isMono) {
+        src.connect(slot.gain);
+      } else if (this._audioMode === 'spatial' && opts.position) {
+        // ★ Пространственный режим — с crossfeed или HRTF
+        const chain = this._buildSpatialChain(src, opts.position);
+        chain.out.connect(slot.gain);
+        slot.nodes = chain.nodes;
+      } else {
+        // Стерео
+        src.connect(slot.gain);
+      }
+
+      slot.gain.gain.cancelScheduledValues(this.ctx.currentTime);
+      slot.gain.gain.setValueAtTime(opts.volume != null ? opts.volume : 1.0, this.ctx.currentTime);
+
+      if (opts.rate) src.playbackRate.value = opts.rate;
+
+      src.onended = () => {
+        this._cleanupSlot(slot);
+      };
+      src.start(0);
+      slot.source = src;
+    },
+
+    _cleanupSlot(slot) {
+      slot.busy = false;
+      slot.source = null;
+      if (slot.nodes) {
+        for (let i = 0; i < slot.nodes.length; i++) {
+          try { slot.nodes[i].disconnect(); } catch (e) {}
+        }
+        slot.nodes = [];
+      }
+    },
+
+    // ============ SPATIAL SFX ============
     async playSpatial(key, position, opts = {}) {
       return this.playSFX(key, Object.assign({}, opts, { position: position }));
     },
@@ -611,6 +820,7 @@
     unloadAll() { this._buffers = {}; this._sysPreloaded = false; }
   };
 
+  // Автопредзагрузка системных звуков после unlock
   const originalUnlock = Sound.unlock.bind(Sound);
   Sound.unlock = async function () {
     const ok = await originalUnlock();

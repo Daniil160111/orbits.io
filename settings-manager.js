@@ -6,34 +6,32 @@
   'use strict';
 
   const STORAGE_KEY = 'orbits_settings';
-  const LANGUAGES = ['ru', 'en', 'fr', 'es'];
-
-  // ★ Автоопределение языка при первом запуске
-  function detectInitialLanguage() {
-    try {
-      const nav = (navigator.language || navigator.userLanguage || 'ru').toLowerCase();
-      const code = nav.slice(0, 2);
-      if (LANGUAGES.includes(code)) return code;
-    } catch (e) {}
-    return 'ru';
-  }
 
   const DEFAULTS = {
-    sfxVolume:   0.8,
-    musicVolume: 0.8,
-    vibration:   true,
-    nickname:    '',
-    brightness:  100,
-    language:    detectInitialLanguage()
+    sfxVolume:      0.8,
+    musicVolume:    0.8,
+    vibration:      true,
+    nickname:       '',
+    brightness:     100,
+    language:       'ru',
+    audioMode:      'stereo',
+    spatialEnabled: false,
+    calibrationData: null
   };
 
+  const LANGUAGES = ['ru', 'en', 'fr', 'es'];
+  const AUDIO_MODES = ['mono', 'stereo', 'spatial'];
+
   const VALIDATORS = {
-    sfxVolume:   (v) => typeof v === 'number' && v >= 0 && v <= 1,
-    musicVolume: (v) => typeof v === 'number' && v >= 0 && v <= 1,
-    vibration:   (v) => typeof v === 'boolean',
-    nickname:    (v) => typeof v === 'string' && v.length <= 32,
-    brightness:  (v) => typeof v === 'number' && v >= 0 && v <= 150,
-    language:    (v) => typeof v === 'string' && LANGUAGES.includes(v)
+    sfxVolume:       (v) => typeof v === 'number' && v >= 0 && v <= 1,
+    musicVolume:     (v) => typeof v === 'number' && v >= 0 && v <= 1,
+    vibration:       (v) => typeof v === 'boolean',
+    nickname:        (v) => typeof v === 'string' && v.length <= 32,
+    brightness:      (v) => typeof v === 'number' && v >= 0 && v <= 150,
+    language:        (v) => typeof v === 'string' && LANGUAGES.includes(v),
+    audioMode:       (v) => typeof v === 'string' && AUDIO_MODES.includes(v),
+    spatialEnabled:  (v) => typeof v === 'boolean',
+    calibrationData: (v) => v === null || (typeof v === 'object')
   };
 
   let data = Object.assign({}, DEFAULTS);
@@ -61,6 +59,7 @@
   const Settings = {
     DEFAULTS: Object.assign({}, DEFAULTS),
     LANGUAGES: LANGUAGES.slice(),
+    AUDIO_MODES: AUDIO_MODES.slice(),
 
     get(key) { return (key in data) ? data[key] : undefined; },
     getAll() { return Object.assign({}, data); },

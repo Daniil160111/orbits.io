@@ -1,5 +1,5 @@
 /* =====================================================================
-   ORBITS.IO — MAIN MENU v3
+   ORBITS.IO — MAIN MENU v4
    Путь: menu.js
    ===================================================================== */
 (function () {
@@ -52,6 +52,10 @@
   const RIPPLE_FADE_MS = 1300;
   const SUB_APPEAR_MS  = 1000;
   const SOUND_LOCK_MS  = 350;
+
+  // ★ Тайминги переходов
+  const TRANSITION_OUT_MS = 1000;   // исчезновение 1 сек
+  const TRANSITION_IN_MS  = 700;    // появление 0.7 сек
 
   let container = null;
   let persistentBg = null;
@@ -223,7 +227,6 @@
     return whiteOverlay;
   }
 
-  // ===== РЯБЬ =====
   const RIPPLE_VERT = "attribute vec2 a_pos; varying vec2 v_uv; void main() { v_uv = a_pos * 0.5 + 0.5; gl_Position = vec4(a_pos, 0.0, 1.0); }";
   const RIPPLE_FRAG = `
     precision highp float;
@@ -405,7 +408,6 @@
     });
   }
 
-  // ===== ЭКРАНЫ =====
   function buildTitleScreen() {
     const screen = el('div', 'orbits-title-screen');
     const title = el('div', 'orbits-title-name');
@@ -602,6 +604,7 @@
     back.addEventListener('touchend', goBack);
   }
 
+  // ★ Переход меню → подменю (исчезновение 1 сек, появление 0.7 сек)
   async function goToSubScreen() {
     if (currentScreen === 'sub') return;
     const title = container.querySelector('.orbits-title-screen');
@@ -610,23 +613,41 @@
     musicQuiet();
     if (hint) { hint.style.transition = 'opacity 0.5s ease'; hint.classList.remove('show'); hint.style.opacity = '0'; }
     if (name) { name.style.transition = 'opacity 0.5s ease, transform 0.5s ease'; name.classList.remove('show'); name.style.opacity = '0'; }
+
+    // Титульный — исчезает 1 сек
+    const oldTitle = container.querySelector('.orbits-title-screen');
+    if (oldTitle) {
+      oldTitle.style.transition = 'opacity ' + TRANSITION_OUT_MS + 'ms ease';
+      oldTitle.style.opacity = '0';
+    }
+    await sleep(TRANSITION_OUT_MS);
+
     const sub = buildSubScreen();
     container.appendChild(sub);
     attachButtonHandlers(sub);
-    await sleep(50);
+
+    // Подменю — появляется 0.7 сек
+    await sleep(30);
+    sub.style.transition = 'opacity ' + TRANSITION_IN_MS + 'ms ease';
     sub.classList.add('fade-in');
-    setTimeout(() => { if (title) title.remove(); }, 500);
+
+    setTimeout(() => { if (title) title.remove(); }, TRANSITION_IN_MS);
     currentScreen = 'sub';
     titleLock = false;
     subLock = false;
   }
 
+  // ★ Переход подменю → титульный (исчезновение 1 сек, появление 0.7 сек)
   async function goToTitleScreen() {
     const sub = container.querySelector('.orbits-sub-screen');
     if (!sub) { await showTitleScreen(false); return; }
-    sub.classList.remove('fade-in');
     musicLoud();
-    await sleep(900);
+
+    sub.style.transition = 'opacity ' + TRANSITION_OUT_MS + 'ms ease';
+    sub.classList.remove('fade-in');
+    sub.style.opacity = '0';
+    await sleep(TRANSITION_OUT_MS);
+
     sub.remove();
     currentScreen = 'title';
     titleLock = false;
@@ -634,9 +655,8 @@
     await showTitleScreen(false);
   }
 
-  // ===== СТИЛИ =====
   function injectStyles() {
-    if (document.getElementById('orbits-menu-styles-v3')) return;
+    if (document.getElementById('orbits-menu-styles-v4')) return;
     const css = `
       .orbits-persistent-bg {
         position: absolute; inset: 0;
@@ -654,7 +674,6 @@
       .orbits-title-screen, .orbits-sub-screen {
         position: absolute; inset: 0; overflow: hidden;
         color: #fff; z-index: 5; pointer-events: auto;
-        transition: opacity 0.9s ease;
       }
       .orbits-title-screen { cursor: pointer; opacity: 1; }
       .orbits-sub-screen { opacity: 0; }
@@ -756,7 +775,7 @@
       }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-menu-styles-v3';
+    style.id = 'orbits-menu-styles-v4';
     style.textContent = css;
     document.head.appendChild(style);
   }
@@ -776,16 +795,16 @@
     window.__ORBITS_RETURNING__ = false;
 
     if (!returning && !window.__ORBITS_MENU_SEEN__) {
-      // Первый запуск — белый оверлей, убираем 1.5 сек
+      // ★ Первый запуск — белый оверлей убирается 0.7 сек
       window.__ORBITS_MENU_SEEN__ = true;
       const ov = getWhiteOverlay();
       ov.style.transition = 'none';
       ov.style.opacity = '1';
       ov.classList.add('show');
       void ov.offsetWidth;
-      ov.style.transition = 'opacity 1500ms ease';
+      ov.style.transition = 'opacity ' + TRANSITION_IN_MS + 'ms ease';
       ov.style.opacity = '0';
-      await sleep(1500);
+      await sleep(TRANSITION_IN_MS);
       ov.classList.remove('show');
       await showTitleScreen(true);
     } else if (returning) {

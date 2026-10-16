@@ -182,13 +182,13 @@
     filter: drop-shadow(0 16px 60px rgba(140,80,255,0.85)); pointer-events:none;
   }
 
-  /* ★ Прогресс — над надписью */
+  /* ★ Прогресс над «Загрузка...» */
   #loading-progress {
     position: absolute;
-    bottom: 8vh;
+    bottom: 8.5vh;
     right: 5vw;
     z-index: 5;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 800;
     letter-spacing: 2px;
     color: #ffffff;
@@ -196,9 +196,10 @@
     text-shadow: 0 0 14px rgba(180,120,255,1), 0 0 28px rgba(140,80,255,0.6);
     text-align: right;
     pointer-events: none;
-    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
-  #loading-progress.show { display: block; }
+  #loading-progress.show { opacity: 1; }
 
   #phase-label {
     position:absolute; bottom:4vh; right:5vw; z-index:5; color:#fff;
@@ -232,12 +233,12 @@
   }
   #transition-logo img {
     width: min(50vw, 600px);
-    transform: scale(0.6);
-    transition: transform 1.5s cubic-bezier(0.16,1,0.3,1);
+    transform: scale(1);
+    transition: transform 1s cubic-bezier(0.16,1,0.3,1);
     filter: drop-shadow(0 16px 60px rgba(140,80,255,0.85));
   }
   #transition-logo.show { display: flex; opacity: 1; }
-  #transition-logo.show img { transform: scale(2.2); }
+  #transition-logo.show img { transform: scale(2.5); }
 
   #game-container {
     position:absolute; inset:0; z-index:10;
@@ -258,6 +259,7 @@
     transition: opacity 0.7s ease;
   }
 
+  /* ★ Окно загрузки — замораживает всё под собой */
   #download-dialog {
     position: fixed; inset: 0; z-index: 200000;
     display: none; align-items: center; justify-content: center;
@@ -660,7 +662,7 @@
     { key: 'continue_snd',  url: URL_CONTINUE_SND }
   ];
 
-  const MIN_LOADING_MS = 1000;   // ★ минимум 1 сек
+  const MIN_LOADING_MS = 1000;
   const WATCHDOG_MS = 60000;
   const LOADER_FADE_MS = 1500;
   const FETCH_TRIES = 3;
@@ -691,8 +693,9 @@
   }
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
 
-  // ★ Прогресс реальный
+  // ★ Реальный прогресс
   let stats = { loadedBytes: 0, totalBytes: 0 };
+  let progressTimer = 0;
   function updateLoadingProgress() {
     const el = document.getElementById('loading-progress');
     if (!el) return;
@@ -704,6 +707,13 @@
     const loaded = stats.loadedBytes / (1024 * 1024);
     const total = stats.totalBytes / (1024 * 1024);
     el.textContent = loaded.toFixed(1) + ' МБ / ' + total.toFixed(1) + ' МБ';
+  }
+  function startProgressTicker() {
+    if (progressTimer) return;
+    progressTimer = setInterval(updateLoadingProgress, 100);
+  }
+  function stopProgressTicker() {
+    if (progressTimer) { clearInterval(progressTimer); progressTimer = 0; }
   }
 
   // ===== IndexedDB =====
@@ -772,7 +782,7 @@
     varying float v_height;
     varying vec3 v_normal;
     float flagHeight(float u, float v, float t) {
-      float amp = (0.10 + u * 0.55);   /* ★ было (0.20 + u * 1.10) * 1.30 — теперь в 2 раза меньше */
+      float amp = (0.10 + u * 0.55);
       float frontBoost = 1.0 + u * 0.3;
       float backBoost  = 1.0 + (1.0 - u) * 0.2;
       float w1 = sin(u * 6.0 + t * 2.4) * 0.35 * frontBoost;
@@ -793,7 +803,7 @@
       float ZOOM = 1.15;
       float x = (uv.x - 0.5) * 2.0 * ZOOM;
       float y = (uv.y - 0.5) * 2.0 * ZOOM;
-      float z = h * 0.65;   /* ★ глубина тоже в 2 раза меньше */
+      float z = h * 0.65;
       float xShift = sin(uv.x * 3.0 + t * 1.2) * 0.03 * (0.3 + uv.x);
       float eps = 0.01;
       float hx = flagHeight(uv.x + eps, uv.y, t);
@@ -932,18 +942,27 @@
     animRaf = requestAnimationFrame(loop);
   }
 
-  function freezeForError() {
-    paused_by_error = true;
+  function freezeWebGL() {
+    if (!webglSupported || animFrozen) return;
     animFrozen = true;
     animFreezeTime = (performance.now() - animStart) / 1000;
+  }
+  function unfreezeWebGL() {
+    if (!webglSupported || !animFrozen) return;
+    animFrozen = false;
+    animStart = performance.now() - animFreezeTime * 1000;
+  }
+
+  function freezeForError() {
+    paused_by_error = true;
+    freezeWebGL();
     document.body.classList.add('orbits-error-mode');
     const pl = document.getElementById('phase-label');
     if (pl) pl.classList.add('frozen');
   }
   function unfreezeAfterError() {
     paused_by_error = false;
-    animFrozen = false;
-    animStart = performance.now() - animFreezeTime * 1000;
+    unfreezeWebGL();
     document.body.classList.remove('orbits-error-mode');
     const pl = document.getElementById('phase-label');
     if (pl) pl.classList.remove('frozen');
@@ -981,20 +1000,21 @@
     await Promise.all(tasks);
   }
 
-  // ★ Приоритетная загрузка — предупреждение + звуки
   async function preloadCritical() {
     if (!window.Sound) return;
-    await new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => resolve();
-      img.onerror = () => resolve();
-      img.src = URL_DISCLAIMER;
-    });
-    await Sound.loadBuffer('sys_error', URL_ERROR_SND).catch(() => {});
-    await Sound.loadBuffer('sys_button', URL_CONTINUE_SND).catch(() => {});
-    await Sound.loadBuffer('sys_window', URL_WINDOW_SND).catch(() => {});
-    await Sound.loadBuffer('music_startup', URL_STARTUP).catch(() => {});
+    await Promise.all([
+      new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+        img.src = URL_DISCLAIMER;
+      }),
+      Sound.loadBuffer('sys_error', URL_ERROR_SND).catch(() => {}),
+      Sound.loadBuffer('sys_button', URL_CONTINUE_SND).catch(() => {}),
+      Sound.loadBuffer('sys_window', URL_WINDOW_SND).catch(() => {}),
+      Sound.loadBuffer('music_startup', URL_STARTUP).catch(() => {})
+    ]);
   }
 
   function pingWatchdog() { watchdogLastPing = Date.now(); }
@@ -1060,10 +1080,6 @@
     updateLoadingProgress();
     $('screen-loader').classList.add('show');
     await sleep(300);
-    if (webglSupported) {
-      animStart = performance.now();
-      animFrozen = false;
-    }
     await runLoaderPipeline();
   }
 
@@ -1087,13 +1103,11 @@
         chunks.push(value);
         received += value.length;
         stats.loadedBytes += value.length;
-        updateLoadingProgress();
       }
       blob = new Blob(chunks);
     } else {
       blob = await resp.blob();
       stats.loadedBytes += blob.size;
-      updateLoadingProgress();
     }
 
     if (!blob || blob.size === 0) throw new Error('Пустой файл');
@@ -1121,7 +1135,6 @@
     const cached = await dbGet(STORE_ASSETS, url);
     if (cached && cached.blob && cached.blob.size > 0) {
       stats.loadedBytes += cached.size;
-      updateLoadingProgress();
       return cached;
     }
     const blob = await downloadWithFallback(url);
@@ -1180,19 +1193,22 @@
     return collectedAssets;
   }
 
+  // ★ Сначала считаем размеры, потом качаем
   async function loadAllAssets(assets) {
     const failed = [];
 
-    const sizePromises = assets.map(async (a) => {
+    // 1) HEAD — точные размеры
+    stats.totalBytes = 0;
+    await Promise.all(assets.map(async (a) => {
       try {
         const r = await fetch(a.url, { method: 'HEAD', mode: 'cors' });
         const size = parseInt(r.headers.get('Content-Length') || '0', 10);
         stats.totalBytes += size || 0;
       } catch (e) {}
-    });
-    await Promise.all(sizePromises);
+    }));
     updateLoadingProgress();
 
+    // 2) Качаем по одному, прогресс реальный
     for (const a of assets) {
       try {
         await fetchAsset(a.url);
@@ -1318,13 +1334,16 @@
     await transitionToBlock(prev);
   }
 
-  // ★ Переход index → menu — лого растёт на 250% за 1.5 сек
+  // ★ Переход index → menu
+  // 1 сек — лого растёт + музыка затихает
+  // 1.5 сек — беление
+  // 0.7 сек — появление титульного
   async function goToMenuWithTransition() {
     const flash = $('white-flash');
     const logo = $('transition-logo');
     const img = logo.querySelector('img');
 
-    // Логотип в центре, начальный размер
+    // Логотип в центре
     logo.style.transition = 'none';
     logo.style.display = 'flex';
     logo.style.opacity = '0';
@@ -1332,23 +1351,25 @@
     img.style.transform = 'scale(1)';
     void img.offsetWidth;
 
-    // Лого появляется и растёт на 250% за 1.5 сек
+    // ★ Фаза 1: 1 сек — лого появляется + растёт до 250%, музыка затихает
     logo.style.transition = 'opacity 0.6s ease';
-    img.style.transition = 'transform 1.5s cubic-bezier(0.16,1,0.3,1)';
+    img.style.transition = 'transform 1s cubic-bezier(0.16,1,0.3,1)';
     logo.classList.add('show');
-    img.style.transform = 'scale(2.5)';   // ★ 250%
+    img.style.transform = 'scale(2.5)';
 
-    // Музыка затихает 1.5 сек
     if (window.Sound) {
-      try { Sound.setMusicVolume(0.0001, 1.5); } catch (e) {}
+      try { Sound.setMusicVolume(0.0001, 1.0); } catch (e) {}
     }
 
-    // Белый оверлей 1.5 сек
+    await sleep(1000);
+
+    // ★ Фаза 2: 1.5 сек — беление
     flash.style.transition = 'opacity 1.5s ease';
     flash.classList.add('show');
 
     await sleep(1500);
 
+    // Под белым — переключаем на menu
     $('screen-loader').style.display = 'none';
     $('game-container').style.display = 'block';
 
@@ -1364,14 +1385,15 @@
 
     await sleep(200);
 
+    // ★ Фаза 3: 0.7 сек — убираем белый, menu появляется
     flash.style.transition = 'opacity 0.7s ease';
     flash.classList.remove('show');
 
-    img.style.transition = 'transform 1.2s cubic-bezier(0.16,1,0.3,1), opacity 0.8s ease';
+    img.style.transition = 'transform 0.8s cubic-bezier(0.16,1,0.3,1), opacity 0.6s ease';
     img.style.transform = 'scale(1)';
     logo.classList.remove('show');
 
-    await sleep(1200);
+    await sleep(800);
     logo.style.display = 'none';
   }
 
@@ -1418,6 +1440,7 @@
     return [coarse, touch, noHover].filter(Boolean).length >= 2;
   }
 
+  // ★ Окно загрузки — замораживает всё под собой
   function showDownloadDialog(type, sizeMB) {
     return new Promise((resolve) => {
       const dialog = $('download-dialog');
@@ -1447,12 +1470,15 @@
       yesBtn.textContent = BT('dl_yes');
       noBtn.textContent = BT('dl_no');
 
+      // ★ Замораживаем флаг и музыку пока окно открыто
+      freezeWebGL();
+      if (window.Sound) {
+        try { Sound.pauseAll(); } catch (e) {}
+      }
+
       dialog.classList.add('show');
       requestAnimationFrame(() => {
         dialog.classList.add('dimmed');
-        if (window.Sound) {
-          try { Sound.setMusicVolume(0.0001, 0.5); } catch (e) {}
-        }
       });
 
       const cleanup = () => {
@@ -1464,6 +1490,11 @@
         if (window.Sound) { try { Sound.playSFX('sys_button', { volume: 0.8 }); } catch (e) {} }
         dialog.classList.remove('dimmed');
         setTimeout(() => dialog.classList.remove('show'), 700);
+        // Размораживаем
+        unfreezeWebGL();
+        if (window.Sound) {
+          try { Sound.resumeAll(); } catch (e) {}
+        }
         resolve('yes');
       };
       const onNo = () => {
@@ -1536,7 +1567,7 @@
     } catch (e) {}
   }
 
-  // ★ Последовательность: предупреждение → загрузка → окно → загрузка
+  // ★ Правильная последовательность
   async function runPWAMode() {
     $('pwa-view').classList.add('show');
     lockLandscape();
@@ -1560,19 +1591,14 @@
       if (!window.ORBITS.assets.find(x => x.url === a.url)) window.ORBITS.assets.push(a);
     }
 
-    // ★ 1. Показываем loader сразу, чтобы было куда положить анимацию «Загрузка...»
-    $('screen-loader').style.transition = 'opacity ' + LOADER_FADE_MS + 'ms ease';
-    $('screen-loader').classList.add('show');
-
-    if (!initWebGL()) console.warn('WebGL не поддерживается');
-    else startWebGL();
-
-    // ★ 2. Приоритетная загрузка — предупреждение + звуки (пока показывается loader)
-    try { await preloadCritical(); } catch (e) {}
-
-    // ★ 3. Показываем предупреждение
+    // ★ 1. СНАЧАЛА предупреждение (картинка + звуки грузятся в фоне)
     $('disclaimer-img').src = URL_DISCLAIMER;
     $('screen-disclaimer').classList.remove('hide');
+
+    // ★ 2. Параллельно — приоритетная загрузка (картинка + звуки)
+    try { await preloadCritical(); } catch (e) {}
+
+    // ★ 3. Ждём тап по предупреждению
     await sleep(700);
     await new Promise(resolve => {
       const handler = () => {
@@ -1581,16 +1607,20 @@
       };
       $('screen-disclaimer').addEventListener('click', handler);
     });
+
+    // ★ 4. Скрываем предупреждение и СРАЗУ показываем загрузку
     $('screen-disclaimer').classList.add('hide');
-    await sleep(1500);
+    $('screen-loader').style.transition = 'opacity ' + LOADER_FADE_MS + 'ms ease';
+    $('screen-loader').classList.add('show');
 
-    try { await prepareAll(); }
-    catch (e) { console.warn('prepareAll ошибка:', e.message); }
+    // ★ 5. Инициализируем WebGL (флаг) и стартуем анимацию
+    if (!initWebGL()) console.warn('WebGL не поддерживается');
+    else startWebGL();
 
-    try { await preloadSystemSounds(); }
-    catch (e) { console.warn('preloadSystemSounds ошибка:', e.message); }
+    // ★ 6. Ждём 0.7 сек — анимация загрузки видна, флаг крутится
+    await sleep(700);
 
-    // ★ 4. Загружаем манифест
+    // ★ 7. Загружаем манифест
     try {
       const resp = await fetch(LOAD_URL, { cache: 'no-store' });
       manifest = await resp.json();
@@ -1602,7 +1632,7 @@
       };
     }
 
-    // ★ 5. Определяем тип загрузки → показываем окно
+    // ★ 8. Определяем тип → показываем окно (замораживает всё под собой)
     const dlInfo = await determineDownloadType(manifest);
     if (dlInfo.type !== 'none') {
       let totalSize = 0;
@@ -1630,7 +1660,7 @@
 
     saveManifestInfo(manifest);
 
-    // ★ 6. Запускаем пайплайн загрузки
+    // ★ 9. Запускаем пайплайн загрузки
     await runLoaderPipeline();
   }
 
@@ -1638,6 +1668,7 @@
     if (loadingRunning) return;
     loadingRunning = true;
     startWatchdog();
+    startProgressTicker();
     const loadingStart = Date.now();
     pingWatchdog();
 
@@ -1650,7 +1681,7 @@
       collectedAssets = await loadAllBlocks(blocks);
       pingWatchdog();
     } catch (e) {
-      loadingRunning = false; stopWatchdog();
+      loadingRunning = false; stopWatchdog(); stopProgressTicker();
       freezeForError();
       showError('download', e.message);
       return;
@@ -1675,13 +1706,14 @@
       await verifyBlocks(blocks);
       pingWatchdog();
     } catch (e) {
-      loadingRunning = false; stopWatchdog();
+      loadingRunning = false; stopWatchdog(); stopProgressTicker();
       freezeForError();
       showError('corrupted', e.message);
       return;
     }
 
     stopWatchdog();
+    stopProgressTicker();
 
     await goToMenuWithTransition();
 

@@ -72,12 +72,28 @@
     50%     { box-shadow:0 0 0 14px rgba(110,168,255,0); }
   }
 
-  #loading-info { margin-top:18px; font-size:13px; color:#8892a8; letter-spacing:1px; min-height:20px; text-align:center; }
-
+  /* ★ Прогресс над надписью, реальный */
   #loading-progress {
-    margin-top:8px; font-size:12px; color:#6a7590;
-    letter-spacing:1px; font-variant-numeric: tabular-nums;
-    min-height:16px; text-align:center;
+    margin-top: 0;
+    margin-bottom: 14px;
+    font-size: 22px;
+    color: #ffffff;
+    letter-spacing: 3px;
+    font-variant-numeric: tabular-nums;
+    min-height: 26px;
+    text-align: center;
+    font-weight: 800;
+    text-shadow: 0 0 14px rgba(180,120,255,1), 0 0 28px rgba(140,80,255,0.6);
+  }
+
+  #loading-info {
+    margin-top: 0;
+    font-size: 14px;
+    color: #c8d4ff;
+    letter-spacing: 2px;
+    min-height: 20px;
+    text-align: center;
+    text-shadow: 0 0 10px rgba(140,80,255,0.5);
   }
 
   #logo-wrap {
@@ -313,7 +329,6 @@
     border: 1px solid rgba(255,255,255,0.25);
   }
 
-  /* ★ Переход между блоками */
   #block-transition {
     position: fixed; inset: 0; z-index: 99998;
     background: #000; opacity: 0; pointer-events: none;
@@ -330,9 +345,10 @@
     <div id="bg-overlay"></div>
 
     <div id="screen-start">
-      <button class="continue-btn" id="btn-continue" data-i18n="continue">Продолжить</button>
-      <div id="loading-info" data-i18n="loading"></div>
+      <!-- ★ Прогресс НАД надписью -->
       <div id="loading-progress"></div>
+      <div id="loading-info" data-i18n="loading">Загрузка...</div>
+      <button class="continue-btn" id="btn-continue" data-i18n="continue">Продолжить</button>
     </div>
 
     <div id="logo-wrap">
@@ -606,7 +622,6 @@
     }
   }
 
-  // ===== URL-константы =====
   const URL_LOAD_BG      = './Текстуры/Меню/Load1.jpg';
   const URL_DISCLAIMER   = './Текстуры/Меню/D1.jpg';
   const URL_STARTUP      = './Звуки/Меню/Startup.mp3';
@@ -651,11 +666,6 @@
     { key: 'continue_snd',  url: URL_CONTINUE_SND }
   ];
 
-  const CRITICAL_ASSETS = [
-    './Текстуры/Меню/Фон1.jpg',
-    './Звуки/Меню/Титульный.mp3'
-  ];
-
   const MIN_LOADING_MS = 2000;
   const WATCHDOG_MS = 60000;
   const LOADER_FADE_MS = 1500;
@@ -687,11 +697,15 @@
   }
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
 
+  // ★ Прогресс реальный, над надписью
   let stats = { loadedBytes: 0, totalBytes: 0 };
   function updateLoadingProgress() {
     const el = document.getElementById('loading-progress');
     if (!el) return;
-    if (stats.totalBytes === 0) { el.textContent = ''; return; }
+    if (stats.totalBytes === 0) {
+      el.textContent = '';
+      return;
+    }
     const loaded = stats.loadedBytes / (1024 * 1024);
     const total = stats.totalBytes / (1024 * 1024);
     el.textContent = loaded.toFixed(1) + ' МБ / ' + total.toFixed(1) + ' МБ';
@@ -754,7 +768,6 @@
     return 'fnv_' + h.toString(16).padStart(8, '0') + '_len_' + bytes.length.toString(16);
   }
 
-  // ===== WebGL флаг =====
   const VERT_SHADER = `
     attribute vec2 a_uv;
     uniform float u_time;
@@ -1057,7 +1070,6 @@
     await runLoaderPipeline();
   }
 
-  // ===== СКАЧИВАНИЕ =====
   async function downloadOnce(url) {
     const resp = await fetch(url, {
       mode: 'cors', credentials: 'omit', cache: 'no-store'
@@ -1088,7 +1100,7 @@
     }
 
     if (!blob || blob.size === 0) throw new Error('Пустой файл');
-    return { blob, totalBytes };
+    return blob;
   }
 
   async function downloadWithFallback(url) {
@@ -1096,8 +1108,8 @@
     for (let attempt = 1; attempt <= FETCH_TRIES; attempt++) {
       try {
         pingWatchdog();
-        const res = await downloadOnce(url);
-        return { blob: res.blob, totalBytes: res.totalBytes, finalUrl: url };
+        const blob = await downloadOnce(url);
+        return blob;
       } catch (e) {
         lastErr = e;
         console.warn('[download] попытка ' + attempt + '/' + FETCH_TRIES +
@@ -1109,15 +1121,13 @@
   }
 
   async function fetchAsset(url) {
-    // Проверяем кэш
     const cached = await dbGet(STORE_ASSETS, url);
     if (cached && cached.blob && cached.blob.size > 0) {
       stats.loadedBytes += cached.size;
       updateLoadingProgress();
       return cached;
     }
-    // Скачиваем
-    const { blob } = await downloadWithFallback(url);
+    const blob = await downloadWithFallback(url);
     const ab = await blob.arrayBuffer();
     const hash = await sha256(ab);
     const entry = { blob, hash, size: blob.size, url };
@@ -1175,7 +1185,8 @@
 
   async function loadAllAssets(assets) {
     const failed = [];
-    // Считаем размеры параллельно
+
+    // ★ Параллельно считаем размеры (HEAD) — быстрее
     const sizePromises = assets.map(async (a) => {
       try {
         const r = await fetch(a.url, { method: 'HEAD', mode: 'cors' });
@@ -1186,7 +1197,7 @@
     await Promise.all(sizePromises);
     updateLoadingProgress();
 
-    // Качаем по одному (чтобы прогресс был точным)
+    // ★ Качаем по одному, чтобы прогресс был точный
     for (const a of assets) {
       try {
         await fetchAsset(a.url);
@@ -1226,7 +1237,6 @@
     await sleep(50);
   }
 
-  // ===== API =====
   window.ORBITS = window.ORBITS || {
     assets: [],
     registerAssets: function (list) {
@@ -1248,43 +1258,37 @@
     }
   };
 
-  // ★ Плавный переход между блоками (1.5 сек затенение + музыка затихает)
+  // ★ Плавный переход между блоками
   async function transitionToBlock(url) {
     if (window.ErrorManager && ErrorManager.isOpen()) return;
 
     const bt = $('block-transition');
     const gameContainer = $('game-container');
 
-    // 1. Запускаем затенение и затихание музыки одновременно
     bt.style.transition = 'opacity 1.5s ease';
     bt.classList.add('show');
     if (window.Sound) {
       try { Sound.stopMusic(1.5); } catch (e) {}
     }
 
-    // 2. Ждём 1.5 секунды
     await sleep(1500);
 
-    // 3. Стек блоков
     const current = window.__ORBITS_CURRENT_BLOCK__;
     if (current && current !== url) {
       window.__ORBITS_BLOCK_STACK__.push(url);
     }
 
-    // 4. Очищаем контейнер
     if (gameContainer) {
       gameContainer.innerHTML = '';
       gameContainer.classList.add('show');
     }
 
-    // 5. Запускаем новый блок (у него своя анимация появления)
     try {
       await runBlock(url);
     } catch (e) {
       const lastOk = window.__ORBITS_LAST_OK_BLOCK__ || './menu.js';
       console.warn('[transition] не удалось открыть', url, '→ откат в', lastOk, e.message);
 
-      // Убираем затенение
       bt.style.transition = 'opacity 0.5s ease';
       bt.classList.remove('show');
 
@@ -1301,11 +1305,10 @@
       return;
     }
 
-    // 6. Ждём появления нового блока (0.9 сек)
-    await sleep(900);
+    // ★ Ждём появления нового блока (0.7 сек)
+    await sleep(700);
 
-    // 7. Убираем затенение — 0.9 сек
-    bt.style.transition = 'opacity 0.9s ease';
+    bt.style.transition = 'opacity 0.7s ease';
     bt.classList.remove('show');
   }
 
@@ -1322,13 +1325,12 @@
     await transitionToBlock(prev);
   }
 
-  // ★ Переход index → menu (1.5 сек все 3 одновременно)
+  // ★ Переход index → menu
   async function goToMenuWithTransition() {
     const flash = $('white-flash');
     const logo = $('transition-logo');
     const img = logo.querySelector('img');
 
-    // Подготовка логотипа
     logo.style.transition = 'none';
     logo.style.display = 'flex';
     logo.style.opacity = '0';
@@ -1336,25 +1338,20 @@
     img.style.transform = 'scale(0.6)';
     void img.offsetWidth;
 
-    // Логотип: появление + рост 1.5 сек
     logo.style.transition = 'opacity 0.6s ease';
     img.style.transition = 'transform 1.5s cubic-bezier(0.16,1,0.3,1)';
     logo.classList.add('show');
     img.style.transform = 'scale(2.2)';
 
-    // Музыка затихает 1.5 сек
     if (window.Sound) {
       try { Sound.setMusicVolume(0.0001, 1.5); } catch (e) {}
     }
 
-    // Белый оверлей 1.5 сек
     flash.style.transition = 'opacity 1.5s ease';
     flash.classList.add('show');
 
-    // Все 3 завершены одновременно
     await sleep(1500);
 
-    // Под белым — переключаем
     $('screen-loader').style.display = 'none';
     $('game-container').style.display = 'block';
 
@@ -1362,7 +1359,6 @@
       try { Sound.setMusicVolume(0.0001, 0); } catch (e) {}
     }
 
-    // Запуск menu.js
     try {
       await runBlock('./menu.js');
     } catch (e) {
@@ -1371,11 +1367,10 @@
 
     await sleep(200);
 
-    // Убираем белый за 0.9 сек (menu появляется)
-    flash.style.transition = 'opacity 0.9s ease';
+    // ★ Убираем белый за 0.7 сек
+    flash.style.transition = 'opacity 0.7s ease';
     flash.classList.remove('show');
 
-    // Логотип уменьшается
     img.style.transition = 'transform 1.2s cubic-bezier(0.16,1,0.3,1), opacity 0.8s ease';
     img.style.transform = 'scale(0.6)';
     logo.classList.remove('show');
@@ -1427,7 +1422,6 @@
     return [coarse, touch, noHover].filter(Boolean).length >= 2;
   }
 
-  // ===== ОКНА ЗАГРУЗКИ =====
   function showDownloadDialog(type, sizeMB) {
     return new Promise((resolve) => {
       const dialog = $('download-dialog');
@@ -1546,7 +1540,6 @@
     } catch (e) {}
   }
 
-  // ===== PWA =====
   async function runPWAMode() {
     $('pwa-view').classList.add('show');
     lockLandscape();
@@ -1570,10 +1563,8 @@
       if (!window.ORBITS.assets.find(x => x.url === a.url)) window.ORBITS.assets.push(a);
     }
 
-    // ★ Приоритетная загрузка для диалогов (картинка + звуки)
     try { await preloadCriticalForDialogs(); } catch (e) {}
 
-    // Загружаем манифест
     try {
       const resp = await fetch(LOAD_URL, { cache: 'no-store' });
       manifest = await resp.json();
@@ -1585,10 +1576,8 @@
       };
     }
 
-    // ★ Определяем тип загрузки
     const dlInfo = await determineDownloadType(manifest);
     if (dlInfo.type !== 'none') {
-      // Считаем общий размер
       let totalSize = 0;
       const allUrls = [];
       if (Array.isArray(manifest.blocks)) {
@@ -1614,7 +1603,6 @@
 
     saveManifestInfo(manifest);
 
-    // Disclaimer
     $('disclaimer-img').src = URL_DISCLAIMER;
     $('screen-disclaimer').classList.remove('hide');
     await sleep(700);
@@ -1697,7 +1685,6 @@
     loadingRunning = false;
   }
 
-  // ===== BROWSER =====
   async function runBrowserMode() {
     $('browser-view').classList.add('show');
     const mobileCheck = checkMobileOnly();

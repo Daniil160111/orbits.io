@@ -1,6 +1,14 @@
 /* =====================================================================
-   ORBITS.IO — MAIN MENU v4
+   ORBITS.IO — MAIN MENU v5
    Путь: menu.js
+
+   Изменения:
+   - Кнопка My Avatar под «Играть»
+   - Фон не двигается/не темнеет при переходе титульный → подменю
+   - Яркость фона на 50% меньше (1.5 → 0.75)
+   - Ripple реалистичный (преломление + каустика + хром. аберрация)
+   - Переход белый → титульный 0.7 сек
+   - Без Troll
    ===================================================================== */
 (function () {
   'use strict';
@@ -25,10 +33,30 @@
   }
 
   const DICT = {
-    ru: { solo: 'Одиночная игра', online: 'Игра онлайн', shop: 'Магазин', score: 'Рекорды', settings: 'Настройки', back: 'На титульный', tap: 'Нажмите на экран' },
-    en: { solo: 'Single player', online: 'Online', shop: 'Shop', score: 'Scores', settings: 'Settings', back: 'To title', tap: 'Tap the screen' },
-    fr: { solo: 'Solo', online: 'En ligne', shop: 'Boutique', score: 'Scores', settings: 'Paramètres', back: 'Au titre', tap: 'Touchez l\'écran' },
-    es: { solo: 'Un jugador', online: 'En línea', shop: 'Tienda', score: 'Récords', settings: 'Ajustes', back: 'Al título', tap: 'Toca la pantalla' }
+    ru: {
+      avatar: 'My Avatar',
+      solo: 'Одиночная игра', online: 'Игра онлайн',
+      shop: 'Магазин', score: 'Рекорды', settings: 'Настройки',
+      back: 'На титульный', tap: 'Нажмите на экран'
+    },
+    en: {
+      avatar: 'My Avatar',
+      solo: 'Single player', online: 'Online',
+      shop: 'Shop', score: 'Scores', settings: 'Settings',
+      back: 'To title', tap: 'Tap the screen'
+    },
+    fr: {
+      avatar: 'My Avatar',
+      solo: 'Solo', online: 'En ligne',
+      shop: 'Boutique', score: 'Scores', settings: 'Paramètres',
+      back: 'Au titre', tap: 'Touchez l\'écran'
+    },
+    es: {
+      avatar: 'My Avatar',
+      solo: 'Un jugador', online: 'En línea',
+      shop: 'Tienda', score: 'Récords', settings: 'Ajustes',
+      back: 'Al título', tap: 'Toca la pantalla'
+    }
   };
   function lang() {
     const l = (window.Settings && Settings.get('language')) || 'ru';
@@ -40,7 +68,12 @@
   }
 
   const BLOCK_MAP = {
-    solo: 'select', online: 'select', shop: 'shop', score: 'score', settings: 'settings'
+    avatar:   'my-avatar',   // ★ новый блок
+    solo:     'select',
+    online:   'select',
+    shop:     'shop',
+    score:    'score',
+    settings: 'settings'
   };
 
   const MUSIC_LOOP_START = 6.8;
@@ -53,9 +86,8 @@
   const SUB_APPEAR_MS  = 1000;
   const SOUND_LOCK_MS  = 350;
 
-  // ★ Тайминги переходов
-  const TRANSITION_OUT_MS = 1000;   // исчезновение 1 сек
-  const TRANSITION_IN_MS  = 700;    // появление 0.7 сек
+  const TRANSITION_OUT_MS = 1000;
+  const TRANSITION_IN_MS  = 700;
 
   let container = null;
   let persistentBg = null;
@@ -89,6 +121,9 @@
   function sfxVolume()   { const v = getS('sfxVolume');   return (typeof v === 'number') ? v : 0.8; }
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
   function vibeEnabled() { const v = getS('vibration');   return (typeof v === 'boolean') ? v : true; }
+
+  // ★ Вибрация усилена на 30%
+  const VIBE_MULT = 1.3;
 
   function sfx(name, baseVolume) {
     if (!window.Sound) return false;
@@ -130,7 +165,7 @@
     let t = 0;
     pulses.forEach((p) => {
       const id = setTimeout(() => {
-        if (canVibrate()) { try { navigator.vibrate(p.dur); } catch (e) {} }
+        if (canVibrate()) { try { navigator.vibrate(Math.round(p.dur * VIBE_MULT)); } catch (e) {} }
       }, t);
       vibeTimeouts.push(id);
       t += p.dur + p.pause;
@@ -139,11 +174,11 @@
   function vibrateButton() {
     if (!canVibrate()) return;
     stopVibrate();
-    try { navigator.vibrate([13, 30, 13]); } catch (e) {}
+    try { navigator.vibrate([Math.round(13 * VIBE_MULT), 30, Math.round(13 * VIBE_MULT)]); } catch (e) {}
   }
   function vibrateSensor() {
     if (!canVibrate()) return;
-    try { navigator.vibrate([7, 30, 7]); } catch (e) {}
+    try { navigator.vibrate([Math.round(7 * VIBE_MULT), 30, Math.round(7 * VIBE_MULT)]); } catch (e) {}
   }
 
   async function loadAssets() {
@@ -227,6 +262,7 @@
     return whiteOverlay;
   }
 
+  // ★ Ripple — реалистичный
   const RIPPLE_VERT = "attribute vec2 a_pos; varying vec2 v_uv; void main() { v_uv = a_pos * 0.5 + 0.5; gl_Position = vec4(a_pos, 0.0, 1.0); }";
   const RIPPLE_FRAG = `
     precision highp float;
@@ -236,6 +272,7 @@
     uniform float u_fade;
     uniform vec2 u_resolution;
     varying vec2 v_uv;
+
     float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float noise(vec2 p) {
       vec2 i = floor(p); vec2 f = fract(p);
@@ -246,53 +283,90 @@
       vec2 u = f * f * (3.0 - 2.0 * f);
       return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
     }
+
     void main() {
       vec2 uv = v_uv;
       vec2 aspectVec = vec2(u_resolution.x / u_resolution.y, 1.0);
       vec2 toCenter = (uv - u_center) * aspectVec;
       float dist = length(toCenter);
       float t = u_time;
-      float radius = t * 0.45;
-      float ringWidth = 0.10 * (1.0 - t * 0.5);
-      float crestWidth = 0.025 * (1.0 - t * 0.7);
+
+      // ★ Медленнее и мягче
+      float radius = t * 0.38;
+      float ringWidth = 0.14 * (1.0 - t * 0.55);
+      float crestWidth = 0.030 * (1.0 - t * 0.65);
+
+      // ★ 3 волны + слабая 4-я
       float ringMain = smoothstep(crestWidth, 0.0, abs(dist - radius));
-      float ring2 = smoothstep(crestWidth * 0.7, 0.0, abs(dist - radius * 0.65));
-      float ring3 = smoothstep(crestWidth * 0.4, 0.0, abs(dist - radius * 1.35));
+      float ring2 = smoothstep(crestWidth * 0.75, 0.0, abs(dist - radius * 0.68));
+      float ring3 = smoothstep(crestWidth * 0.45, 0.0, abs(dist - radius * 1.32));
+      float ring4 = smoothstep(crestWidth * 0.30, 0.0, abs(dist - radius * 1.75));
+      float ring5 = smoothstep(crestWidth * 0.20, 0.0, abs(dist - radius * 0.35));
+
       float distortZone = smoothstep(ringWidth, 0.0, abs(dist - radius));
-      float innerZone = smoothstep(radius + ringWidth, 0.0, dist) * 0.15;
+      float innerZone = smoothstep(radius + ringWidth, 0.0, dist) * 0.22;
       float distortMask = clamp(distortZone + innerZone, 0.0, 1.0);
+
       vec2 dir = normalize(toCenter + vec2(0.0001));
       vec2 tangent = vec2(-dir.y, dir.x);
-      float radialAmount = (ringMain * 1.0 + ring2 * 0.5 + ring3 * 0.3) * 0.06;
-      radialAmount += distortZone * 0.015;
-      float tangentAmount = (ring2 * 0.5 - ringMain * 0.3) * 0.035;
-      float nz = noise(uv * 45.0 + t * 2.5) * 0.012 * distortMask;
+
+      // ★ Реалистичное преломление — 2x сильнее, но без перебора
+      float radialAmount = (ringMain * 1.2 + ring2 * 0.7 + ring3 * 0.5 + ring4 * 0.3 + ring5 * 0.4) * 0.10;
+      radialAmount += distortZone * 0.025;
+      float tangentAmount = (ring2 * 0.7 - ringMain * 0.4 + ring5 * 0.3) * 0.050;
+
+      // ★ Микро-шум — дрожание воды
+      float nz = noise(uv * 55.0 + t * 2.8) * 0.018 * distortMask;
+      float nz2 = noise(uv * 120.0 - t * 4.5) * 0.008 * distortMask;
+
       vec2 distortedUV = uv
         - dir * radialAmount * distortMask / aspectVec
         + tangent * tangentAmount * distortMask / aspectVec
-        + vec2(nz);
+        + vec2(nz + nz2);
+
+      // ★ Хроматическая аберрация — RGB разъезжаются у гребня
+      float ca = ringMain * 0.016 * distortMask + ring2 * 0.008 * distortMask;
       vec4 bgColor = texture2D(u_tex, distortedUV);
-      float ca = ringMain * 0.010 * distortMask;
       vec4 bgR = texture2D(u_tex, distortedUV + dir * ca / aspectVec);
       vec4 bgB = texture2D(u_tex, distortedUV - dir * ca / aspectVec);
       bgColor = vec4(bgR.r, bgColor.g, bgB.b, 1.0);
-      vec3 h1 = vec3(1.0, 0.99, 1.0) * ringMain * 0.95;
-      vec3 h2 = vec3(0.9, 0.95, 1.0) * ring2 * 0.55;
-      vec3 h3 = vec3(0.85, 0.9, 1.0) * ring3 * 0.35;
-      float crest = smoothstep(crestWidth * 0.25, 0.0, abs(dist - radius));
-      vec3 crestH = vec3(1.0, 1.0, 1.0) * crest * 1.4;
-      float innerShadow = smoothstep(radius + crestWidth * 0.6, radius - crestWidth * 2.5, dist);
-      vec3 innerDark = vec3(0.0, 0.0, 0.06) * 0.4 * innerShadow * (1.0 - t);
-      float outerShadow = smoothstep(radius - crestWidth * 0.5, radius + crestWidth * 2.5, dist);
-      outerShadow *= smoothstep(radius + crestWidth * 5.0, radius + crestWidth * 1.5, dist);
-      vec3 outerDark = vec3(0.0, 0.0, 0.06) * 0.22 * outerShadow;
-      float glow = smoothstep(radius + 0.25, radius, dist) * 0.20;
-      vec3 glowColor = vec3(0.6, 0.8, 1.0) * glow * (1.0 - t);
-      vec3 effect = h1 + h2 + h3 + crestH + innerDark + outerDark + glowColor;
-      vec3 finalColor = bgColor.rgb + effect * distortMask;
+
+      // ★ Блики — как от солнца
+      vec3 h1 = vec3(1.0, 0.99, 1.0) * ringMain * 1.1;
+      vec3 h2 = vec3(0.92, 0.96, 1.0) * ring2 * 0.65;
+      vec3 h3 = vec3(0.88, 0.92, 1.0) * ring3 * 0.40;
+      vec3 h4 = vec3(0.85, 0.90, 1.0) * ring4 * 0.22;
+      vec3 h5 = vec3(0.95, 0.98, 1.0) * ring5 * 0.35;
+
+      // ★ Каустика — яркая точка в самом гребне
+      float crest = smoothstep(crestWidth * 0.20, 0.0, abs(dist - radius));
+      vec3 crestH = vec3(1.0, 1.0, 1.0) * crest * 1.6;
+
+      // ★ Внутренняя тень — «дыра» под волной
+      float innerShadow = smoothstep(radius + crestWidth * 0.7, radius - crestWidth * 2.8, dist);
+      vec3 innerDark = vec3(0.0, 0.0, 0.06) * 0.45 * innerShadow * (1.0 - t);
+
+      // ★ Внешняя тень — за волной
+      float outerShadow = smoothstep(radius - crestWidth * 0.5, radius + crestWidth * 2.8, dist);
+      outerShadow *= smoothstep(radius + crestWidth * 5.5, radius + crestWidth * 1.6, dist);
+      vec3 outerDark = vec3(0.0, 0.0, 0.06) * 0.24 * outerShadow;
+
+      // ★ Мягкое свечение
+      float glow = smoothstep(radius + 0.28, radius, dist) * 0.22;
+      vec3 glowColor = vec3(0.62, 0.82, 1.0) * glow * (1.0 - t);
+
+      vec3 effect = h1 + h2 + h3 + h4 + h5 + crestH + innerDark + outerDark + glowColor;
+
+      // ★ Тонирование — вода слегка голубая
+      vec3 waterTint = vec3(0.92, 0.96, 1.0);
+      vec3 bgTinted = bgColor.rgb * waterTint;
+
+      vec3 finalColor = bgTinted + effect * distortMask;
+
       float fadeAmt = smoothstep(0.66, 1.0, u_fade);
       float fade = 1.0 - fadeAmt;
-      vec3 result = mix(bgColor.rgb, finalColor, fade);
+      vec3 result = mix(bgTinted, finalColor, fade);
+
       gl_FragColor = vec4(result, 1.0);
     }
   `;
@@ -511,8 +585,10 @@
     screen.appendChild(stripes);
 
     const wrap = el('div', 'orbits-buttons');
+    // ★ My Avatar под «Играть» (solo)
     const items = [
       { label: T('solo'),     id: 'solo' },
+      { label: T('avatar'),   id: 'avatar' },
       { label: T('online'),   id: 'online' },
       { label: T('shop'),     id: 'shop' },
       { label: T('score'),    id: 'score' },
@@ -604,7 +680,6 @@
     back.addEventListener('touchend', goBack);
   }
 
-  // ★ Переход меню → подменю (исчезновение 1 сек, появление 0.7 сек)
   async function goToSubScreen() {
     if (currentScreen === 'sub') return;
     const title = container.querySelector('.orbits-title-screen');
@@ -614,7 +689,7 @@
     if (hint) { hint.style.transition = 'opacity 0.5s ease'; hint.classList.remove('show'); hint.style.opacity = '0'; }
     if (name) { name.style.transition = 'opacity 0.5s ease, transform 0.5s ease'; name.classList.remove('show'); name.style.opacity = '0'; }
 
-    // Титульный — исчезает 1 сек
+    // ★ Фон НЕ трогаем — только opacity title
     const oldTitle = container.querySelector('.orbits-title-screen');
     if (oldTitle) {
       oldTitle.style.transition = 'opacity ' + TRANSITION_OUT_MS + 'ms ease';
@@ -626,7 +701,6 @@
     container.appendChild(sub);
     attachButtonHandlers(sub);
 
-    // Подменю — появляется 0.7 сек
     await sleep(30);
     sub.style.transition = 'opacity ' + TRANSITION_IN_MS + 'ms ease';
     sub.classList.add('fade-in');
@@ -637,7 +711,6 @@
     subLock = false;
   }
 
-  // ★ Переход подменю → титульный (исчезновение 1 сек, появление 0.7 сек)
   async function goToTitleScreen() {
     const sub = container.querySelector('.orbits-sub-screen');
     if (!sub) { await showTitleScreen(false); return; }
@@ -656,21 +729,26 @@
   }
 
   function injectStyles() {
-    if (document.getElementById('orbits-menu-styles-v4')) return;
+    if (document.getElementById('orbits-menu-styles-v5')) return;
     const css = `
       .orbits-persistent-bg {
         position: absolute; inset: 0;
         background-size: cover; background-position: center;
-        opacity: 0; filter: brightness(1.5);
+        opacity: 0;
+        filter: brightness(0.75);   /* ★ было 1.5 → стало 0.75 (-50%) */
         transition: opacity 1.2s ease; z-index: 1;
+        will-change: opacity;
       }
       .orbits-persistent-bg.show { opacity: 1; }
+
       .orbits-ripple-wrap { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+
       .orbits-white-overlay {
         position: absolute; inset: 0; background: #ffffff;
         z-index: 9999; opacity: 0; pointer-events: none; will-change: opacity;
       }
       .orbits-white-overlay.show { opacity: 1; }
+
       .orbits-title-screen, .orbits-sub-screen {
         position: absolute; inset: 0; overflow: hidden;
         color: #fff; z-index: 5; pointer-events: auto;
@@ -678,6 +756,7 @@
       .orbits-title-screen { cursor: pointer; opacity: 1; }
       .orbits-sub-screen { opacity: 0; }
       .orbits-sub-screen.fade-in { opacity: 1; }
+
       .orbits-title-name {
         position: absolute; left: 6vw; bottom: 12vh;
         width: min(48vw, 600px); z-index: 5;
@@ -687,7 +766,7 @@
       .orbits-title-name.show { opacity: 1; transform: translateX(0); }
       .orbits-title-img {
         display: block; width: 100%; height: auto;
-        filter: brightness(1.5) drop-shadow(0 0 30px rgba(160,100,255,1));
+        filter: brightness(1.3) drop-shadow(0 0 30px rgba(160,100,255,1));
       }
       .orbits-tap-hint {
         position: absolute; left: 50%; bottom: 6vh;
@@ -701,10 +780,12 @@
       }
       .orbits-tap-hint.show { opacity: 0.95; }
       @keyframes orbits-hint-pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+
       .orbits-ripple-canvas {
         position: absolute; inset: 0; width: 100%; height: 100%;
         pointer-events: none; opacity: 0; transition: opacity 0.3s ease;
       }
+
       .orbits-veil {
         position: absolute; inset: 0;
         background: linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 55%);
@@ -726,17 +807,18 @@
       .orbits-sub-screen.fade-in .orbits-stripe-left  { transform: skewX(-8deg) translateY(0) translateX(-4%); }
       .orbits-sub-screen.fade-in .orbits-stripe-right { transform: skewX(-8deg) translateY(0) translateX(4%); }
       @keyframes orbits-stripe-move { 0% { background-position: 0 0; } 100% { background-position: 360px -360px; } }
+
       .orbits-buttons {
-        position: absolute; left: 6vw; top: 16vh;
+        position: absolute; left: 6vw; top: 14vh;
         width: min(48vw, 600px);
-        display: flex; flex-direction: column; gap: 2.2vh;
+        display: flex; flex-direction: column; gap: 1.6vh;
         z-index: 5;
       }
       .orbits-btn {
         position: relative; display: flex; align-items: center;
-        padding: 1.4vh 2.4vh;
+        padding: 1.1vh 2.2vh;
         background: rgba(230, 230, 240, 0.75);
-        color: #2a2a3a; font-size: 18px; letter-spacing: 1px;
+        color: #2a2a3a; font-size: 16px; letter-spacing: 1px;
         border-radius: 6px; cursor: pointer;
         transform-origin: left center;
         opacity: 0; transform: translateX(-60px) scale(0.9);
@@ -751,17 +833,18 @@
       .orbits-btn.appear { opacity: 1; transform: translateX(0) scale(1); filter: brightness(1); }
       .orbits-btn.hover, .orbits-btn.clicked {
         background: #ffb800; color: #1a1a22;
-        transform: scale(1.2, 1.3);
+        transform: scale(1.15, 1.25);
         transform-origin: left center;
         box-shadow: 0 0 32px rgba(255,184,0,0.9);
       }
       .orbits-btn-label { pointer-events: none; }
+
       .orbits-back-btn {
         position: absolute; left: 50%; bottom: 4vh;
         transform: translateX(-50%);
         padding: 1.4vh 3.6vh;
         background: rgba(230, 230, 240, 0.6);
-        color: #2a2a3a; font-size: 20px;
+        color: #2a2a3a; font-size: 18px;
         letter-spacing: 2px; text-transform: uppercase;
         border-radius: 10px; cursor: pointer;
         z-index: 6; opacity: 0;
@@ -775,7 +858,7 @@
       }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-menu-styles-v4';
+    style.id = 'orbits-menu-styles-v5';
     style.textContent = css;
     document.head.appendChild(style);
   }
@@ -795,13 +878,13 @@
     window.__ORBITS_RETURNING__ = false;
 
     if (!returning && !window.__ORBITS_MENU_SEEN__) {
-      // ★ Первый запуск — белый оверлей убирается 0.7 сек
       window.__ORBITS_MENU_SEEN__ = true;
       const ov = getWhiteOverlay();
       ov.style.transition = 'none';
       ov.style.opacity = '1';
       ov.classList.add('show');
       void ov.offsetWidth;
+      // ★ Убираем белый за 0.7 сек
       ov.style.transition = 'opacity ' + TRANSITION_IN_MS + 'ms ease';
       ov.style.opacity = '0';
       await sleep(TRANSITION_IN_MS);

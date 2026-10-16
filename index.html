@@ -72,30 +72,6 @@
     50%     { box-shadow:0 0 0 14px rgba(110,168,255,0); }
   }
 
-  /* ★ Прогресс над надписью, реальный */
-  #loading-progress {
-    margin-top: 0;
-    margin-bottom: 14px;
-    font-size: 22px;
-    color: #ffffff;
-    letter-spacing: 3px;
-    font-variant-numeric: tabular-nums;
-    min-height: 26px;
-    text-align: center;
-    font-weight: 800;
-    text-shadow: 0 0 14px rgba(180,120,255,1), 0 0 28px rgba(140,80,255,0.6);
-  }
-
-  #loading-info {
-    margin-top: 0;
-    font-size: 14px;
-    color: #c8d4ff;
-    letter-spacing: 2px;
-    min-height: 20px;
-    text-align: center;
-    text-shadow: 0 0 10px rgba(140,80,255,0.5);
-  }
-
   #logo-wrap {
     position:absolute; top:8%; left:50%; z-index:10;
     width: min(85vw, 640px); opacity:0;
@@ -205,6 +181,24 @@
     z-index:3; width: min(120vw, 1040px); height:auto; max-height:80vh; object-fit: contain;
     filter: drop-shadow(0 16px 60px rgba(140,80,255,0.85)); pointer-events:none;
   }
+
+  /* ★ Прогресс — над надписью */
+  #loading-progress {
+    position: absolute;
+    bottom: 8vh;
+    right: 5vw;
+    z-index: 5;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #ffffff;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 14px rgba(180,120,255,1), 0 0 28px rgba(140,80,255,0.6);
+    text-align: right;
+    pointer-events: none;
+    display: none;
+  }
+  #loading-progress.show { display: block; }
 
   #phase-label {
     position:absolute; bottom:4vh; right:5vw; z-index:5; color:#fff;
@@ -345,10 +339,8 @@
     <div id="bg-overlay"></div>
 
     <div id="screen-start">
-      <!-- ★ Прогресс НАД надписью -->
-      <div id="loading-progress"></div>
-      <div id="loading-info" data-i18n="loading">Загрузка...</div>
       <button class="continue-btn" id="btn-continue" data-i18n="continue">Продолжить</button>
+      <div id="loading-info" data-i18n="loading">Загрузка...</div>
     </div>
 
     <div id="logo-wrap">
@@ -391,6 +383,8 @@
     <div id="screen-loader">
       <canvas id="loader-canvas"></canvas>
       <img id="loader-logo-center" src="icon/name.png" alt="ORBITS.IO">
+
+      <div id="loading-progress"></div>
 
       <div id="phase-label">
         <span class="letter" style="animation-delay:0.00s">З</span>
@@ -666,7 +660,7 @@
     { key: 'continue_snd',  url: URL_CONTINUE_SND }
   ];
 
-  const MIN_LOADING_MS = 2000;
+  const MIN_LOADING_MS = 1000;   // ★ минимум 1 сек
   const WATCHDOG_MS = 60000;
   const LOADER_FADE_MS = 1500;
   const FETCH_TRIES = 3;
@@ -697,15 +691,16 @@
   }
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
 
-  // ★ Прогресс реальный, над надписью
+  // ★ Прогресс реальный
   let stats = { loadedBytes: 0, totalBytes: 0 };
   function updateLoadingProgress() {
     const el = document.getElementById('loading-progress');
     if (!el) return;
     if (stats.totalBytes === 0) {
-      el.textContent = '';
+      el.classList.remove('show');
       return;
     }
+    el.classList.add('show');
     const loaded = stats.loadedBytes / (1024 * 1024);
     const total = stats.totalBytes / (1024 * 1024);
     el.textContent = loaded.toFixed(1) + ' МБ / ' + total.toFixed(1) + ' МБ';
@@ -768,6 +763,7 @@
     return 'fnv_' + h.toString(16).padStart(8, '0') + '_len_' + bytes.length.toString(16);
   }
 
+  // ★ Шейдер флага — амплитуда в 2 раза меньше
   const VERT_SHADER = `
     attribute vec2 a_uv;
     uniform float u_time;
@@ -776,16 +772,16 @@
     varying float v_height;
     varying vec3 v_normal;
     float flagHeight(float u, float v, float t) {
-      float amp = (0.20 + u * 1.10) * 1.30;
-      float frontBoost = 1.0 + u * 0.6;
-      float backBoost  = 1.0 + (1.0 - u) * 0.4;
+      float amp = (0.10 + u * 0.55);   /* ★ было (0.20 + u * 1.10) * 1.30 — теперь в 2 раза меньше */
+      float frontBoost = 1.0 + u * 0.3;
+      float backBoost  = 1.0 + (1.0 - u) * 0.2;
       float w1 = sin(u * 6.0 + t * 2.4) * 0.35 * frontBoost;
       float w2 = sin(u * 9.5 - t * 1.9 + v * 1.5) * 0.20;
       float w3 = sin(v * 4.0 + t * 1.6) * 0.10 * backBoost;
       float w4 = sin(u * 2.5 - t * 0.8) * 0.15;
-      float w5 = sin(u * 12.0 + t * 3.1) * 0.12 * smoothstep(0.5, 1.0, u);
-      float w6 = sin(u * 14.0 - t * 2.7) * 0.10 * smoothstep(0.5, 0.0, u);
-      float sag = -cos(v * 3.14159) * 0.08;
+      float w5 = sin(u * 12.0 + t * 3.1) * 0.06 * smoothstep(0.5, 1.0, u);
+      float w6 = sin(u * 14.0 - t * 2.7) * 0.05 * smoothstep(0.5, 0.0, u);
+      float sag = -cos(v * 3.14159) * 0.04;
       return (w1 + w2 + w3 + w4 + w5 + w6) * amp + sag;
     }
     void main() {
@@ -797,13 +793,13 @@
       float ZOOM = 1.15;
       float x = (uv.x - 0.5) * 2.0 * ZOOM;
       float y = (uv.y - 0.5) * 2.0 * ZOOM;
-      float z = h * 1.30;
-      float xShift = sin(uv.x * 3.0 + t * 1.2) * 0.05 * (0.3 + uv.x);
+      float z = h * 0.65;   /* ★ глубина тоже в 2 раза меньше */
+      float xShift = sin(uv.x * 3.0 + t * 1.2) * 0.03 * (0.3 + uv.x);
       float eps = 0.01;
       float hx = flagHeight(uv.x + eps, uv.y, t);
       float hy = flagHeight(uv.x, uv.y + eps, t);
-      vec3 tangentX = vec3(eps * 2.0 * ZOOM, 0.0, (hx - h) * 1.30);
-      vec3 tangentY = vec3(0.0, eps * 2.0 * ZOOM, (hy - h) * 1.30);
+      vec3 tangentX = vec3(eps * 2.0 * ZOOM, 0.0, (hx - h) * 0.65);
+      vec3 tangentY = vec3(0.0, eps * 2.0 * ZOOM, (hy - h) * 0.65);
       vec3 normal = normalize(cross(tangentX, tangentY));
       v_normal = normal;
       gl_Position = vec4(x + xShift, y, z, 1.0);
@@ -843,7 +839,7 @@
       gl_FragColor = vec4(finalColor, 1.0);
     }
   `;
-  const GRID_X = 140, GRID_Y = 48;
+  const GRID_X = 100, GRID_Y = 36;
 
   function buildGrid() {
     const positions = [];
@@ -985,7 +981,8 @@
     await Promise.all(tasks);
   }
 
-  async function preloadCriticalForDialogs() {
+  // ★ Приоритетная загрузка — предупреждение + звуки
+  async function preloadCritical() {
     if (!window.Sound) return;
     await new Promise((resolve) => {
       const img = new Image();
@@ -1186,7 +1183,6 @@
   async function loadAllAssets(assets) {
     const failed = [];
 
-    // ★ Параллельно считаем размеры (HEAD) — быстрее
     const sizePromises = assets.map(async (a) => {
       try {
         const r = await fetch(a.url, { method: 'HEAD', mode: 'cors' });
@@ -1197,7 +1193,6 @@
     await Promise.all(sizePromises);
     updateLoadingProgress();
 
-    // ★ Качаем по одному, чтобы прогресс был точный
     for (const a of assets) {
       try {
         await fetchAsset(a.url);
@@ -1258,7 +1253,6 @@
     }
   };
 
-  // ★ Плавный переход между блоками
   async function transitionToBlock(url) {
     if (window.ErrorManager && ErrorManager.isOpen()) return;
 
@@ -1305,7 +1299,6 @@
       return;
     }
 
-    // ★ Ждём появления нового блока (0.7 сек)
     await sleep(700);
 
     bt.style.transition = 'opacity 0.7s ease';
@@ -1325,28 +1318,32 @@
     await transitionToBlock(prev);
   }
 
-  // ★ Переход index → menu
+  // ★ Переход index → menu — лого растёт на 250% за 1.5 сек
   async function goToMenuWithTransition() {
     const flash = $('white-flash');
     const logo = $('transition-logo');
     const img = logo.querySelector('img');
 
+    // Логотип в центре, начальный размер
     logo.style.transition = 'none';
     logo.style.display = 'flex';
     logo.style.opacity = '0';
     img.style.transition = 'none';
-    img.style.transform = 'scale(0.6)';
+    img.style.transform = 'scale(1)';
     void img.offsetWidth;
 
+    // Лого появляется и растёт на 250% за 1.5 сек
     logo.style.transition = 'opacity 0.6s ease';
     img.style.transition = 'transform 1.5s cubic-bezier(0.16,1,0.3,1)';
     logo.classList.add('show');
-    img.style.transform = 'scale(2.2)';
+    img.style.transform = 'scale(2.5)';   // ★ 250%
 
+    // Музыка затихает 1.5 сек
     if (window.Sound) {
       try { Sound.setMusicVolume(0.0001, 1.5); } catch (e) {}
     }
 
+    // Белый оверлей 1.5 сек
     flash.style.transition = 'opacity 1.5s ease';
     flash.classList.add('show');
 
@@ -1367,12 +1364,11 @@
 
     await sleep(200);
 
-    // ★ Убираем белый за 0.7 сек
     flash.style.transition = 'opacity 0.7s ease';
     flash.classList.remove('show');
 
     img.style.transition = 'transform 1.2s cubic-bezier(0.16,1,0.3,1), opacity 0.8s ease';
-    img.style.transform = 'scale(0.6)';
+    img.style.transform = 'scale(1)';
     logo.classList.remove('show');
 
     await sleep(1200);
@@ -1540,6 +1536,7 @@
     } catch (e) {}
   }
 
+  // ★ Последовательность: предупреждение → загрузка → окно → загрузка
   async function runPWAMode() {
     $('pwa-view').classList.add('show');
     lockLandscape();
@@ -1563,8 +1560,37 @@
       if (!window.ORBITS.assets.find(x => x.url === a.url)) window.ORBITS.assets.push(a);
     }
 
-    try { await preloadCriticalForDialogs(); } catch (e) {}
+    // ★ 1. Показываем loader сразу, чтобы было куда положить анимацию «Загрузка...»
+    $('screen-loader').style.transition = 'opacity ' + LOADER_FADE_MS + 'ms ease';
+    $('screen-loader').classList.add('show');
 
+    if (!initWebGL()) console.warn('WebGL не поддерживается');
+    else startWebGL();
+
+    // ★ 2. Приоритетная загрузка — предупреждение + звуки (пока показывается loader)
+    try { await preloadCritical(); } catch (e) {}
+
+    // ★ 3. Показываем предупреждение
+    $('disclaimer-img').src = URL_DISCLAIMER;
+    $('screen-disclaimer').classList.remove('hide');
+    await sleep(700);
+    await new Promise(resolve => {
+      const handler = () => {
+        $('screen-disclaimer').removeEventListener('click', handler);
+        resolve();
+      };
+      $('screen-disclaimer').addEventListener('click', handler);
+    });
+    $('screen-disclaimer').classList.add('hide');
+    await sleep(1500);
+
+    try { await prepareAll(); }
+    catch (e) { console.warn('prepareAll ошибка:', e.message); }
+
+    try { await preloadSystemSounds(); }
+    catch (e) { console.warn('preloadSystemSounds ошибка:', e.message); }
+
+    // ★ 4. Загружаем манифест
     try {
       const resp = await fetch(LOAD_URL, { cache: 'no-store' });
       manifest = await resp.json();
@@ -1576,6 +1602,7 @@
       };
     }
 
+    // ★ 5. Определяем тип загрузки → показываем окно
     const dlInfo = await determineDownloadType(manifest);
     if (dlInfo.type !== 'none') {
       let totalSize = 0;
@@ -1603,31 +1630,7 @@
 
     saveManifestInfo(manifest);
 
-    $('disclaimer-img').src = URL_DISCLAIMER;
-    $('screen-disclaimer').classList.remove('hide');
-    await sleep(700);
-    await new Promise(resolve => {
-      const handler = () => {
-        $('screen-disclaimer').removeEventListener('click', handler);
-        resolve();
-      };
-      $('screen-disclaimer').addEventListener('click', handler);
-    });
-    $('screen-disclaimer').classList.add('hide');
-    await sleep(1500);
-
-    $('screen-loader').style.transition = 'opacity ' + LOADER_FADE_MS + 'ms ease';
-    $('screen-loader').classList.add('show');
-
-    if (!initWebGL()) console.warn('WebGL не поддерживается');
-    else startWebGL();
-
-    try { await prepareAll(); }
-    catch (e) { console.warn('prepareAll ошибка:', e.message); }
-
-    try { await preloadSystemSounds(); }
-    catch (e) { console.warn('preloadSystemSounds ошибка:', e.message); }
-
+    // ★ 6. Запускаем пайплайн загрузки
     await runLoaderPipeline();
   }
 
@@ -1842,4 +1845,4 @@
 })();
 </script>
 </body>
-  </html>
+</html>

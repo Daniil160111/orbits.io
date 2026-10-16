@@ -2,47 +2,20 @@
    ORBITS.IO — SOUND ENGINE
    Путь: sounds.js
 
-   API:
-     Sound.init()
-     Sound.unlock()
-     Sound.loadBuffer(key, source)
-     Sound.playMusic(key, opts)
-     Sound.playMusicIntroLoop(key, opts)
-     Sound.stopMusic(fadeOut)
-     Sound.playSFX(key, opts)
-     Sound.playSys(name, baseVolume)   ← ★ новый: играет системный звук
-     Sound.hasBuffer(key)
-     Sound.getDuration(key)
-     Sound.setMasterVolume / setMusicVolume / setSFXVolume
-     Sound.mute / unmute / pauseAll / resumeAll
-     Sound.getSysList()                 ← ★ новый: список системных
+   Поддерживает три режима:
+   - mono: всё миксуется в моно
+   - stereo: обычное стерео (по умолчанию)
+   - spatial: позиционирование через PannerNode (3D)
    ===================================================================== */
 (function (global) {
   'use strict';
-
-  // ★ Список системных звуков — единая точка правды
-  const SYS_SOUNDS = {
-    back_select_menu: './Звуки/Система/Back-select-menu.wav',
-    back:             './Звуки/Система/Back.wav',
-    blok_slot:        './Звуки/Система/Blok_slot.wav',
-    button:           './Звуки/Система/Button.wav',
-    error:            './Звуки/Система/Error.wav',
-    message:          './Звуки/Система/Message.wav',
-    save:             './Звуки/Система/Save.wav',
-    setting:          './Звуки/Система/Setting.wav',
-    start_race:       './Звуки/Система/Start-race-menu-to-select.wav',
-    tap_screen:       './Звуки/Система/Tap-to-screen.wav',
-    unblok_slot:      './Звуки/Система/Unblok_slot.wav',
-    window:           './Звуки/Система/Window.wav'
-  };
-
-  const SYS_PREFIX = 'sys_';
 
   const Sound = {
     ctx: null,
     masterGain: null,
     musicGain: null,
     sfxGain: null,
+    monoGain: null,
     unlocked: false,
 
     _buffers: {},
@@ -50,7 +23,10 @@
     _sfxPool: [],
     _poolSize: 16,
     _securityInstalled: false,
-    _sysPreloaded: false,
+
+    _audioMode: 'stereo',
+    _spatialEnabled: false,
+    _listener: null,
 
     init() {
       if (this.ctx) return this.ctx;
@@ -62,7 +38,12 @@
       this.musicGain  = this.ctx.createGain(); this.musicGain.gain.value  = 1.0;
       this.sfxGain    = this.ctx.createGain(); this.sfxGain.gain.value    = 1.0;
 
-      this.musicGain.connect(this.masterGain);
+      // Моно-узел (для принудительного моно). Проходит, если режим stereo или spatial.
+      this.monoGain = this.ctx.createGain();
+      this.monoGain.gain.value = 1.0;
+      // Стерео-в-моно через понижение каналов делается через ChannelMergerNode вручную в _applyOutputMode.
+
+      this.musicGain.connect(this.sfxGain ? this.masterGain : this.masterGain);
       this.sfxGain.connect(this.masterGain);
       this.masterGain.connect(this.ctx.destination);
 
@@ -72,8 +53,96 @@
         this._sfxPool.push({ gain: g, busy: false, source: null });
       }
 
+      // Применяем сохранённый режим
+      const savedMode = (global.Settings && Settings.get('audioMode')) || 'stereo';
+      const savedSpatial = (global.Settings && Settings.get('spatialEnabled')) || false;
+      this.setAudioMode(savedMode, savedSpatial);
+
       this.installSecurity();
       return this.ctx;
+    },
+
+    /**
+     * Устанавливает режим звука.
+     * @param mode 'mono' | 'stereo' | 'spatial'
+     * @param spatialEnabled true — если включён 3D-звук (только для spatial)
+     */
+    setAudioMode(mode, spatialEnabled) {
+      this._audioMode = mode || 'stereo';
+      this._spatialEnabled = !!spatialEnabled && this._audioMode === 'spatial';
+
+      if (!this.ctx) return;
+
+      // Применяем моно, если нужно
+      // (в Web Audio нет простого способа сделать "моно" без пересборки графа,
+      //  но ChannelMergerNode с одним каналом + отключение панорамы работает)
+      try {
+        if (this._audioMode === 'mono') {
+          this._applyMonoOutput();
+        } else {
+          this._applyStereoOutput();
+        }
+      } catch (e) {
+        console.warn('[Sound] setAudioMode error:', e.message);
+      }
+    },
+
+    _applyMonoOutput() {
+      // Простой путь: сужаем masterGain до одного канала через ChannelMergerNode
+      if (!this.ctx) return;
+      try {
+        if (!this._monoMerger) {
+          this._monoMerger = this.ctx.createChannelMerger(1);
+          this._monoSplitter = this.ctx.createChannelSplitter(2);
+        }
+        // Отключаем masterGain от destination, если был подключён
+        try { this.masterGain.disconnect(); } catch (e) {}
+        // Схема: masterGain -> splitter -> (L+R в один канал) -> merger(1) -> destination
+        this.masterGain.connect(this._monoSplitter);
+        // Соединяем оба канала в один вход merger (0)
+        try { this._monoSplitter.connect(this._monoMerger, 0, 0); } catch (e) {}
+        try { this._monoSplitter.connect(this._monoMerger, 1, 0); } catch (e) {}
+        this._monoMerger.connect(this.ctx.destination);
+      } catch (e) {}
+    },
+
+    _applyStereoOutput() {
+      if (!this.ctx) return;
+      try { this.masterGain.disconnect(); } catch (e) {}
+      try { if (this._monoSplitter) this._monoSplitter.disconnect(); } catch (e) {}
+      try { if (this._monoMerger) this._monoMerger.disconnect(); } catch (e) {}
+      this.masterGain.connect(this.ctx.destination);
+    },
+
+    /**
+     * Обновление позиции слушателя (для spatial).
+     * @param pos {x, y, z} — позиция
+     * @param forward {x, y, z} — направление взгляда
+     * @param up {x, y, z} — верх
+     */
+    updateListener(pos, forward, up) {
+      if (!this.ctx || !this._spatialEnabled) return;
+      const l = this.ctx.listener;
+      const t = this.ctx.currentTime;
+      const fwd = forward || { x: 0, y: 0, z: -1 };
+      const u = up || { x: 0, y: 1, z: 0 };
+
+      if (l.positionX) {
+        // Modern API
+        l.positionX.setValueAtTime(pos.x, t);
+        l.positionY.setValueAtTime(pos.y, t);
+        l.positionZ.setValueAtTime(pos.z, t);
+        l.forwardX.setValueAtTime(fwd.x, t);
+        l.forwardY.setValueAtTime(fwd.y, t);
+        l.forwardZ.setValueAtTime(fwd.z, t);
+        l.upX.setValueAtTime(u.x, t);
+        l.upY.setValueAtTime(u.y, t);
+        l.upZ.setValueAtTime(u.z, t);
+      } else if (l.setPosition) {
+        // Legacy API
+        l.setPosition(pos.x, pos.y, pos.z);
+        l.setOrientation(fwd.x, fwd.y, fwd.z, u.x, u.y, u.z);
+      }
     },
 
     installSecurity() {
@@ -167,6 +236,33 @@
     },
 
     _stopNode(node, when) { try { node.stop(when); } catch (e) {} },
+
+    /**
+     * Создаёт PannerNode, если режим spatial и spatialEnabled.
+     * Иначе возвращает null — звук будет обычным.
+     */
+    _createPanner(pos) {
+      if (!this._spatialEnabled || !this.ctx) return null;
+      if (!this.ctx.createPanner) return null;
+      try {
+        const p = this.ctx.createPanner();
+        p.panningModel = 'HRTF';
+        p.distanceModel = 'inverse';
+        p.refDistance = 1;
+        p.maxDistance = 100;
+        p.rolloffFactor = 1;
+        if (p.positionX) {
+          p.positionX.value = pos.x;
+          p.positionY.value = pos.y;
+          p.positionZ.value = pos.z;
+        } else if (p.setPosition) {
+          p.setPosition(pos.x, pos.y, pos.z);
+        }
+        return p;
+      } catch (e) {
+        return null;
+      }
+    },
 
     async playMusic(key, opts = {}) {
       this.init();
@@ -303,7 +399,14 @@
 
       const src = this.ctx.createBufferSource();
       src.buffer = buffer;
-      src.connect(slot.gain);
+
+      const panner = opts.position ? this._createPanner(opts.position) : null;
+      if (panner) {
+        src.connect(panner);
+        panner.connect(slot.gain);
+      } else {
+        src.connect(slot.gain);
+      }
 
       slot.gain.gain.cancelScheduledValues(this.ctx.currentTime);
       slot.gain.gain.setValueAtTime(opts.volume ?? 1.0, this.ctx.currentTime);
@@ -314,46 +417,6 @@
       src.start(0);
       slot.source = src;
     },
-
-    // ★ НОВЫЙ API: играет системный звук по короткому имени
-    // name: 'button' | 'back' | 'error' | 'save' | 'setting' | 'window'
-    //       'message' | 'start_race' | 'tap_screen' | 'blok_slot'
-    //       'unblok_slot' | 'back_select_menu'
-    // baseVolume: 0..1
-    // Возвращает true если звук реально проиграл
-    playSys(name, baseVolume) {
-      if (!name) return false;
-      const url = SYS_SOUNDS[name];
-      if (!url) return false;
-      const key = SYS_PREFIX + name;
-      if (!this._buffers[key]) {
-        // Если не загружен — попробуем загрузить в фоне и не играем
-        this.loadBuffer(key, url).catch(() => {});
-        return false;
-      }
-      const vol = (typeof baseVolume === 'number') ? baseVolume : 1.0;
-      this.playSFX(key, { volume: vol, fadeIn: 0 });
-      return true;
-    },
-
-    // ★ Предзагрузка всех системных звуков
-    async preloadAllSys() {
-      if (this._sysPreloaded) return;
-      this._sysPreloaded = true;
-      this.init();
-      if (!this.ctx) return;
-      const tasks = [];
-      for (const name in SYS_SOUNDS) {
-        const key = SYS_PREFIX + name;
-        if (!this._buffers[key]) {
-          tasks.push(this.loadBuffer(key, SYS_SOUNDS[name]).catch(() => {}));
-        }
-      }
-      await Promise.all(tasks);
-    },
-
-    // ★ Список системных звуков (для диагностики)
-    getSysList() { return Object.keys(SYS_SOUNDS); },
 
     setMasterVolume(v, fade = 0) { this._ramp(this.masterGain.gain, v, fade); },
     setMusicVolume(v, fade = 0)  { this._ramp(this.musicGain.gain, v, fade); },
@@ -376,16 +439,44 @@
     hasBuffer(key) { return !!this._buffers[key]; },
     getDuration(key) { return this._buffers[key] ? this._buffers[key].duration : 0; },
     unloadBuffer(key) { delete this._buffers[key]; },
-    unloadAll() { this._buffers = {}; this._sysPreloaded = false; }
-  };
+    unloadAll() { this._buffers = {}; },
 
-  // Автопредзагрузка системных звуков при первой возможности
-  // (после unlock — пользователь кликнул, аудио разрешено)
-  const originalUnlock = Sound.unlock.bind(Sound);
-  Sound.unlock = async function () {
-    const ok = await originalUnlock();
-    if (ok) { try { await Sound.preloadAllSys(); } catch (e) {} }
-    return ok;
+    getAudioMode() { return this._audioMode; },
+    isSpatialEnabled() { return this._spatialEnabled; },
+
+    /**
+     * Проверка поддержки режима.
+     * mono: ctx есть
+     * stereo: ctx есть и createStereoPanner или default stereo
+     * spatial: ctx есть и createPanner
+     * 3D с камерой: ctx есть, createPanner есть, getUserMedia есть
+     */
+    isSupported(mode) {
+      const AC = global.AudioContext || global.webkitAudioContext;
+      if (!AC) return { ok: false, reason: 'no-webaudio' };
+      let testCtx;
+      try { testCtx = new AC(); } catch (e) { return { ok: false, reason: 'no-webaudio' }; }
+      if (mode === 'mono' || mode === 'stereo') {
+        try { testCtx.close(); } catch (e) {}
+        return { ok: true };
+      }
+      if (mode === 'spatial') {
+        const hasPanner = !!testCtx.createPanner;
+        try { testCtx.close(); } catch (e) {}
+        if (!hasPanner) return { ok: false, reason: 'no-panner' };
+        return { ok: true };
+      }
+      return { ok: false, reason: 'unknown' };
+    },
+
+    is3DCameraSupported() {
+      const AC = global.AudioContext || global.webkitAudioContext;
+      if (!AC) return { ok: false, reason: 'no-webaudio' };
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        return { ok: false, reason: 'no-camera-api' };
+      }
+      return { ok: true };
+    }
   };
 
   global.Sound = Sound;

@@ -13,8 +13,7 @@
     sfxBtn:   './Звуки/Система/Button.wav',
     sfxSet:   './Звуки/Система/Setting.wav',
     sfxSave:  './Звуки/Система/Save.wav',
-    sfxBack:  './Звуки/Система/Back.wav',
-    sfxBackMenu: './Звуки/Система/Back-select-menu.wav'
+    sfxBack:  './Звуки/Система/Back.wav'
   };
 
   if (window.ORBITS && ORBITS.registerAssets) {
@@ -34,6 +33,18 @@
       nickname: 'Ник', music: 'Музыка', sfx: 'Эффекты',
       vibration: 'Вибрация', brightness: 'Яркость', language: 'Язык',
       lang_title: 'Язык',
+      audio_title: 'Аудио-режим',
+      audio_mono: 'Моно',
+      audio_stereo: 'Стерео',
+      audio_spatial: 'Пространственный',
+      audio_3d_toggle: '3D-звук через камеру',
+      audio_calibrate: 'Калибровка',
+      audio_calibrate_soon: 'Калибровка появится позже',
+      help_title: 'Пояснение',
+      help_audio_mono: 'Все звуки объединяются в один канал.\nРаботает на одном динамике и более.',
+      help_audio_stereo: 'Обычный стереозвук. Левый и правый каналы.\nТребуется два динамика и более.',
+      help_audio_spatial: 'Звуки позиционируются в 3D-пространстве вокруг игрока.\nТребуется два динамика и более.',
+      help_audio_3d: 'Стереоскопический 3D-звук с учётом положения головы.\nТребуется фронтальная камера.',
       unsaved_title: 'Несохранённые изменения',
       unsaved_text: 'Вы изменили настройки, но не сохранили их.\nЧто сделать?',
       unsaved_save: 'Сохранить и выйти',
@@ -47,17 +58,25 @@
       reset_confirm2_title: 'Вы уверены?',
       reset_confirm2_text: 'Это действие нельзя отменить.',
       reset_confirm2_yes: 'Стереть навсегда',
-      reset_doing: 'Очистка...',
-      device_title: 'Устройство',
-      device_score: 'Баллы',
-      device_power: 'Мощность',
-      device_adapt: 'Адаптирование системы'
+      reset_doing: 'Очистка...'
     },
     en: {
       title: 'Settings', back: 'Back', save: 'Save',
       nickname: 'Nickname', music: 'Music', sfx: 'Effects',
       vibration: 'Vibration', brightness: 'Brightness', language: 'Language',
       lang_title: 'Language',
+      audio_title: 'Audio mode',
+      audio_mono: 'Mono',
+      audio_stereo: 'Stereo',
+      audio_spatial: 'Spatial',
+      audio_3d_toggle: '3D sound via camera',
+      audio_calibrate: 'Calibrate',
+      audio_calibrate_soon: 'Calibration will come later',
+      help_title: 'Explanation',
+      help_audio_mono: 'All sounds are merged into one channel.\nWorks on one or more speakers.',
+      help_audio_stereo: 'Standard stereo. Left and right channels.\nRequires two or more speakers.',
+      help_audio_spatial: 'Sounds are positioned in 3D space around the player.\nRequires two or more speakers.',
+      help_audio_3d: 'Stereoscopic 3D sound with head tracking.\nRequires a front camera.',
       unsaved_title: 'Unsaved changes',
       unsaved_text: 'You changed settings but didn\'t save them.\nWhat to do?',
       unsaved_save: 'Save and exit',
@@ -71,17 +90,25 @@
       reset_confirm2_title: 'Are you sure?',
       reset_confirm2_text: 'This action cannot be undone.',
       reset_confirm2_yes: 'Erase forever',
-      reset_doing: 'Erasing...',
-      device_title: 'Device',
-      device_score: 'Score',
-      device_power: 'Power',
-      device_adapt: 'System adaptation'
+      reset_doing: 'Erasing...'
     },
     fr: {
       title: 'Paramètres', back: 'Retour', save: 'Enregistrer',
       nickname: 'Pseudo', music: 'Musique', sfx: 'Effets',
       vibration: 'Vibration', brightness: 'Luminosité', language: 'Langue',
       lang_title: 'Langue',
+      audio_title: 'Mode audio',
+      audio_mono: 'Mono',
+      audio_stereo: 'Stéréo',
+      audio_spatial: 'Spatial',
+      audio_3d_toggle: 'Son 3D via caméra',
+      audio_calibrate: 'Calibrer',
+      audio_calibrate_soon: 'La calibration viendra plus tard',
+      help_title: 'Explication',
+      help_audio_mono: 'Tous les sons sont fusionnés en un canal.\nFonctionne sur un ou plusieurs haut-parleurs.',
+      help_audio_stereo: 'Stéréo standard. Canaux gauche et droit.\nNécessite deux haut-parleurs ou plus.',
+      help_audio_spatial: 'Les sons sont positionnés dans l\'espace 3D autour du joueur.\nNécessite deux haut-parleurs ou plus.',
+      help_audio_3d: 'Son 3D stéréoscopique avec suivi de tête.\nNécessite une caméra frontale.',
       unsaved_title: 'Modifications non enregistrées',
       unsaved_text: 'Vous avez modifié les paramètres sans les enregistrer.\nQue faire ?',
       unsaved_save: 'Enregistrer et quitter',
@@ -95,17 +122,25 @@
       reset_confirm2_title: 'Êtes-vous sûr ?',
       reset_confirm2_text: 'Cette action est irréversible.',
       reset_confirm2_yes: 'Effacer définitivement',
-      reset_doing: 'Suppression...',
-      device_title: 'Appareil',
-      device_score: 'Score',
-      device_power: 'Puissance',
-      device_adapt: 'Adaptation système'
+      reset_doing: 'Suppression...'
     },
     es: {
       title: 'Ajustes', back: 'Atrás', save: 'Guardar',
       nickname: 'Apodo', music: 'Música', sfx: 'Efectos',
       vibration: 'Vibración', brightness: 'Brillo', language: 'Idioma',
       lang_title: 'Idioma',
+      audio_title: 'Modo de audio',
+      audio_mono: 'Mono',
+      audio_stereo: 'Estéreo',
+      audio_spatial: 'Espacial',
+      audio_3d_toggle: 'Sonido 3D por cámara',
+      audio_calibrate: 'Calibrar',
+      audio_calibrate_soon: 'La calibración llegará más tarde',
+      help_title: 'Explicación',
+      help_audio_mono: 'Todos los sonidos se combinan en un canal.\nFunciona con uno o más altavoces.',
+      help_audio_stereo: 'Estéreo estándar. Canales izquierdo y derecho.\nRequiere dos o más altavoces.',
+      help_audio_spatial: 'Los sonidos se posicionan en el espacio 3D alrededor del jugador.\nRequiere dos o más altavoces.',
+      help_audio_3d: 'Sonido 3D estereoscópico con seguimiento de cabeza.\nRequiere cámara frontal.',
       unsaved_title: 'Cambios sin guardar',
       unsaved_text: 'Has cambiado los ajustes sin guardarlos.\n¿Qué hacer?',
       unsaved_save: 'Guardar y salir',
@@ -119,11 +154,7 @@
       reset_confirm2_title: '¿Estás seguro?',
       reset_confirm2_text: 'Esta acción no se puede deshacer.',
       reset_confirm2_yes: 'Borrar para siempre',
-      reset_doing: 'Borrando...',
-      device_title: 'Dispositivo',
-      device_score: 'Puntuación',
-      device_power: 'Potencia',
-      device_adapt: 'Adaptación del sistema'
+      reset_doing: 'Borrando...'
     }
   };
   function lang() {
@@ -137,6 +168,8 @@
 
   const LANG_LIST = ['ru', 'en', 'fr', 'es'];
   const LANG_LABELS = ['RU', 'EN', 'FR', 'ES'];
+  const AUDIO_MODES = ['mono', 'stereo', 'spatial'];
+  const AUDIO_LABELS = { mono: 'audio_mono', stereo: 'audio_stereo', spatial: 'audio_spatial' };
 
   let container = null;
   let root = null;
@@ -148,10 +181,6 @@
   let currentPage = 'main';
   let vibeTimeouts = [];
 
-  const SOUND_LOCK_MS = 350;
-  let soundLockActive = false;
-  let soundLockTimer = null;
-
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const el = (tag, cls, html) => {
     const e = document.createElement(tag);
@@ -161,14 +190,10 @@
   };
 
   function getS(key) { return (window.Settings && window.Settings.get) ? window.Settings.get(key) : undefined; }
-  function sfxVolume() { const v = getS('sfxVolume'); return (typeof v === 'number') ? v : 0.8; }
-  function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
 
+  // ===== ВИБРАЦИЯ =====
   function vibeEnabled() { const v = getS('vibration'); return (typeof v === 'boolean') ? v : true; }
   const canVibrate = () => !!navigator.vibrate && vibeEnabled();
-
-  const VIBE_MULT = 1.0;
-
   function stopVibrate() {
     vibeTimeouts.forEach(t => clearTimeout(t));
     vibeTimeouts = [];
@@ -181,7 +206,7 @@
     if (now - lastVibeTime < 40) return;
     lastVibeTime = now;
     const strength = Math.max(1, Math.min(12, Math.round(speedPxPerSec / 180)));
-    try { navigator.vibrate(Math.round(strength * VIBE_MULT)); } catch (e) {}
+    try { navigator.vibrate(strength); } catch (e) {}
   }
   function vibrateButton() {
     if (!canVibrate()) return;
@@ -193,7 +218,7 @@
     let t = 0;
     pulses.forEach((p) => {
       const id = setTimeout(() => {
-        if (canVibrate()) { try { navigator.vibrate(Math.round(p.dur * VIBE_MULT)); } catch (e) {} }
+        if (canVibrate()) { try { navigator.vibrate(p.dur); } catch (e) {} }
       }, t);
       vibeTimeouts.push(id);
       t += p.dur + p.pause;
@@ -209,42 +234,33 @@
     let t = 0;
     pulses.forEach((p) => {
       const id = setTimeout(() => {
-        if (canVibrate()) { try { navigator.vibrate(Math.round(p.dur * VIBE_MULT)); } catch (e) {} }
+        if (canVibrate()) { try { navigator.vibrate(p.dur); } catch (e) {} }
       }, t);
       vibeTimeouts.push(id);
       t += p.dur + p.pause;
     });
   }
 
+  // ===== SFX =====
   async function loadSounds() {
     if (!window.Sound) return;
     await Promise.all([
-      Sound.loadBuffer('set_sfx_btn',      ASSETS.sfxBtn).catch(() => {}),
-      Sound.loadBuffer('set_sfx_set',      ASSETS.sfxSet).catch(() => {}),
-      Sound.loadBuffer('set_sfx_save',     ASSETS.sfxSave).catch(() => {}),
-      Sound.loadBuffer('set_sfx_back',     ASSETS.sfxBack).catch(() => {}),
-      Sound.loadBuffer('set_sfx_backMenu', ASSETS.sfxBackMenu).catch(() => {})
+      Sound.loadBuffer('set_sfx_btn',  ASSETS.sfxBtn).catch(() => {}),
+      Sound.loadBuffer('set_sfx_set',  ASSETS.sfxSet).catch(() => {}),
+      Sound.loadBuffer('set_sfx_save', ASSETS.sfxSave).catch(() => {}),
+      Sound.loadBuffer('set_sfx_back', ASSETS.sfxBack).catch(() => {})
     ]);
   }
-
-  function playSFX(key, base = 1.0, lockMs = SOUND_LOCK_MS) {
-    if (!window.Sound) return false;
-    if (soundLockActive) return false;
+  function playSFX(key, base = 1.0) {
+    if (!window.Sound) return;
     try {
-      if (!Sound.hasBuffer(key)) return false;
-      Sound.playSFX(key, { volume: base * sfxVolume(), fadeIn: 0 });
-      soundLockActive = true;
-      if (soundLockTimer) clearTimeout(soundLockTimer);
-      soundLockTimer = setTimeout(() => {
-        soundLockActive = false;
-        soundLockTimer = null;
-      }, lockMs);
-      return true;
-    } catch (e) { return false; }
+      if (!Sound.hasBuffer(key)) return;
+      const v = (typeof getS('sfxVolume') === 'number') ? getS('sfxVolume') : 0.8;
+      Sound.playSFX(key, { volume: base * v, fadeIn: 0 });
+    } catch (e) {}
   }
 
-  function isLocked() { return soundLockActive; }
-
+  // ===== МУЗЫКА =====
   async function loadBlockMusicWithFallback() {
     if (!window.Sound) throw new Error('Sound не загружен');
     if (Sound.hasBuffer('set_music')) return true;
@@ -261,7 +277,7 @@
     try {
       try { Sound.stopMusic(0); } catch (e) {}
       await loadBlockMusicWithFallback();
-      const v = 0.7 * musicVolume();
+      const v = 0.7 * ((typeof getS('musicVolume') === 'number') ? getS('musicVolume') : 0.8);
       await Sound.playMusic('set_music', { loop: true, volume: v, fadeIn: 0.3 });
     } catch (e) {}
   }
@@ -270,6 +286,7 @@
     try { Sound.setMusicVolume(0.7 * musicVol01, 0); } catch (e) {}
   }
 
+  // ===== SNAPSHOT =====
   function takeSnapshot() {
     const all = (window.Settings && Settings.getAll) ? Settings.getAll() : {};
     return {
@@ -278,7 +295,10 @@
       vibration:     (typeof all.vibration   === 'boolean') ? all.vibration   : true,
       nickname:      (typeof all.nickname    === 'string')  ? all.nickname    : '',
       brightness:    (typeof all.brightness  === 'number')  ? all.brightness  : 100,
-      language:      (typeof all.language    === 'string')  ? all.language    : 'ru'
+      language:      (typeof all.language    === 'string')  ? all.language    : 'ru',
+      audioMode:     (typeof all.audioMode   === 'string')  ? all.audioMode   : 'stereo',
+      spatialEnabled: (typeof all.spatialEnabled === 'boolean') ? all.spatialEnabled : false,
+      calibrationData: all.calibrationData || null
     };
   }
   function recomputeDirty() {
@@ -288,7 +308,9 @@
       working.vibration   !== savedSnapshot.vibration ||
       working.nickname    !== savedSnapshot.nickname ||
       working.brightness  !== savedSnapshot.brightness ||
-      working.language    !== savedSnapshot.language;
+      working.language    !== savedSnapshot.language ||
+      working.audioMode   !== savedSnapshot.audioMode ||
+      working.spatialEnabled !== savedSnapshot.spatialEnabled;
   }
   function applyPreview(key, uiValue) {
     if (key === 'musicVolume') setBlockMusicVolume(uiValue / 100);
@@ -303,11 +325,15 @@
     document.documentElement.style.filter = 'brightness(' + b + ')';
   }
 
-  // ============ SLIDER ============
-  function buildSlider(key, label, min, max, uiValue, formatter) {
+  // ===== SLIDER =====
+  function buildSlider(key, label, min, max, uiValue, formatter, helpKey) {
     const row = el('div', 'st-row st-slider-row');
     row.dataset.key = key;
-    row.appendChild(el('div', 'st-label', label));
+
+    const labelWrap = el('div', 'st-label st-label-with-help');
+    labelWrap.appendChild(el('span', 'st-label-text', label));
+    if (helpKey) labelWrap.appendChild(buildHelpBtn(helpKey));
+    row.appendChild(labelWrap);
 
     const trackWrap = el('div', 'st-slider-track');
     const track = el('div', 'st-slider-track-inner');
@@ -340,7 +366,6 @@
       return Math.round(min + (x / rect.width) * (max - min));
     }
     function onStart(e) {
-      if (isLocked()) return;
       dragging = true;
       previewUiValue = working[key];
       knob.classList.add('st-knob-active');
@@ -372,7 +397,7 @@
       updateUI(previewUiValue);
       revertToSaved(key);
       recomputeDirty();
-      playSFX('set_sfx_set', 0.7, 250);
+      playSFX('set_sfx_set', 0.7);
       if (e) e.preventDefault();
     }
 
@@ -388,11 +413,15 @@
     return row;
   }
 
-  // ============ MINI TOGGLE ============
-  function buildMiniToggle(key, label, value) {
+  // ===== MINI TOGGLE =====
+  function buildMiniToggle(key, label, value, helpKey, onChange) {
     const row = el('div', 'st-row st-mini-row');
     row.dataset.key = key;
-    row.appendChild(el('div', 'st-label', label));
+
+    const labelWrap = el('div', 'st-label st-label-with-help');
+    labelWrap.appendChild(el('span', 'st-label-text', label));
+    if (helpKey) labelWrap.appendChild(buildHelpBtn(helpKey));
+    row.appendChild(labelWrap);
 
     const trackWrap = el('div', 'st-mini-track');
     const knob = el('div', 'st-mini-knob');
@@ -424,11 +453,11 @@
       const changed = working[key] !== v;
       working[key] = v;
       if (v) vibrateToggle();
-      playSFX('set_sfx_set', 1.0, 250);
+      playSFX('set_sfx_set', 1.0);
       if (changed) recomputeDirty();
+      if (typeof onChange === 'function') onChange(v);
     }
     function onStart(e) {
-      if (isLocked()) return;
       dragging = true;
       trackWrap.classList.add('st-mini-hold');
       knob.classList.add('st-mini-knob-active');
@@ -464,7 +493,6 @@
     }
     let tapStart = 0;
     trackWrap.addEventListener('touchstart', (e) => {
-      if (isLocked()) return;
       tapStart = performance.now();
       onStart(e);
     }, { passive: false });
@@ -486,10 +514,7 @@
     });
     trackWrap.addEventListener('touchcancel', onEnd);
 
-    trackWrap.addEventListener('mousedown', (e) => {
-      if (isLocked()) return;
-      tapStart = performance.now(); onStart(e);
-    });
+    trackWrap.addEventListener('mousedown', (e) => { tapStart = performance.now(); onStart(e); });
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', (e) => {
       const dt = performance.now() - tapStart;
@@ -510,7 +535,7 @@
     return row;
   }
 
-  // ============ MULTI TOGGLE (язык) ============
+  // ===== MULTI TOGGLE (язык) =====
   function buildMultiToggle(key, labels, value) {
     const row = el('div', 'st-row st-multi-row');
     row.dataset.key = key;
@@ -588,11 +613,10 @@
       const newLangKey = LANG_LIST[idx];
       const changed = working[key] !== newLangKey;
       working[key] = newLangKey;
-      playSFX('set_sfx_set', 1.0, 250);
+      playSFX('set_sfx_set', 1.0);
       if (changed) recomputeDirty();
     }
     function onStart(e) {
-      if (isLocked()) return;
       dragging = true;
       movedFar = false;
       trackWrap.classList.add('st-multi-hold');
@@ -628,7 +652,6 @@
     }
     let tapStart = 0;
     trackWrap.addEventListener('touchstart', (e) => {
-      if (isLocked()) return;
       tapStart = performance.now();
       movedFar = false;
       onStart(e);
@@ -652,7 +675,6 @@
     trackWrap.addEventListener('touchcancel', onEnd);
     labelEls.forEach((lb, i) => {
       lb.addEventListener('click', () => {
-        if (isLocked()) return;
         setPos(i / (N - 1), true);
         commitIndex(i);
       });
@@ -662,10 +684,135 @@
     return row;
   }
 
-  // ============ NICK INPUT ============
+  // ===== КНОПКИ АУДИО-РЕЖИМА =====
+  function buildAudioModeRow() {
+    const row = el('div', 'st-row st-audio-row');
+    row.dataset.key = 'audioMode';
+
+    const labelWrap = el('div', 'st-label st-label-with-help');
+    labelWrap.appendChild(el('span', 'st-label-text', T('audio_title')));
+    labelWrap.appendChild(buildHelpBtn('help_audio_spatial'));
+    row.appendChild(labelWrap);
+
+    const wrap = el('div', 'st-audio-buttons');
+
+    AUDIO_MODES.forEach(mode => {
+      const support = (mode === 'spatial')
+        ? Sound.isSupported('spatial')
+        : Sound.isSupported('mono');
+
+      const btn = el('div', 'st-audio-btn');
+      btn.dataset.mode = mode;
+      btn.textContent = T(AUDIO_LABELS[mode]);
+
+      if (!support.ok) {
+        btn.classList.add('disabled');
+        btn.title = support.reason || 'not-supported';
+      } else {
+        btn.addEventListener('click', () => {
+          if (working.audioMode === mode) return;
+          working.audioMode = mode;
+          playSFX('set_sfx_set', 1.0);
+          vibrateToggle();
+          // Обновим активную кнопку
+          wrap.querySelectorAll('.st-audio-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.mode === mode);
+          });
+          // Покажем/скроем блок 3D-звука
+          updateAudioExtra();
+          recomputeDirty();
+        });
+      }
+      btn.classList.toggle('active', working.audioMode === mode);
+      wrap.appendChild(btn);
+    });
+
+    row.appendChild(wrap);
+    return row;
+  }
+
+  function buildAudioExtraRow() {
+    const row = el('div', 'st-row st-audio-extra-row');
+    row.dataset.key = 'audioExtra';
+
+    // Тумблер 3D-звука
+    const toggleRow = el('div', 'st-audio-extra-toggle');
+    const toggleLabel = el('div', 'st-label st-label-with-help');
+    toggleLabel.appendChild(el('span', 'st-label-text', T('audio_3d_toggle')));
+    toggleLabel.appendChild(buildHelpBtn('help_audio_3d'));
+    toggleRow.appendChild(toggleLabel);
+
+    const camSupport = Sound.is3DCameraSupported();
+    const miniTrack = el('div', 'st-mini-track');
+    const knob = el('div', 'st-mini-knob');
+    const shine = el('div', 'st-mini-shine');
+    knob.appendChild(shine);
+    miniTrack.appendChild(knob);
+    if (camSupport.ok) {
+      miniTrack.classList.toggle('on', !!working.spatialEnabled);
+      knob.style.transform = 'translateY(-50%) translateX(' + (working.spatialEnabled ? 34 : 0) + 'px)';
+      miniTrack.addEventListener('click', () => {
+        working.spatialEnabled = !working.spatialEnabled;
+        miniTrack.classList.toggle('on', working.spatialEnabled);
+        knob.style.transition = 'transform 0.42s cubic-bezier(0.16,1,0.3,1)';
+        knob.style.transform = 'translateY(-50%) translateX(' + (working.spatialEnabled ? 34 : 0) + 'px)';
+        playSFX('set_sfx_set', 1.0);
+        vibrateToggle();
+        recomputeDirty();
+      });
+    } else {
+      miniTrack.classList.add('disabled');
+    }
+    toggleRow.appendChild(miniTrack);
+    row.appendChild(toggleRow);
+
+    // Кнопка калибровки
+    const calibBtn = el('button', 'st-audio-calib-btn');
+    calibBtn.type = 'button';
+    calibBtn.textContent = T('audio_calibrate');
+    if (camSupport.ok) {
+      calibBtn.addEventListener('click', () => {
+        vibrateButton();
+        playSFX('set_sfx_btn', 1.0);
+        showInfo(T('help_title'), T('audio_calibrate_soon'));
+      });
+    } else {
+      calibBtn.classList.add('disabled');
+      calibBtn.disabled = true;
+    }
+    row.appendChild(calibBtn);
+
+    return row;
+  }
+
+  function updateAudioExtra() {
+    // Удалить старую доп. строку, если есть
+    const existing = root.querySelector('.st-audio-extra-row');
+    if (existing) existing.remove();
+
+    // Показать, если выбран spatial
+    if (working.audioMode === 'spatial') {
+      const mainPage = viewportEl.querySelector('.st-page-main');
+      const list = mainPage.querySelector('.st-list');
+      if (list) {
+        const extra = buildAudioExtraRow();
+        // Вставим после аудио-строки
+        const audioRow = list.querySelector('.st-audio-row');
+        if (audioRow && audioRow.nextSibling) {
+          list.insertBefore(extra, audioRow.nextSibling);
+        } else if (audioRow) {
+          list.appendChild(extra);
+        }
+      }
+    }
+  }
+
+  // ===== НИК =====
   function buildNickInput(value) {
     const row = el('div', 'st-row st-nick-row');
-    row.appendChild(el('div', 'st-label', T('nickname')));
+    const labelWrap = el('div', 'st-label st-label-with-help');
+    labelWrap.appendChild(el('span', 'st-label-text', T('nickname')));
+    row.appendChild(labelWrap);
     const wrap = el('div', 'st-nick-wrap');
     const inp = el('input', 'st-nick-input');
     inp.type = 'text';
@@ -682,6 +829,18 @@
     return row;
   }
 
+  // ===== КНОПКА (?) =====
+  function buildHelpBtn(helpKey) {
+    const btn = el('span', 'st-help-btn', '?');
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      vibrateButton();
+      playSFX('set_sfx_btn', 0.8);
+      showInfo(T('help_title'), T(helpKey));
+    });
+    return btn;
+  }
+
   function buildGlassButton(label, cls) {
     const btn = el('button', 'st-btn ' + (cls || ''));
     btn.type = 'button';
@@ -689,6 +848,7 @@
     return btn;
   }
 
+  // ===== COMMIT / ROLLBACK =====
   function commit() {
     if (!window.Settings) return;
     Settings.set('musicVolume', working.musicVolume / 100);
@@ -697,8 +857,17 @@
     Settings.set('nickname',    working.nickname || '');
     Settings.set('brightness',  working.brightness);
     Settings.set('language',    working.language);
+    Settings.set('audioMode',   working.audioMode);
+    Settings.set('spatialEnabled', working.spatialEnabled);
+
     setBlockMusicVolume(working.musicVolume / 100);
     applyBrightness(working.brightness);
+
+    // Передаём режим в звуковой движок
+    if (window.Sound && Sound.setAudioMode) {
+      Sound.setAudioMode(working.audioMode, working.spatialEnabled);
+    }
+
     savedSnapshot = takeSnapshot();
     dirty = false;
     setTimeout(() => rebuildPagesContent(), 80);
@@ -711,12 +880,16 @@
     Settings.set('nickname',    savedSnapshot.nickname);
     Settings.set('brightness',  savedSnapshot.brightness);
     Settings.set('language',    savedSnapshot.language);
+    Settings.set('audioMode',   savedSnapshot.audioMode);
+    Settings.set('spatialEnabled', savedSnapshot.spatialEnabled);
+
     setBlockMusicVolume(savedSnapshot.musicVolume01);
     applyBrightness(savedSnapshot.brightness);
     dirty = false;
     setTimeout(() => rebuildPagesContent(), 80);
   }
 
+  // ===== МОДАЛКИ =====
   function showUnsavedModal() {
     if (modalOpen) return;
     modalOpen = true;
@@ -728,22 +901,15 @@
     const btnNoSave = buildGlassButton(T('unsaved_discard'), 'st-btn-danger');
     const btnCancel = buildGlassButton(T('unsaved_cancel'), 'st-btn-secondary');
     btnSave.addEventListener('click', () => {
-      if (isLocked()) return;
-      playSFX('set_sfx_save', 0.9, 400); vibrateButton();
-      commit(); hideModalOverlay();
-      setTimeout(() => { playSFX('set_sfx_backMenu', 0.9, 500); }, 200);
-      exitToMenu();
+      playSFX('set_sfx_save', 0.9); vibrateButton();
+      commit(); hideModalOverlay(); exitToMenu();
     });
     btnNoSave.addEventListener('click', () => {
-      if (isLocked()) return;
-      playSFX('set_sfx_back', 0.9, 400); vibrateButton();
-      rollback(); hideModalOverlay();
-      setTimeout(() => { playSFX('set_sfx_backMenu', 0.9, 500); }, 200);
-      exitToMenu();
+      playSFX('set_sfx_back', 0.9); vibrateButton();
+      rollback(); hideModalOverlay(); exitToMenu();
     });
     btnCancel.addEventListener('click', () => {
-      if (isLocked()) return;
-      playSFX('set_sfx_btn', 1.0, 350); vibrateButton();
+      playSFX('set_sfx_btn', 1.0); vibrateButton();
       hideModalOverlay();
     });
     box.appendChild(btnSave);
@@ -760,6 +926,23 @@
     setTimeout(() => { overlay.remove(); modalOpen = false; }, 500);
   }
 
+  function showInfo(title, text) {
+    const overlay = el('div', 'st-modal');
+    const box = el('div', 'st-modal-box');
+    box.innerHTML = '<h3>' + title + '</h3><p>' + String(text).replace(/\n/g, '<br>') + '</p>';
+    const ok = buildGlassButton('OK', 'st-btn-primary');
+    ok.addEventListener('click', () => {
+      vibrateButton();
+      playSFX('set_sfx_btn', 1.0);
+      overlay.classList.remove('show');
+      setTimeout(() => overlay.remove(), 500);
+    });
+    box.appendChild(ok);
+    overlay.appendChild(box);
+    root.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+  }
+
   function showResetModal1() {
     if (modalOpen) return;
     modalOpen = true;
@@ -770,9 +953,8 @@
     const btnYes = buildGlassButton(T('reset_yes'), 'st-btn-danger');
     const btnNo  = buildGlassButton(T('reset_no'),  'st-btn-secondary');
     btnYes.addEventListener('click', () => {
-      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_back', 0.9, 400);
+      playSFX('set_sfx_back', 0.9);
       overlay.classList.remove('show');
       setTimeout(() => {
         overlay.remove();
@@ -781,9 +963,8 @@
       }, 400);
     });
     btnNo.addEventListener('click', () => {
-      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 1.0, 350);
+      playSFX('set_sfx_btn', 1.0);
       overlay.classList.remove('show');
       setTimeout(() => { overlay.remove(); modalOpen = false; }, 500);
     });
@@ -803,16 +984,14 @@
     const btnYes = buildGlassButton(T('reset_confirm2_yes'), 'st-btn-danger');
     const btnNo  = buildGlassButton(T('reset_no'), 'st-btn-secondary');
     btnYes.addEventListener('click', async () => {
-      if (isLocked()) return;
       vibrateButton();
       box.innerHTML = '<h3>' + T('reset_doing') + '</h3><p>...</p>';
-      try { playSFX('set_sfx_save', 1.0, 500); } catch (e) {}
+      try { playSFX('set_sfx_save', 1.0); } catch (e) {}
       await doFullReset();
     });
     btnNo.addEventListener('click', () => {
-      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 1.0, 350);
+      playSFX('set_sfx_btn', 1.0);
       overlay.classList.remove('show');
       setTimeout(() => { overlay.remove(); modalOpen = false; }, 500);
     });
@@ -827,7 +1006,6 @@
     try { if (window.Sound) Sound.stopMusic(0); } catch (e) {}
     try { if (window.Sound && Sound.unloadAll) Sound.unloadAll(); } catch (e) {}
     try { if (window.Sound && Sound.pauseAll)  Sound.pauseAll();  } catch (e) {}
-    try { if (window.Troll && Troll.resetAll) Troll.resetAll(); } catch (e) {}
     try { localStorage.clear(); } catch (e) {}
     try { sessionStorage.clear(); } catch (e) {}
     try {
@@ -870,7 +1048,7 @@
     if (window.ORBITS && ORBITS.back) await ORBITS.back();
   }
 
-  // ============ CSS ============
+  // ===== СТИЛИ =====
   function injectStyles() {
     if (document.getElementById('orbits-settings-styles-v8')) return;
     const css = `
@@ -905,15 +1083,14 @@
         backdrop-filter: blur(22px) saturate(200%) contrast(115%); -webkit-backdrop-filter: blur(22px) saturate(200%) contrast(115%);
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.3),
           0 8px 24px rgba(0,0,0,0.55), 0 0 24px rgba(120,80,220,0.3);
-        transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), background 0.35s ease, opacity 0.35s ease;
-        position: relative; overflow: hidden; }
+        transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), background 0.35s ease, opacity 0.35s ease; }
       .st-arrow:active { transform: scale(0.9); }
       .st-arrow.inactive { opacity: 0.28; pointer-events: none; filter: saturate(0.5); }
       .st-arrow-left { padding-right: 3px; }
       .st-arrow-right { padding-left: 3px; }
-      .st-list { position: absolute; top: 12vh; left: 50%; transform: translateX(-50%);
-        width: min(80vw, 820px); display: flex; flex-direction: column; gap: 1.5vh; z-index: 5; }
-      .st-row { position: relative; display: flex; align-items: center; gap: 2vw; padding: 1.25vh 2.4vh; border-radius: 26px;
+      .st-list { position: absolute; top: 11vh; left: 50%; transform: translateX(-50%);
+        width: min(80vw, 820px); display: flex; flex-direction: column; gap: 1.2vh; z-index: 5; }
+      .st-row { position: relative; display: flex; align-items: center; gap: 1.6vw; padding: 1.1vh 2.2vh; border-radius: 26px;
         background: linear-gradient(155deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.09) 32%,
           rgba(180,140,255,0.07) 68%, rgba(120,80,220,0.13) 100%);
         border: 1px solid rgba(255,255,255,0.34);
@@ -930,9 +1107,22 @@
         background: linear-gradient(0deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 100%); pointer-events: none; }
       .st-row.show { opacity: 1; transform: translateX(0) scale(1); }
       .st-label { flex: 0 0 26%; font-size: 14px; letter-spacing: 2.4px; text-transform: uppercase; color: #f0eaff;
-        text-shadow: 0 0 10px rgba(180,120,255,0.85), 0 1px 0 rgba(0,0,0,0.45); position: relative; z-index: 2; font-weight: 800; }
-      .st-slider-track { position: relative; flex: 1 1 auto; height: 46px; display: flex; align-items: center; padding: 0 22px; touch-action: none; }
-      .st-slider-track-inner { position: relative; width: 100%; height: 15px;
+        text-shadow: 0 0 10px rgba(180,120,255,0.85), 0 1px 0 rgba(0,0,0,0.45); position: relative; z-index: 2; font-weight: 800;
+        display: flex; align-items: center; gap: 6px; }
+      .st-label-text { display: inline-block; }
+      .st-help-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 18px; height: 18px; border-radius: 50%;
+        background: rgba(255,255,255,0.18);
+        border: 1px solid rgba(255,255,255,0.4);
+        color: #fff; font-size: 12px; font-weight: 900;
+        cursor: pointer; user-select: none;
+        transition: background 0.2s ease, transform 0.2s ease;
+        flex-shrink: 0;
+      }
+      .st-help-btn:active { transform: scale(0.9); background: rgba(255,200,60,0.8); }
+      .st-slider-track { position: relative; flex: 1 1 auto; height: 42px; display: flex; align-items: center; padding: 0 22px; touch-action: none; }
+      .st-slider-track-inner { position: relative; width: 100%; height: 14px;
         background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(60,30,120,0.32) 40%, rgba(255,255,255,0.10) 100%);
         border: 1px solid rgba(255,255,255,0.18); border-radius: 20px;
         box-shadow: inset 0 3px 8px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.2); overflow: visible; }
@@ -941,7 +1131,7 @@
         border-radius: 20px; box-shadow: 0 0 22px rgba(160,80,255,1), 0 0 42px rgba(140,70,220,0.55),
           inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1.5px 0 rgba(0,0,0,0.3);
         pointer-events: none; transition: width 0.08s linear; }
-      .st-slider-knob { position: absolute; top: 50%; left: 0; width: 32px; height: 32px; border-radius: 50%;
+      .st-slider-knob { position: absolute; top: 50%; left: 0; width: 30px; height: 30px; border-radius: 50%;
         background: radial-gradient(circle at 32% 26%, rgba(255,255,255,0.98) 0%, rgba(240,225,255,0.75) 20%,
           rgba(210,180,255,0.55) 50%, rgba(170,130,250,0.6) 80%, rgba(140,100,220,0.65) 100%);
         border: 1.5px solid rgba(255,255,255,0.85);
@@ -974,6 +1164,7 @@
       .st-mini-track.on { background: linear-gradient(135deg, rgba(140,70,255,0.95) 0%, rgba(190,110,255,0.95) 100%);
         box-shadow: inset 0 3px 8px rgba(0,0,0,0.28), inset 0 -1px 0 rgba(255,255,255,0.55),
           0 0 28px rgba(190,110,255,1), 0 0 56px rgba(140,80,255,0.7), 0 6px 20px rgba(60,20,120,0.55); }
+      .st-mini-track.disabled { opacity: 0.35; pointer-events: none; filter: saturate(0.4); }
       .st-mini-knob, .st-multi-knob { position: absolute; top: 50%; left: 3px; width: 26px; height: 26px; border-radius: 50%;
         background: radial-gradient(circle at 32% 26%, rgba(255,255,255,1) 0%, rgba(240,225,255,0.8) 22%,
           rgba(210,180,255,0.55) 52%, rgba(170,130,250,0.55) 82%, rgba(140,100,220,0.6) 100%);
@@ -988,119 +1179,170 @@
       .st-mini-reflect, .st-multi-reflect { position: absolute; bottom: 8%; right: 15%; width: 38%; height: 28%;
         background: radial-gradient(ellipse at 60% 60%, rgba(200,160,255,0.55) 0%, rgba(200,160,255,0) 80%);
         border-radius: 50%; pointer-events: none; }
-      .st-multi-wrap { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-      .st-multi-labels { display: flex; padding: 0; font-size: 14px; letter-spacing: 2.4px;
-        color: rgba(255,255,255,0.55); text-shadow: 0 1px 0 rgba(0,0,0,0.5); font-weight: 800; user-select: none; }
-      .st-multi-label { flex: 1 1 0; text-align: center; cursor: pointer;
-        transition: color 0.35s ease, text-shadow 0.35s ease, transform 0.35s cubic-bezier(0.16,1,0.3,1); position: relative; }
-      .st-multi-label.active { color: #fff;
-        text-shadow: 0 0 14px rgba(220,170,255,1), 0 0 30px rgba(170,100,255,0.9), 0 0 60px rgba(140,80,220,0.5);
-        transform: translateY(-1px); }
-      .st-multi-track { position: relative; height: 32px;
-        background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(60,30,120,0.28) 45%, rgba(255,255,255,0.14) 100%);
-        border: 1px solid rgba(255,255,255,0.26); border-radius: 40px; cursor: pointer;
-        backdrop-filter: blur(22px) saturate(200%); -webkit-backdrop-filter: blur(22px) saturate(200%);
-        box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), inset 0 -1px 0 rgba(255,255,255,0.22), 0 6px 18px rgba(0,0,0,0.45);
-        transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); touch-action: none; width: 100%; margin: 0; overflow: hidden; }
-      .st-multi-track:active, .st-multi-track.st-multi-hold { transform: scale(1.03); }
-      .st-multi-knob.st-multi-knob-active { transform: translateY(-50%) scale(1.5);
-        box-shadow: inset 0 0 16px rgba(255,255,255,1), inset 0 -6px 12px rgba(140,100,220,0.55),
-          inset 0 6px 12px rgba(255,255,255,0.7), 0 0 36px rgba(220,180,255,1),
-          0 0 72px rgba(160,100,255,0.85), 0 10px 24px rgba(0,0,0,0.55); }
+
+      /* Кнопки аудио-режима */
+      .st-audio-row { flex-wrap: nowrap; }
+      .st-audio-buttons {
+        flex: 1 1 auto;
+        display: flex; gap: 8px;
+        position: relative; z-index: 2;
+      }
+      .st-audio-btn {
+        flex: 1 1 0;
+        padding: 10px 8px;
+        font-family: inherit;
+        font-size: 13px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        font-weight: 800;
+        text-align: center;
+        color: rgba(255,255,255,0.7);
+        background: linear-gradient(155deg,
+          rgba(255,255,255,0.14) 0%,
+          rgba(255,255,255,0.05) 100%);
+        border: 1px solid rgba(255,255,255,0.28);
+        border-radius: 14px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.35s ease, color 0.35s ease, transform 0.2s ease, box-shadow 0.35s ease;
+      }
+      .st-audio-btn:active { transform: scale(0.96); }
+      .st-audio-btn.active {
+        color: #fff;
+        background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
+        border-color: rgba(220,180,255,0.85);
+        box-shadow:
+          inset 0 1.5px 0 rgba(255,255,255,0.85),
+          0 10px 26px rgba(130,60,255,0.7),
+          0 0 34px rgba(170,100,255,0.5);
+      }
+      .st-audio-btn.disabled {
+        opacity: 0.3;
+        pointer-events: none;
+        filter: saturate(0.3);
+      }
+
+      .st-audio-extra-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0; padding-bottom: 0;
+        transition: opacity 0.5s ease, max-height 0.5s ease, padding 0.4s ease;
+      }
+      .st-audio-extra-row.show {
+        opacity: 1;
+        max-height: 200px;
+        padding-top: 1.1vh; padding-bottom: 1.1vh;
+      }
+      .st-audio-extra-toggle {
+        display: flex; align-items: center; gap: 1.6vw;
+      }
+      .st-audio-extra-toggle .st-label {
+        flex: 1 1 auto;
+      }
+      .st-audio-calib-btn {
+        width: 100%;
+        padding: 12px 20px;
+        font-family: inherit;
+        font-size: 14px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-weight: 800;
+        color: #fff;
+        background: linear-gradient(135deg, rgba(140,70,255,0.85), rgba(190,110,255,0.85));
+        border: 1px solid rgba(220,180,255,0.7);
+        border-radius: 16px;
+        cursor: pointer;
+        box-shadow:
+          inset 0 1.5px 0 rgba(255,255,255,0.7),
+          0 8px 22px rgba(130,60,255,0.5);
+        transition: transform 0.2s ease, background 0.25s ease;
+      }
+      .st-audio-calib-btn:active { transform: scale(0.96); }
+      .st-audio-calib-btn.disabled { opacity: 0.35; pointer-events: none; filter: saturate(0.3); }
+
+      /* Ник */
       .st-nick-wrap { flex: 1 1 auto; position: relative; z-index: 2; }
       .st-nick-input { width: 100%; padding: 10px 18px;
         background: linear-gradient(180deg, rgba(0,0,0,0.32) 0%, rgba(60,30,120,0.22) 50%, rgba(255,255,255,0.10) 100%);
         border: 1px solid rgba(255,255,255,0.28); border-radius: 18px; color: #fff; font-size: 15px;
         letter-spacing: 1px; outline: none;
         backdrop-filter: blur(16px) saturate(200%); -webkit-backdrop-filter: blur(16px) saturate(200%);
-        box-shadow: inset 0 3px 8px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(255,255,255,0.22);
-        transition: border 0.3s ease, box-shadow 0.3s ease; }
+        box-shadow: inset 0 3px 8px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(255,255,255,0.22); }
       .st-nick-input:focus { border-color: rgba(200,150,255,0.95);
         box-shadow: inset 0 3px 8px rgba(0,0,0,0.5), 0 0 24px rgba(180,100,255,0.8), 0 0 48px rgba(150,80,255,0.4); }
-      .st-btn-back, .st-btn-save { position: absolute; bottom: 4vh; padding: 1.3vh 3.6vh;
-        color: #fff; font-family: inherit; font-size: 18px; letter-spacing: 2.5px;
+
+      /* Нижние кнопки */
+      .st-btn-back, .st-btn-save { position: absolute; bottom: 3vh; padding: 1.2vh 3.4vh;
+        color: #fff; font-family: inherit; font-size: 17px; letter-spacing: 2.2px;
         text-transform: uppercase; font-weight: 900; border-radius: 22px; cursor: pointer; z-index: 8;
         backdrop-filter: blur(24px) saturate(210%); -webkit-backdrop-filter: blur(24px) saturate(210%);
-        transition: transform 0.28s cubic-bezier(0.16,1,0.3,1), background 0.3s ease, box-shadow 0.3s ease;
-        overflow: hidden; }
-      .st-btn-back::before, .st-btn-save::before { content: ''; position: absolute; left: 8%; right: 8%; top: 0;
-        height: 45%; background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.05) 70%, rgba(255,255,255,0) 100%);
-        pointer-events: none; }
+        transition: transform 0.28s cubic-bezier(0.16,1,0.3,1), background 0.3s ease, box-shadow 0.3s ease; }
       .st-btn-back { left: 4vw;
         background: linear-gradient(135deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.08) 100%);
         border: 1px solid rgba(255,255,255,0.42);
         box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.55); }
       .st-btn-back:active { transform: scale(0.94) translateY(2px);
-        background: linear-gradient(135deg, rgba(255,200,60,0.95) 0%, rgba(210,150,0,0.95) 100%);
-        box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.8), 0 8px 24px rgba(255,180,40,0.55), 0 0 40px rgba(255,180,40,0.4); }
+        background: linear-gradient(135deg, rgba(255,200,60,0.95) 0%, rgba(210,150,0,0.95) 100%); }
       .st-btn-save { right: 4vw;
         background: linear-gradient(135deg, rgba(140,70,255,0.95) 0%, rgba(190,110,255,0.95) 100%);
         border: 1px solid rgba(220,180,255,0.75);
         box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.75), inset 0 -1px 0 rgba(0,0,0,0.3),
           0 12px 34px rgba(130,60,255,0.75), 0 0 48px rgba(160,90,255,0.5); }
-      .st-btn-save:active { transform: scale(0.94) translateY(2px);
-        box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.85), 0 8px 24px rgba(130,60,255,0.9), 0 0 60px rgba(180,100,255,0.6); }
-      .st-reset-row { justify-content: center; padding: 1.2vh 2.4vh;
+      .st-btn-save:active { transform: scale(0.94) translateY(2px); }
+
+      .st-multi-wrap { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+      .st-multi-labels { display: flex; padding: 0; font-size: 14px; letter-spacing: 2.4px;
+        color: rgba(255,255,255,0.55); text-shadow: 0 1px 0 rgba(0,0,0,0.5); font-weight: 800; user-select: none; }
+      .st-multi-label { flex: 1 1 0; text-align: center; cursor: pointer;
+        transition: color 0.35s ease, text-shadow 0.35s ease; }
+      .st-multi-label.active { color: #fff;
+        text-shadow: 0 0 14px rgba(220,170,255,1), 0 0 30px rgba(170,100,255,0.9); }
+      .st-multi-track { position: relative; height: 30px;
+        background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(60,30,120,0.28) 45%, rgba(255,255,255,0.14) 100%);
+        border: 1px solid rgba(255,255,255,0.26); border-radius: 40px; cursor: pointer;
+        backdrop-filter: blur(22px) saturate(200%); -webkit-backdrop-filter: blur(22px) saturate(200%);
+        box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), inset 0 -1px 0 rgba(255,255,255,0.22), 0 6px 18px rgba(0,0,0,0.45);
+        touch-action: none; width: 100%; margin: 0; overflow: hidden; }
+      .st-multi-knob.st-multi-knob-active { transform: translateY(-50%) scale(1.5); }
+
+      .st-reset-row { justify-content: center; padding: 1.1vh 2.2vh;
         background: linear-gradient(155deg, rgba(255,80,80,0.14) 0%, rgba(200,50,50,0.08) 50%, rgba(150,30,30,0.12) 100%);
         border: 1px solid rgba(255,120,120,0.4); }
-      .st-reset-btn { width: 100%; padding: 13px 26px; font-family: inherit; font-size: 15px;
-        letter-spacing: 2.4px; text-transform: uppercase; font-weight: 900; color: #ffb8b8;
+      .st-reset-btn { width: 100%; padding: 12px 24px; font-family: inherit; font-size: 14px;
+        letter-spacing: 2.2px; text-transform: uppercase; font-weight: 900; color: #ffb8b8;
         background: linear-gradient(135deg, rgba(255,80,80,0.25) 0%, rgba(200,50,50,0.20) 100%);
         border: 1px solid rgba(255,140,140,0.55); border-radius: 16px; cursor: pointer;
-        text-shadow: 0 0 12px rgba(255,80,80,0.8);
-        box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.3),
-          0 8px 24px rgba(120,20,20,0.55), 0 0 32px rgba(255,60,60,0.3);
-        transition: transform 0.24s cubic-bezier(0.16,1,0.3,1), background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease; }
-      .st-reset-btn:active { transform: scale(0.96) translateY(1px);
-        background: linear-gradient(135deg, rgba(255,50,50,0.95) 0%, rgba(180,30,30,0.95) 100%);
-        color: #fff; box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.5),
-          0 10px 30px rgba(255,40,40,0.75), 0 0 60px rgba(255,60,60,0.55); }
-      .st-device-box { padding: 1.6vh 2.4vh; display: flex; flex-direction: column; gap: 0.8vh;
-        background: linear-gradient(155deg, rgba(120,90,255,0.16) 0%, rgba(60,40,140,0.10) 50%, rgba(40,20,100,0.14) 100%);
-        border: 1px solid rgba(180,140,255,0.42); }
-      .st-device-title { font-size: 13px; letter-spacing: 3px; text-transform: uppercase;
-        color: rgba(255,255,255,0.7); text-shadow: 0 0 10px rgba(180,120,255,0.7);
-        font-weight: 800; margin-bottom: 0.4vh; }
-      .st-device-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-      .st-device-key { font-size: 13px; letter-spacing: 1.6px; color: rgba(255,255,255,0.75); font-weight: 700; }
-      .st-device-val { font-size: 15px; letter-spacing: 1px; color: #fff; font-weight: 800;
-        text-shadow: 0 0 12px rgba(180,120,255,0.85); font-variant-numeric: tabular-nums; }
-      .st-device-val.good { color: #4ade80; text-shadow: 0 0 12px rgba(74,222,128,0.85); }
-      .st-device-val.normal { color: #fbbf24; text-shadow: 0 0 12px rgba(251,191,36,0.85); }
-      .st-device-val.weak { color: #ef4444; text-shadow: 0 0 12px rgba(239,68,68,0.85); }
-      .st-device-val.powerful { color: #a78bfa; text-shadow: 0 0 12px rgba(167,139,250,0.85); }
+        text-shadow: 0 0 12px rgba(255,80,80,0.8); }
+      .st-reset-btn:active { transform: scale(0.96); }
+
       .st-modal { position: absolute; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
         background: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px);
         opacity: 0; transition: opacity 0.55s ease, background 0.55s ease, backdrop-filter 0.55s ease; }
       .st-modal.show { opacity: 1; background: rgba(0,0,0,0.62);
         backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-      .st-modal-box { width: min(88vw, 480px); padding: 30px 26px;
+      .st-modal-box { width: min(88vw, 480px); padding: 28px 24px;
         background: linear-gradient(155deg, rgba(45,30,75,0.96) 0%, rgba(65,40,110,0.96) 100%);
         border: 1px solid rgba(220,180,255,0.65); border-radius: 30px; text-align: center; color: #e0d8ff;
         backdrop-filter: blur(24px) saturate(200%); -webkit-backdrop-filter: blur(24px) saturate(200%);
-        box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.35),
-          0 0 60px rgba(160,90,255,0.5), 0 24px 80px rgba(0,0,0,0.9);
+        box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.4), 0 0 60px rgba(160,90,255,0.5), 0 24px 80px rgba(0,0,0,0.9);
         transform: scale(0.55) rotate(-3deg); opacity: 0;
-        transition: transform 0.6s cubic-bezier(0.16,1,0.3,1), opacity 0.6s ease;
-        position: relative; overflow: hidden; }
-      .st-modal-box::before { content: ''; position: absolute; left: 10%; right: 10%; top: 0; height: 40%;
-        background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.05) 70%, rgba(255,255,255,0) 100%);
-        pointer-events: none; }
+        transition: transform 0.6s cubic-bezier(0.16,1,0.3,1), opacity 0.6s ease; }
       .st-modal.show .st-modal-box { transform: scale(1) rotate(0deg); opacity: 1; }
-      .st-modal-box h3 { font-size: 21px; margin-bottom: 14px; color: #fff; }
-      .st-modal-box p { font-size: 14px; line-height: 1.65; margin-bottom: 22px; }
+      .st-modal-box h3 { font-size: 20px; margin-bottom: 12px; color: #fff; }
+      .st-modal-box p { font-size: 14px; line-height: 1.65; margin-bottom: 18px; }
       .st-modal-box .st-btn { display: block; width: 100%; margin-top: 10px; font-size: 15px; padding: 13px 22px; }
       .st-modal-danger { border-color: rgba(255,100,100,0.75) !important;
         background: linear-gradient(155deg, rgba(60,20,25,0.98) 0%, rgba(40,15,20,0.98) 100%) !important; }
-      .st-modal-danger h3 { color: #ff7070 !important; text-shadow: 0 0 14px rgba(255,80,80,0.85); }
+      .st-modal-danger h3 { color: #ff7070 !important; }
       .st-modal-danger p { color: #ffd0d0 !important; }
-      .st-btn { padding: 15px 34px; font-family: inherit; font-size: 17px; letter-spacing: 2.4px;
+      .st-btn { padding: 14px 32px; font-family: inherit; font-size: 16px; letter-spacing: 2.2px;
         text-transform: uppercase; font-weight: 900; color: #fff; background: rgba(255,255,255,0.10);
         border: 1px solid rgba(255,255,255,0.32); border-radius: 22px; cursor: pointer;
-        backdrop-filter: blur(18px) saturate(200%); -webkit-backdrop-filter: blur(18px) saturate(200%);
-        box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.5), 0 8px 26px rgba(0,0,0,0.5);
-        transition: transform 0.24s cubic-bezier(0.16,1,0.3,1), background 0.28s ease, box-shadow 0.28s ease; }
-      .st-btn:active { transform: scale(0.95) translateY(1px); background: rgba(190,150,255,0.35); }
+        backdrop-filter: blur(18px) saturate(200%); -webkit-backdrop-filter: blur(18px) saturate(200%); }
+      .st-btn:active { transform: scale(0.95); }
       .st-btn-primary { background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
         border-color: rgba(220,180,255,0.8); }
       .st-btn-danger { background: linear-gradient(135deg, rgba(255,80,80,0.92), rgba(210,50,50,0.92));
@@ -1113,6 +1355,7 @@
     document.head.appendChild(style);
   }
 
+  // ===== СТРАНИЦЫ =====
   function buildBg() {
     const bg = el('div', 'st-bg');
     bg.style.backgroundImage = "url('" + ASSETS.bg + "')";
@@ -1124,9 +1367,8 @@
     const header = el('div', 'st-header');
     const arrowLeft = el('div', 'st-arrow st-arrow-left', '‹');
     arrowLeft.addEventListener('click', () => {
-      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 0.9, 350);
+      playSFX('set_sfx_back', 0.9);
       goToPage('main');
     });
     header.appendChild(arrowLeft);
@@ -1135,9 +1377,8 @@
     header.appendChild(title);
     const arrowRight = el('div', 'st-arrow st-arrow-right', '›');
     arrowRight.addEventListener('click', () => {
-      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 0.9, 350);
+      playSFX('set_sfx_btn', 0.9);
       goToPage('lang');
     });
     header.appendChild(arrowRight);
@@ -1159,123 +1400,55 @@
   function buildMainPageInto(pageEl) {
     const list = el('div', 'st-list');
     pageEl.appendChild(list);
-    const rowNick   = buildNickInput(working.nickname);
-    const rowMusic  = buildSlider('musicVolume', T('music'), 0, 100, working.musicVolume, v => v + '%');
-    const rowSfx    = buildSlider('sfxVolume',   T('sfx'),   0, 100, working.sfxVolume,   v => v + '%');
-    const rowVibe   = buildMiniToggle('vibration', T('vibration'), working.vibration);
-    const rowBright = buildSlider('brightness',  T('brightness'), 0, 150, working.brightness, v => v);
+
+    const rowNick    = buildNickInput(working.nickname);
+    const rowMusic   = buildSlider('musicVolume', T('music'), 0, 100, working.musicVolume, v => v + '%');
+    const rowSfx     = buildSlider('sfxVolume',   T('sfx'),   0, 100, working.sfxVolume,   v => v + '%');
+    const rowAudio   = buildAudioModeRow();
+    const rowVibe    = buildMiniToggle('vibration', T('vibration'), working.vibration);
+    const rowBright  = buildSlider('brightness',  T('brightness'), 0, 150, working.brightness, v => v);
+
     list.appendChild(rowNick);
     list.appendChild(rowMusic);
     list.appendChild(rowSfx);
+    list.appendChild(rowAudio);
     list.appendChild(rowVibe);
     list.appendChild(rowBright);
-    const rows = [rowNick, rowMusic, rowSfx, rowVibe, rowBright];
-    rows.forEach((r, i) => setTimeout(() => r.classList.add('show'), 100 + i * 130));
+
+    // Если выбран spatial — показываем доп. блок
+    if (working.audioMode === 'spatial') {
+      const extra = buildAudioExtraRow();
+      list.insertBefore(extra, rowVibe);
+    }
+
+    const rows = [rowNick, rowMusic, rowSfx, rowAudio, rowVibe, rowBright];
+    rows.forEach((r, i) => setTimeout(() => r.classList.add('show'), 80 + i * 100));
+
+    // Доп. строка
+    const extra = list.querySelector('.st-audio-extra-row');
+    if (extra) setTimeout(() => extra.classList.add('show'), 80 + 4 * 100);
   }
 
   function buildLangPageInto(pageEl) {
     const list = el('div', 'st-list');
     pageEl.appendChild(list);
-
     const rowLang = buildMultiToggle('language', LANG_LABELS, working.language);
     list.appendChild(rowLang);
-
-    const deviceBox = buildDeviceStatusBox();
-    list.appendChild(deviceBox);
-
     const rowReset = el('div', 'st-row st-reset-row');
     const resetBtn = el('button', 'st-reset-btn');
     resetBtn.type = 'button';
     resetBtn.textContent = T('reset_btn');
     resetBtn.addEventListener('click', () => {
-      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 1.0, 350);
+      playSFX('set_sfx_btn', 1.0);
       showResetModal1();
     });
     rowReset.appendChild(resetBtn);
     list.appendChild(rowReset);
-
     setTimeout(() => {
       rowLang.classList.add('show');
-      setTimeout(() => deviceBox.classList.add('show'), 140);
-      setTimeout(() => rowReset.classList.add('show'), 280);
+      setTimeout(() => rowReset.classList.add('show'), 140);
     }, 100);
-  }
-
-  function buildDeviceStatusBox() {
-    const box = el('div', 'st-row st-device-box');
-    box.appendChild(el('div', 'st-device-title', T('device_title')));
-
-    let score = 0, tier = 'normal', adaptationStatus = 'none', adaptationPercent = 0;
-    let labels = null;
-
-    try {
-      if (window.Troll && Troll.getDeviceScore && Troll.getDeviceScoreLabels) {
-        const ds = Troll.getDeviceScore();
-        labels = Troll.getDeviceScoreLabels();
-        score = ds.score;
-        tier = ds.tier;
-        adaptationStatus = ds.adaptation.status;
-        adaptationPercent = ds.adaptation.percent;
-      }
-    } catch (e) {
-      console.warn('[settings] Troll недоступен:', e.message);
-    }
-
-    const scoreRow = el('div', 'st-device-row');
-    scoreRow.appendChild(el('div', 'st-device-key', T('device_score')));
-    const scoreVal = el('div', 'st-device-val', score.toLocaleString('ru-RU'));
-    scoreRow.appendChild(scoreVal);
-    box.appendChild(scoreRow);
-
-    const powerRow = el('div', 'st-device-row');
-    powerRow.appendChild(el('div', 'st-device-key', T('device_power')));
-    const powerLabel = (labels && labels.tiers[tier])
-      ? (labels.tiers[tier][lang()] || labels.tiers[tier].ru)
-      : tier;
-    const powerVal = el('div', 'st-device-val ' + tier, powerLabel);
-    powerRow.appendChild(powerVal);
-    box.appendChild(powerRow);
-
-    const adaptRow = el('div', 'st-device-row');
-    adaptRow.appendChild(el('div', 'st-device-key', T('device_adapt')));
-    let adaptText = '';
-    if (labels && labels.adaptation[adaptationStatus]) {
-      adaptText = labels.adaptation[adaptationStatus][lang()] || labels.adaptation[adaptationStatus].ru;
-      if (adaptationStatus === 'partial' || adaptationStatus === 'adapting') {
-        adaptText += ' (~' + adaptationPercent + '%)';
-      }
-    } else {
-      adaptText = adaptationStatus;
-    }
-    const adaptVal = el('div', 'st-device-val', adaptText);
-    adaptRow.appendChild(adaptVal);
-    box.appendChild(adaptRow);
-
-    const updateInterval = setInterval(() => {
-      try {
-        if (!window.Troll || !Troll.getDeviceScore) return;
-        const ds = Troll.getDeviceScore(true);
-        scoreVal.textContent = ds.score.toLocaleString('ru-RU');
-        const newPowerLabel = (labels && labels.tiers[ds.tier])
-          ? (labels.tiers[ds.tier][lang()] || labels.tiers[ds.tier].ru)
-          : ds.tier;
-        powerVal.textContent = newPowerLabel;
-        powerVal.className = 'st-device-val ' + ds.tier;
-        if (labels && labels.adaptation[ds.adaptation.status]) {
-          let at = labels.adaptation[ds.adaptation.status][lang()] || labels.adaptation[ds.adaptation.status].ru;
-          if (ds.adaptation.status === 'partial' || ds.adaptation.status === 'adapting') {
-            at += ' (~' + ds.adaptation.percent + '%)';
-          }
-          adaptVal.textContent = at;
-        }
-      } catch (e) {}
-    }, 5000);
-
-    box._cleanup = () => clearInterval(updateInterval);
-
-    return box;
   }
 
   function buildBottomButtons() {
@@ -1288,19 +1461,17 @@
     btnSave.textContent = T('save');
     root.appendChild(btnSave);
     btnBack.addEventListener('click', () => {
-      if (isLocked()) return;
       vibrateButton();
       if (dirty) {
-        playSFX('set_sfx_btn', 1.0, 350);
+        playSFX('set_sfx_btn', 1.0);
         showUnsavedModal();
       } else {
-        playSFX('set_sfx_backMenu', 0.9, 500);
+        playSFX('set_sfx_back', 0.9);
         exitToMenu();
       }
     });
     btnSave.addEventListener('click', () => {
-      if (isLocked()) return;
-      playSFX('set_sfx_save', 1.0, 450);
+      playSFX('set_sfx_save', 1.0);
       vibrateButton();
       commit();
       btnSave.style.transform = 'scale(0.9) translateY(2px)';
@@ -1325,9 +1496,6 @@
   }
   async function rebuildPagesContent() {
     if (!viewportEl) return;
-    const oldBoxes = root.querySelectorAll('.st-device-box');
-    oldBoxes.forEach(b => { if (b._cleanup) b._cleanup(); });
-
     const main = viewportEl.querySelector('.st-page-main');
     const lang = viewportEl.querySelector('.st-page-lang');
     if (!main || !lang) return;
@@ -1370,12 +1538,6 @@
     container = document.getElementById('game-container') || document.body;
     injectStyles();
     await loadSounds();
-
-    // ★ Уведомляем Troll
-    try { if (window.Troll) Troll.setBlock('settings'); } catch (e) {}
-    // ★ Патч: сообщаем типы нагрузки
-    try { if (window.Troll && Troll.setLoadTypes) Troll.setLoadTypes(['blur', 'glass']); } catch (e) {}
-
     savedSnapshot = takeSnapshot();
     working = {
       musicVolume: Math.round(savedSnapshot.musicVolume01 * 100),
@@ -1383,7 +1545,9 @@
       vibration:   savedSnapshot.vibration,
       nickname:    savedSnapshot.nickname,
       brightness:  savedSnapshot.brightness,
-      language:    savedSnapshot.language
+      language:    savedSnapshot.language,
+      audioMode:   savedSnapshot.audioMode,
+      spatialEnabled: savedSnapshot.spatialEnabled
     };
     dirty = false;
     currentPage = 'main';

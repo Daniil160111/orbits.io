@@ -1,6 +1,15 @@
 /* =====================================================================
-   ORBITS.IO — SETTINGS BLOCK
+   ORBITS.IO — SETTINGS BLOCK v9
    Путь: settings.js
+
+   Что нового:
+   - Блок «Звук»: Моно / Стерео / Пространство (сегменты-переключатели)
+   - Условные опции (серые при не поддержке)
+   - Значки (?) у всех пунктов
+   - Убран блок мощности устройства
+   - Исправлен чёрный экран
+   - Блокировка кнопок при звуке
+   - Правильные звуки (back_select_menu, back, button, save, setting)
    ===================================================================== */
 (function () {
   'use strict';
@@ -8,12 +17,13 @@
   const MUSIC_URLS = ['./Звуки/Меню/Н1-1.mp3'];
 
   const ASSETS = {
-    bg:       './Текстуры/Меню/Фонменю.jpg',
-    music:    './Звуки/Меню/Н1-1.mp3',
-    sfxBtn:   './Звуки/Система/Button.wav',
-    sfxSet:   './Звуки/Система/Setting.wav',
-    sfxSave:  './Звуки/Система/Save.wav',
-    sfxBack:  './Звуки/Система/Back.wav'
+    bg:          './Текстуры/Меню/Фонменю.jpg',
+    music:       './Звуки/Меню/Н1-1.mp3',
+    sfxBtn:      './Звуки/Система/Button.wav',
+    sfxSet:      './Звуки/Система/Setting.wav',
+    sfxSave:     './Звуки/Система/Save.wav',
+    sfxBack:     './Звуки/Система/Back.wav',
+    sfxBackMenu: './Звуки/Система/Back-select-menu.wav'
   };
 
   if (window.ORBITS && ORBITS.registerAssets) {
@@ -31,20 +41,24 @@
     ru: {
       title: 'Настройки', back: 'Назад', save: 'Сохранить',
       nickname: 'Ник', music: 'Музыка', sfx: 'Эффекты',
-      vibration: 'Вибрация', brightness: 'Яркость', language: 'Язык',
-      lang_title: 'Язык',
-      audio_title: 'Аудио-режим',
+      vibration: 'Вибрация', brightness: 'Яркость',
+      // Звук
+      audio_title: 'Звук',
+      audio_mode: 'Режим звука',
       audio_mono: 'Моно',
       audio_stereo: 'Стерео',
-      audio_spatial: 'Пространственный',
-      audio_3d_toggle: '3D-звук через камеру',
-      audio_calibrate: 'Калибровка',
-      audio_calibrate_soon: 'Калибровка появится позже',
-      help_title: 'Пояснение',
-      help_audio_mono: 'Все звуки объединяются в один канал.\nРаботает на одном динамике и более.',
-      help_audio_stereo: 'Обычный стереозвук. Левый и правый каналы.\nТребуется два динамика и более.',
-      help_audio_spatial: 'Звуки позиционируются в 3D-пространстве вокруг игрока.\nТребуется два динамика и более.',
-      help_audio_3d: 'Стереоскопический 3D-звук с учётом положения головы.\nТребуется фронтальная камера.',
+      audio_spatial: 'Пространство',
+      spatial_3d: 'Стереоскопический 3D звук',
+      spatial_3d_hint: 'Использовать камеру для точного объёмного звука',
+      // Подсказки
+      hint_music: 'Громкость фоновой музыки',
+      hint_sfx: 'Громкость звуковых эффектов',
+      hint_vibration: 'Тактильная отдача при действиях',
+      hint_brightness: 'Яркость всего интерфейса',
+      hint_nickname: 'Ваше имя в игре (до 16 символов)',
+      hint_audio_mode: 'Моно — 1 канал, Стерео — 2 канала, Пространство — объёмный звук',
+      hint_spatial_3d: 'Нужна фронтальная камера. Звук подстраивается под положение головы.',
+      // Модалки
       unsaved_title: 'Несохранённые изменения',
       unsaved_text: 'Вы изменили настройки, но не сохранили их.\nЧто сделать?',
       unsaved_save: 'Сохранить и выйти',
@@ -58,25 +72,30 @@
       reset_confirm2_title: 'Вы уверены?',
       reset_confirm2_text: 'Это действие нельзя отменить.',
       reset_confirm2_yes: 'Стереть навсегда',
-      reset_doing: 'Очистка...'
+      reset_doing: 'Очистка...',
+      // Ошибки
+      err_camera: 'Камера недоступна',
+      err_mediapipe: 'Не удалось загрузить MediaPipe',
+      err_not_supported: 'Не поддерживается на этом устройстве'
     },
     en: {
       title: 'Settings', back: 'Back', save: 'Save',
       nickname: 'Nickname', music: 'Music', sfx: 'Effects',
-      vibration: 'Vibration', brightness: 'Brightness', language: 'Language',
-      lang_title: 'Language',
-      audio_title: 'Audio mode',
+      vibration: 'Vibration', brightness: 'Brightness',
+      audio_title: 'Sound',
+      audio_mode: 'Audio mode',
       audio_mono: 'Mono',
       audio_stereo: 'Stereo',
       audio_spatial: 'Spatial',
-      audio_3d_toggle: '3D sound via camera',
-      audio_calibrate: 'Calibrate',
-      audio_calibrate_soon: 'Calibration will come later',
-      help_title: 'Explanation',
-      help_audio_mono: 'All sounds are merged into one channel.\nWorks on one or more speakers.',
-      help_audio_stereo: 'Standard stereo. Left and right channels.\nRequires two or more speakers.',
-      help_audio_spatial: 'Sounds are positioned in 3D space around the player.\nRequires two or more speakers.',
-      help_audio_3d: 'Stereoscopic 3D sound with head tracking.\nRequires a front camera.',
+      spatial_3d: 'Stereoscopic 3D sound',
+      spatial_3d_hint: 'Use camera for precise spatial audio',
+      hint_music: 'Background music volume',
+      hint_sfx: 'Sound effects volume',
+      hint_vibration: 'Haptic feedback on actions',
+      hint_brightness: 'Interface brightness',
+      hint_nickname: 'Your in-game name (up to 16 characters)',
+      hint_audio_mode: 'Mono — 1 channel, Stereo — 2 channels, Spatial — 3D audio',
+      hint_spatial_3d: 'Requires front camera. Sound adapts to your head position.',
       unsaved_title: 'Unsaved changes',
       unsaved_text: 'You changed settings but didn\'t save them.\nWhat to do?',
       unsaved_save: 'Save and exit',
@@ -90,25 +109,29 @@
       reset_confirm2_title: 'Are you sure?',
       reset_confirm2_text: 'This action cannot be undone.',
       reset_confirm2_yes: 'Erase forever',
-      reset_doing: 'Erasing...'
+      reset_doing: 'Erasing...',
+      err_camera: 'Camera unavailable',
+      err_mediapipe: 'Failed to load MediaPipe',
+      err_not_supported: 'Not supported on this device'
     },
     fr: {
       title: 'Paramètres', back: 'Retour', save: 'Enregistrer',
       nickname: 'Pseudo', music: 'Musique', sfx: 'Effets',
-      vibration: 'Vibration', brightness: 'Luminosité', language: 'Langue',
-      lang_title: 'Langue',
-      audio_title: 'Mode audio',
+      vibration: 'Vibration', brightness: 'Luminosité',
+      audio_title: 'Son',
+      audio_mode: 'Mode audio',
       audio_mono: 'Mono',
       audio_stereo: 'Stéréo',
       audio_spatial: 'Spatial',
-      audio_3d_toggle: 'Son 3D via caméra',
-      audio_calibrate: 'Calibrer',
-      audio_calibrate_soon: 'La calibration viendra plus tard',
-      help_title: 'Explication',
-      help_audio_mono: 'Tous les sons sont fusionnés en un canal.\nFonctionne sur un ou plusieurs haut-parleurs.',
-      help_audio_stereo: 'Stéréo standard. Canaux gauche et droit.\nNécessite deux haut-parleurs ou plus.',
-      help_audio_spatial: 'Les sons sont positionnés dans l\'espace 3D autour du joueur.\nNécessite deux haut-parleurs ou plus.',
-      help_audio_3d: 'Son 3D stéréoscopique avec suivi de tête.\nNécessite une caméra frontale.',
+      spatial_3d: 'Son 3D stéréoscopique',
+      spatial_3d_hint: 'Utiliser la caméra pour un son spatial précis',
+      hint_music: 'Volume de la musique de fond',
+      hint_sfx: 'Volume des effets sonores',
+      hint_vibration: 'Retour haptique sur les actions',
+      hint_brightness: 'Luminosité de l\'interface',
+      hint_nickname: 'Votre nom en jeu (16 caractères max)',
+      hint_audio_mode: 'Mono — 1 canal, Stéréo — 2 canaux, Spatial — son 3D',
+      hint_spatial_3d: 'Nécessite la caméra frontale. Le son s\'adapte à votre tête.',
       unsaved_title: 'Modifications non enregistrées',
       unsaved_text: 'Vous avez modifié les paramètres sans les enregistrer.\nQue faire ?',
       unsaved_save: 'Enregistrer et quitter',
@@ -122,25 +145,29 @@
       reset_confirm2_title: 'Êtes-vous sûr ?',
       reset_confirm2_text: 'Cette action est irréversible.',
       reset_confirm2_yes: 'Effacer définitivement',
-      reset_doing: 'Suppression...'
+      reset_doing: 'Suppression...',
+      err_camera: 'Caméra indisponible',
+      err_mediapipe: 'Échec du chargement de MediaPipe',
+      err_not_supported: 'Non pris en charge sur cet appareil'
     },
     es: {
       title: 'Ajustes', back: 'Atrás', save: 'Guardar',
       nickname: 'Apodo', music: 'Música', sfx: 'Efectos',
-      vibration: 'Vibración', brightness: 'Brillo', language: 'Idioma',
-      lang_title: 'Idioma',
-      audio_title: 'Modo de audio',
+      vibration: 'Vibración', brightness: 'Brillo',
+      audio_title: 'Sonido',
+      audio_mode: 'Modo de audio',
       audio_mono: 'Mono',
       audio_stereo: 'Estéreo',
       audio_spatial: 'Espacial',
-      audio_3d_toggle: 'Sonido 3D por cámara',
-      audio_calibrate: 'Calibrar',
-      audio_calibrate_soon: 'La calibración llegará más tarde',
-      help_title: 'Explicación',
-      help_audio_mono: 'Todos los sonidos se combinan en un canal.\nFunciona con uno o más altavoces.',
-      help_audio_stereo: 'Estéreo estándar. Canales izquierdo y derecho.\nRequiere dos o más altavoces.',
-      help_audio_spatial: 'Los sonidos se posicionan en el espacio 3D alrededor del jugador.\nRequiere dos o más altavoces.',
-      help_audio_3d: 'Sonido 3D estereoscópico con seguimiento de cabeza.\nRequiere cámara frontal.',
+      spatial_3d: 'Sonido 3D estereoscópico',
+      spatial_3d_hint: 'Usar cámara para audio espacial preciso',
+      hint_music: 'Volumen de la música de fondo',
+      hint_sfx: 'Volumen de los efectos de sonido',
+      hint_vibration: 'Respuesta háptica en acciones',
+      hint_brightness: 'Brillo de la interfaz',
+      hint_nickname: 'Tu nombre en el juego (máx. 16)',
+      hint_audio_mode: 'Mono — 1 canal, Estéreo — 2 canales, Espacial — audio 3D',
+      hint_spatial_3d: 'Requiere cámara frontal. El sonido se adapta a tu cabeza.',
       unsaved_title: 'Cambios sin guardar',
       unsaved_text: 'Has cambiado los ajustes sin guardarlos.\n¿Qué hacer?',
       unsaved_save: 'Guardar y salir',
@@ -154,7 +181,10 @@
       reset_confirm2_title: '¿Estás seguro?',
       reset_confirm2_text: 'Esta acción no se puede deshacer.',
       reset_confirm2_yes: 'Borrar para siempre',
-      reset_doing: 'Borrando...'
+      reset_doing: 'Borrando...',
+      err_camera: 'Cámara no disponible',
+      err_mediapipe: 'Error al cargar MediaPipe',
+      err_not_supported: 'No compatible con este dispositivo'
     }
   };
   function lang() {
@@ -166,20 +196,22 @@
     return d[key] || DICT.ru[key] || key;
   }
 
-  const LANG_LIST = ['ru', 'en', 'fr', 'es'];
-  const LANG_LABELS = ['RU', 'EN', 'FR', 'ES'];
-  const AUDIO_MODES = ['mono', 'stereo', 'spatial'];
-  const AUDIO_LABELS = { mono: 'audio_mono', stereo: 'audio_stereo', spatial: 'audio_spatial' };
+  const SOUND_LOCK_MS = 350;
 
   let container = null;
   let root = null;
-  let viewportEl = null;
   let savedSnapshot = null;
   let working = null;
   let dirty = false;
   let modalOpen = false;
-  let currentPage = 'main';
   let vibeTimeouts = [];
+
+  let soundLockActive = false;
+  let soundLockTimer = null;
+
+  // ★ Тултип (подсказки «?»)
+  let tooltipEl = null;
+  let tooltipTimer = null;
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const el = (tag, cls, html) => {
@@ -190,10 +222,12 @@
   };
 
   function getS(key) { return (window.Settings && window.Settings.get) ? window.Settings.get(key) : undefined; }
+  function sfxVolume() { const v = getS('sfxVolume'); return (typeof v === 'number') ? v : 0.8; }
+  function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
 
-  // ===== ВИБРАЦИЯ =====
   function vibeEnabled() { const v = getS('vibration'); return (typeof v === 'boolean') ? v : true; }
   const canVibrate = () => !!navigator.vibrate && vibeEnabled();
+
   function stopVibrate() {
     vibeTimeouts.forEach(t => clearTimeout(t));
     vibeTimeouts = [];
@@ -241,26 +275,65 @@
     });
   }
 
-  // ===== SFX =====
   async function loadSounds() {
     if (!window.Sound) return;
     await Promise.all([
-      Sound.loadBuffer('set_sfx_btn',  ASSETS.sfxBtn).catch(() => {}),
-      Sound.loadBuffer('set_sfx_set',  ASSETS.sfxSet).catch(() => {}),
-      Sound.loadBuffer('set_sfx_save', ASSETS.sfxSave).catch(() => {}),
-      Sound.loadBuffer('set_sfx_back', ASSETS.sfxBack).catch(() => {})
+      Sound.loadBuffer('set_sfx_btn',      ASSETS.sfxBtn).catch(() => {}),
+      Sound.loadBuffer('set_sfx_set',      ASSETS.sfxSet).catch(() => {}),
+      Sound.loadBuffer('set_sfx_save',     ASSETS.sfxSave).catch(() => {}),
+      Sound.loadBuffer('set_sfx_back',     ASSETS.sfxBack).catch(() => {}),
+      Sound.loadBuffer('set_sfx_backMenu', ASSETS.sfxBackMenu).catch(() => {})
     ]);
   }
-  function playSFX(key, base = 1.0) {
-    if (!window.Sound) return;
+
+  function playSFX(key, base = 1.0, lockMs = SOUND_LOCK_MS) {
+    if (!window.Sound) return false;
+    if (soundLockActive) return false;
     try {
-      if (!Sound.hasBuffer(key)) return;
-      const v = (typeof getS('sfxVolume') === 'number') ? getS('sfxVolume') : 0.8;
-      Sound.playSFX(key, { volume: base * v, fadeIn: 0 });
-    } catch (e) {}
+      if (!Sound.hasBuffer(key)) return false;
+      Sound.playSFX(key, { volume: base * sfxVolume() });
+      soundLockActive = true;
+      if (soundLockTimer) clearTimeout(soundLockTimer);
+      soundLockTimer = setTimeout(() => {
+        soundLockActive = false;
+        soundLockTimer = null;
+      }, lockMs);
+      return true;
+    } catch (e) { return false; }
   }
 
-  // ===== МУЗЫКА =====
+  function isLocked() { return soundLockActive; }
+
+  // ============ ТУЛТИП ============
+  function ensureTooltip() {
+    if (tooltipEl && tooltipEl.parentNode) return tooltipEl;
+    tooltipEl = el('div', 'st-tooltip');
+    root.appendChild(tooltipEl);
+    return tooltipEl;
+  }
+  function showTooltip(target, text) {
+    if (!text) return;
+    const tip = ensureTooltip();
+    tip.textContent = text;
+    const rect = target.getBoundingClientRect();
+    const rootRect = root.getBoundingClientRect();
+    tip.style.left = (rect.left - rootRect.left) + 'px';
+    tip.style.top = (rect.bottom - rootRect.top + 8) + 'px';
+    tip.classList.add('show');
+  }
+  function hideTooltip() {
+    if (tooltipEl) tooltipEl.classList.remove('show');
+  }
+  function bindTooltip(target, text) {
+    target.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showTooltip(target, text);
+      if (tooltipTimer) clearTimeout(tooltipTimer);
+      tooltipTimer = setTimeout(hideTooltip, 4000);
+    });
+  }
+
+  // ============ МУЗЫКА ============
   async function loadBlockMusicWithFallback() {
     if (!window.Sound) throw new Error('Sound не загружен');
     if (Sound.hasBuffer('set_music')) return true;
@@ -277,8 +350,9 @@
     try {
       try { Sound.stopMusic(0); } catch (e) {}
       await loadBlockMusicWithFallback();
-      const v = 0.7 * ((typeof getS('musicVolume') === 'number') ? getS('musicVolume') : 0.8);
-      await Sound.playMusic('set_music', { loop: true, volume: v, fadeIn: 0.3 });
+      const v = 0.7 * musicVolume();
+      // ★ Crossfade при повторе (наложение 15 мс)
+      await Sound.playMusicCrossfade('set_music', { volume: v, fadeIn: 0.3 });
     } catch (e) {}
   }
   function setBlockMusicVolume(musicVol01) {
@@ -286,19 +360,20 @@
     try { Sound.setMusicVolume(0.7 * musicVol01, 0); } catch (e) {}
   }
 
-  // ===== SNAPSHOT =====
+  // ============ SNAPSHOT ============
   function takeSnapshot() {
     const all = (window.Settings && Settings.getAll) ? Settings.getAll() : {};
     return {
-      musicVolume01: (typeof all.musicVolume === 'number') ? all.musicVolume : 0.8,
-      sfxVolume01:   (typeof all.sfxVolume   === 'number') ? all.sfxVolume   : 0.8,
-      vibration:     (typeof all.vibration   === 'boolean') ? all.vibration   : true,
-      nickname:      (typeof all.nickname    === 'string')  ? all.nickname    : '',
-      brightness:    (typeof all.brightness  === 'number')  ? all.brightness  : 100,
-      language:      (typeof all.language    === 'string')  ? all.language    : 'ru',
-      audioMode:     (typeof all.audioMode   === 'string')  ? all.audioMode   : 'stereo',
-      spatialEnabled: (typeof all.spatialEnabled === 'boolean') ? all.spatialEnabled : false,
-      calibrationData: all.calibrationData || null
+      musicVolume01:       (typeof all.musicVolume === 'number') ? all.musicVolume : 0.8,
+      sfxVolume01:         (typeof all.sfxVolume   === 'number') ? all.sfxVolume   : 0.8,
+      vibration:           (typeof all.vibration   === 'boolean') ? all.vibration   : true,
+      nickname:            (typeof all.nickname    === 'string')  ? all.nickname    : '',
+      brightness:          (typeof all.brightness  === 'number')  ? all.brightness  : 100,
+      language:            (typeof all.language    === 'string')  ? all.language    : 'ru',
+      audioMode:           (typeof all.audioMode   === 'string')  ? all.audioMode   : 'spatial',
+      spatialNoHeadphones: (typeof all.spatialNoHeadphones === 'boolean') ? all.spatialNoHeadphones : true,
+      spatialHeadphones:   (typeof all.spatialHeadphones   === 'boolean') ? all.spatialHeadphones   : false,
+      headTracking:        (typeof all.headTracking === 'boolean') ? all.headTracking : false
     };
   }
   function recomputeDirty() {
@@ -310,7 +385,9 @@
       working.brightness  !== savedSnapshot.brightness ||
       working.language    !== savedSnapshot.language ||
       working.audioMode   !== savedSnapshot.audioMode ||
-      working.spatialEnabled !== savedSnapshot.spatialEnabled;
+      working.spatialNoHeadphones !== savedSnapshot.spatialNoHeadphones ||
+      working.spatialHeadphones   !== savedSnapshot.spatialHeadphones ||
+      working.headTracking        !== savedSnapshot.headTracking;
   }
   function applyPreview(key, uiValue) {
     if (key === 'musicVolume') setBlockMusicVolume(uiValue / 100);
@@ -325,14 +402,13 @@
     document.documentElement.style.filter = 'brightness(' + b + ')';
   }
 
-  // ===== SLIDER =====
-  function buildSlider(key, label, min, max, uiValue, formatter, helpKey) {
+  // ============ SLIDER ============
+  function buildSlider(key, label, min, max, uiValue, formatter) {
     const row = el('div', 'st-row st-slider-row');
     row.dataset.key = key;
 
-    const labelWrap = el('div', 'st-label st-label-with-help');
-    labelWrap.appendChild(el('span', 'st-label-text', label));
-    if (helpKey) labelWrap.appendChild(buildHelpBtn(helpKey));
+    const labelWrap = el('div', 'st-label-wrap');
+    labelWrap.appendChild(el('div', 'st-label', label));
     row.appendChild(labelWrap);
 
     const trackWrap = el('div', 'st-slider-track');
@@ -366,6 +442,7 @@
       return Math.round(min + (x / rect.width) * (max - min));
     }
     function onStart(e) {
+      if (isLocked()) return;
       dragging = true;
       previewUiValue = working[key];
       knob.classList.add('st-knob-active');
@@ -397,7 +474,7 @@
       updateUI(previewUiValue);
       revertToSaved(key);
       recomputeDirty();
-      playSFX('set_sfx_set', 0.7);
+      playSFX('set_sfx_set', 0.7, 250);
       if (e) e.preventDefault();
     }
 
@@ -413,14 +490,18 @@
     return row;
   }
 
-  // ===== MINI TOGGLE =====
-  function buildMiniToggle(key, label, value, helpKey, onChange) {
+  // ============ MINI TOGGLE ============
+  function buildMiniToggle(key, label, value, hint) {
     const row = el('div', 'st-row st-mini-row');
     row.dataset.key = key;
 
-    const labelWrap = el('div', 'st-label st-label-with-help');
-    labelWrap.appendChild(el('span', 'st-label-text', label));
-    if (helpKey) labelWrap.appendChild(buildHelpBtn(helpKey));
+    const labelWrap = el('div', 'st-label-wrap');
+    labelWrap.appendChild(el('div', 'st-label', label));
+    if (hint) {
+      const help = el('div', 'st-help', '?');
+      bindTooltip(help, hint);
+      labelWrap.appendChild(help);
+    }
     row.appendChild(labelWrap);
 
     const trackWrap = el('div', 'st-mini-track');
@@ -453,11 +534,11 @@
       const changed = working[key] !== v;
       working[key] = v;
       if (v) vibrateToggle();
-      playSFX('set_sfx_set', 1.0);
+      playSFX('set_sfx_set', 1.0, 250);
       if (changed) recomputeDirty();
-      if (typeof onChange === 'function') onChange(v);
     }
     function onStart(e) {
+      if (isLocked()) return;
       dragging = true;
       trackWrap.classList.add('st-mini-hold');
       knob.classList.add('st-mini-knob-active');
@@ -493,6 +574,7 @@
     }
     let tapStart = 0;
     trackWrap.addEventListener('touchstart', (e) => {
+      if (isLocked()) return;
       tapStart = performance.now();
       onStart(e);
     }, { passive: false });
@@ -514,7 +596,10 @@
     });
     trackWrap.addEventListener('touchcancel', onEnd);
 
-    trackWrap.addEventListener('mousedown', (e) => { tapStart = performance.now(); onStart(e); });
+    trackWrap.addEventListener('mousedown', (e) => {
+      if (isLocked()) return;
+      tapStart = performance.now(); onStart(e);
+    });
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', (e) => {
       const dt = performance.now() - tapStart;
@@ -535,7 +620,88 @@
     return row;
   }
 
-  // ===== MULTI TOGGLE (язык) =====
+  // ============ SEGMENTED CONTROL (Моно/Стерео/Пространство) ============
+  function buildSegmented(key, label, options, value, hint) {
+    const row = el('div', 'st-row st-seg-row');
+    row.dataset.key = key;
+
+    const labelWrap = el('div', 'st-label-wrap');
+    labelWrap.appendChild(el('div', 'st-label', label));
+    if (hint) {
+      const help = el('div', 'st-help', '?');
+      bindTooltip(help, hint);
+      labelWrap.appendChild(help);
+    }
+    row.appendChild(labelWrap);
+
+    const seg = el('div', 'st-seg');
+    const buttons = {};
+    options.forEach(opt => {
+      const btn = el('div', 'st-seg-btn', opt.label);
+      btn.dataset.value = opt.value;
+      if (opt.disabled) btn.classList.add('disabled');
+      if (opt.value === value) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        if (isLocked()) return;
+        if (opt.disabled) return;
+        if (working[key] === opt.value) return;
+        Object.values(buttons).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        working[key] = opt.value;
+        recomputeDirty();
+        playSFX('set_sfx_set', 1.0, 250);
+        // ★ Обновить зависимые элементы
+        updateDependentRows();
+      });
+      buttons[opt.value] = btn;
+      seg.appendChild(btn);
+    });
+    row.appendChild(seg);
+    return row;
+  }
+
+  // ============ Зависимые строки ============
+  let dependentContainer = null;
+
+  function updateDependentRows() {
+    if (!dependentContainer) return;
+    dependentContainer.innerHTML = '';
+
+    const caps = (window.Settings && Settings.getAudioCapabilities)
+      ? Settings.getAudioCapabilities()
+      : { spatial: false, spatial3D: false, stereo: false };
+
+    if (working.audioMode !== 'spatial') return;
+
+    // ★ Опция: Стереоскопический 3D звук (через камеру)
+    const can3D = caps.spatial3D && caps.spatial;
+    const row3D = buildMiniToggle(
+      'headTracking',
+      T('spatial_3d'),
+      working.headTracking,
+      T('hint_spatial_3d')
+    );
+    if (!can3D) {
+      row3D.classList.add('disabled');
+      row3D.style.opacity = '0.4';
+      row3D.style.pointerEvents = 'none';
+      // ★ Красная метка ошибки
+      if (!caps.spatial) {
+        addRowError(row3D, T('err_not_supported'));
+      } else if (!caps.spatial3D) {
+        addRowError(row3D, T('err_camera'));
+      }
+    }
+    dependentContainer.appendChild(row3D);
+    setTimeout(() => row3D.classList.add('show'), 80);
+  }
+
+  function addRowError(row, text) {
+    const err = el('div', 'st-row-error', text);
+    row.appendChild(err);
+  }
+
+  // ============ MULTI TOGGLE (язык) ============
   function buildMultiToggle(key, labels, value) {
     const row = el('div', 'st-row st-multi-row');
     row.dataset.key = key;
@@ -562,6 +728,7 @@
     const N = labels.length;
     const KNOB_SIZE = 26;
     const KNOB_LEFT_PAD = 3;
+    const LANG_KEYS = ['ru', 'en', 'fr', 'es'];
 
     let dragging = false;
     let lastMoveTime = 0, lastMoveX = 0;
@@ -610,13 +777,14 @@
     }
     function commitIndex(idx) {
       if (idx < 0 || idx >= N) return;
-      const newLangKey = LANG_LIST[idx];
+      const newLangKey = LANG_KEYS[idx];
       const changed = working[key] !== newLangKey;
       working[key] = newLangKey;
-      playSFX('set_sfx_set', 1.0);
+      playSFX('set_sfx_set', 1.0, 250);
       if (changed) recomputeDirty();
     }
     function onStart(e) {
+      if (isLocked()) return;
       dragging = true;
       movedFar = false;
       trackWrap.classList.add('st-multi-hold');
@@ -652,6 +820,7 @@
     }
     let tapStart = 0;
     trackWrap.addEventListener('touchstart', (e) => {
+      if (isLocked()) return;
       tapStart = performance.now();
       movedFar = false;
       onStart(e);
@@ -675,6 +844,7 @@
     trackWrap.addEventListener('touchcancel', onEnd);
     labelEls.forEach((lb, i) => {
       lb.addEventListener('click', () => {
+        if (isLocked()) return;
         setPos(i / (N - 1), true);
         commitIndex(i);
       });
@@ -684,135 +854,16 @@
     return row;
   }
 
-  // ===== КНОПКИ АУДИО-РЕЖИМА =====
-  function buildAudioModeRow() {
-    const row = el('div', 'st-row st-audio-row');
-    row.dataset.key = 'audioMode';
-
-    const labelWrap = el('div', 'st-label st-label-with-help');
-    labelWrap.appendChild(el('span', 'st-label-text', T('audio_title')));
-    labelWrap.appendChild(buildHelpBtn('help_audio_spatial'));
-    row.appendChild(labelWrap);
-
-    const wrap = el('div', 'st-audio-buttons');
-
-    AUDIO_MODES.forEach(mode => {
-      const support = (mode === 'spatial')
-        ? Sound.isSupported('spatial')
-        : Sound.isSupported('mono');
-
-      const btn = el('div', 'st-audio-btn');
-      btn.dataset.mode = mode;
-      btn.textContent = T(AUDIO_LABELS[mode]);
-
-      if (!support.ok) {
-        btn.classList.add('disabled');
-        btn.title = support.reason || 'not-supported';
-      } else {
-        btn.addEventListener('click', () => {
-          if (working.audioMode === mode) return;
-          working.audioMode = mode;
-          playSFX('set_sfx_set', 1.0);
-          vibrateToggle();
-          // Обновим активную кнопку
-          wrap.querySelectorAll('.st-audio-btn').forEach(b => {
-            b.classList.toggle('active', b.dataset.mode === mode);
-          });
-          // Покажем/скроем блок 3D-звука
-          updateAudioExtra();
-          recomputeDirty();
-        });
-      }
-      btn.classList.toggle('active', working.audioMode === mode);
-      wrap.appendChild(btn);
-    });
-
-    row.appendChild(wrap);
-    return row;
-  }
-
-  function buildAudioExtraRow() {
-    const row = el('div', 'st-row st-audio-extra-row');
-    row.dataset.key = 'audioExtra';
-
-    // Тумблер 3D-звука
-    const toggleRow = el('div', 'st-audio-extra-toggle');
-    const toggleLabel = el('div', 'st-label st-label-with-help');
-    toggleLabel.appendChild(el('span', 'st-label-text', T('audio_3d_toggle')));
-    toggleLabel.appendChild(buildHelpBtn('help_audio_3d'));
-    toggleRow.appendChild(toggleLabel);
-
-    const camSupport = Sound.is3DCameraSupported();
-    const miniTrack = el('div', 'st-mini-track');
-    const knob = el('div', 'st-mini-knob');
-    const shine = el('div', 'st-mini-shine');
-    knob.appendChild(shine);
-    miniTrack.appendChild(knob);
-    if (camSupport.ok) {
-      miniTrack.classList.toggle('on', !!working.spatialEnabled);
-      knob.style.transform = 'translateY(-50%) translateX(' + (working.spatialEnabled ? 34 : 0) + 'px)';
-      miniTrack.addEventListener('click', () => {
-        working.spatialEnabled = !working.spatialEnabled;
-        miniTrack.classList.toggle('on', working.spatialEnabled);
-        knob.style.transition = 'transform 0.42s cubic-bezier(0.16,1,0.3,1)';
-        knob.style.transform = 'translateY(-50%) translateX(' + (working.spatialEnabled ? 34 : 0) + 'px)';
-        playSFX('set_sfx_set', 1.0);
-        vibrateToggle();
-        recomputeDirty();
-      });
-    } else {
-      miniTrack.classList.add('disabled');
-    }
-    toggleRow.appendChild(miniTrack);
-    row.appendChild(toggleRow);
-
-    // Кнопка калибровки
-    const calibBtn = el('button', 'st-audio-calib-btn');
-    calibBtn.type = 'button';
-    calibBtn.textContent = T('audio_calibrate');
-    if (camSupport.ok) {
-      calibBtn.addEventListener('click', () => {
-        vibrateButton();
-        playSFX('set_sfx_btn', 1.0);
-        showInfo(T('help_title'), T('audio_calibrate_soon'));
-      });
-    } else {
-      calibBtn.classList.add('disabled');
-      calibBtn.disabled = true;
-    }
-    row.appendChild(calibBtn);
-
-    return row;
-  }
-
-  function updateAudioExtra() {
-    // Удалить старую доп. строку, если есть
-    const existing = root.querySelector('.st-audio-extra-row');
-    if (existing) existing.remove();
-
-    // Показать, если выбран spatial
-    if (working.audioMode === 'spatial') {
-      const mainPage = viewportEl.querySelector('.st-page-main');
-      const list = mainPage.querySelector('.st-list');
-      if (list) {
-        const extra = buildAudioExtraRow();
-        // Вставим после аудио-строки
-        const audioRow = list.querySelector('.st-audio-row');
-        if (audioRow && audioRow.nextSibling) {
-          list.insertBefore(extra, audioRow.nextSibling);
-        } else if (audioRow) {
-          list.appendChild(extra);
-        }
-      }
-    }
-  }
-
-  // ===== НИК =====
+  // ============ NICK ============
   function buildNickInput(value) {
     const row = el('div', 'st-row st-nick-row');
-    const labelWrap = el('div', 'st-label st-label-with-help');
-    labelWrap.appendChild(el('span', 'st-label-text', T('nickname')));
+    const labelWrap = el('div', 'st-label-wrap');
+    labelWrap.appendChild(el('div', 'st-label', T('nickname')));
+    const help = el('div', 'st-help', '?');
+    bindTooltip(help, T('hint_nickname'));
+    labelWrap.appendChild(help);
     row.appendChild(labelWrap);
+
     const wrap = el('div', 'st-nick-wrap');
     const inp = el('input', 'st-nick-input');
     inp.type = 'text';
@@ -829,18 +880,6 @@
     return row;
   }
 
-  // ===== КНОПКА (?) =====
-  function buildHelpBtn(helpKey) {
-    const btn = el('span', 'st-help-btn', '?');
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      vibrateButton();
-      playSFX('set_sfx_btn', 0.8);
-      showInfo(T('help_title'), T(helpKey));
-    });
-    return btn;
-  }
-
   function buildGlassButton(label, cls) {
     const btn = el('button', 'st-btn ' + (cls || ''));
     btn.type = 'button';
@@ -848,7 +887,6 @@
     return btn;
   }
 
-  // ===== COMMIT / ROLLBACK =====
   function commit() {
     if (!window.Settings) return;
     Settings.set('musicVolume', working.musicVolume / 100);
@@ -858,16 +896,11 @@
     Settings.set('brightness',  working.brightness);
     Settings.set('language',    working.language);
     Settings.set('audioMode',   working.audioMode);
-    Settings.set('spatialEnabled', working.spatialEnabled);
-
+    Settings.set('spatialNoHeadphones', working.spatialNoHeadphones);
+    Settings.set('spatialHeadphones',   working.spatialHeadphones);
+    Settings.set('headTracking',        working.headTracking);
     setBlockMusicVolume(working.musicVolume / 100);
     applyBrightness(working.brightness);
-
-    // Передаём режим в звуковой движок
-    if (window.Sound && Sound.setAudioMode) {
-      Sound.setAudioMode(working.audioMode, working.spatialEnabled);
-    }
-
     savedSnapshot = takeSnapshot();
     dirty = false;
     setTimeout(() => rebuildPagesContent(), 80);
@@ -881,15 +914,15 @@
     Settings.set('brightness',  savedSnapshot.brightness);
     Settings.set('language',    savedSnapshot.language);
     Settings.set('audioMode',   savedSnapshot.audioMode);
-    Settings.set('spatialEnabled', savedSnapshot.spatialEnabled);
-
+    Settings.set('spatialNoHeadphones', savedSnapshot.spatialNoHeadphones);
+    Settings.set('spatialHeadphones',   savedSnapshot.spatialHeadphones);
+    Settings.set('headTracking',        savedSnapshot.headTracking);
     setBlockMusicVolume(savedSnapshot.musicVolume01);
     applyBrightness(savedSnapshot.brightness);
     dirty = false;
     setTimeout(() => rebuildPagesContent(), 80);
   }
 
-  // ===== МОДАЛКИ =====
   function showUnsavedModal() {
     if (modalOpen) return;
     modalOpen = true;
@@ -901,15 +934,22 @@
     const btnNoSave = buildGlassButton(T('unsaved_discard'), 'st-btn-danger');
     const btnCancel = buildGlassButton(T('unsaved_cancel'), 'st-btn-secondary');
     btnSave.addEventListener('click', () => {
-      playSFX('set_sfx_save', 0.9); vibrateButton();
-      commit(); hideModalOverlay(); exitToMenu();
+      if (isLocked()) return;
+      playSFX('set_sfx_save', 0.9, 400); vibrateButton();
+      commit(); hideModalOverlay();
+      setTimeout(() => { playSFX('set_sfx_backMenu', 0.9, 500); }, 200);
+      exitToMenu();
     });
     btnNoSave.addEventListener('click', () => {
-      playSFX('set_sfx_back', 0.9); vibrateButton();
-      rollback(); hideModalOverlay(); exitToMenu();
+      if (isLocked()) return;
+      playSFX('set_sfx_back', 0.9, 400); vibrateButton();
+      rollback(); hideModalOverlay();
+      setTimeout(() => { playSFX('set_sfx_backMenu', 0.9, 500); }, 200);
+      exitToMenu();
     });
     btnCancel.addEventListener('click', () => {
-      playSFX('set_sfx_btn', 1.0); vibrateButton();
+      if (isLocked()) return;
+      playSFX('set_sfx_btn', 1.0, 350); vibrateButton();
       hideModalOverlay();
     });
     box.appendChild(btnSave);
@@ -926,23 +966,6 @@
     setTimeout(() => { overlay.remove(); modalOpen = false; }, 500);
   }
 
-  function showInfo(title, text) {
-    const overlay = el('div', 'st-modal');
-    const box = el('div', 'st-modal-box');
-    box.innerHTML = '<h3>' + title + '</h3><p>' + String(text).replace(/\n/g, '<br>') + '</p>';
-    const ok = buildGlassButton('OK', 'st-btn-primary');
-    ok.addEventListener('click', () => {
-      vibrateButton();
-      playSFX('set_sfx_btn', 1.0);
-      overlay.classList.remove('show');
-      setTimeout(() => overlay.remove(), 500);
-    });
-    box.appendChild(ok);
-    overlay.appendChild(box);
-    root.appendChild(overlay);
-    requestAnimationFrame(() => overlay.classList.add('show'));
-  }
-
   function showResetModal1() {
     if (modalOpen) return;
     modalOpen = true;
@@ -953,8 +976,9 @@
     const btnYes = buildGlassButton(T('reset_yes'), 'st-btn-danger');
     const btnNo  = buildGlassButton(T('reset_no'),  'st-btn-secondary');
     btnYes.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_back', 0.9);
+      playSFX('set_sfx_back', 0.9, 400);
       overlay.classList.remove('show');
       setTimeout(() => {
         overlay.remove();
@@ -963,8 +987,9 @@
       }, 400);
     });
     btnNo.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 1.0);
+      playSFX('set_sfx_btn', 1.0, 350);
       overlay.classList.remove('show');
       setTimeout(() => { overlay.remove(); modalOpen = false; }, 500);
     });
@@ -984,14 +1009,16 @@
     const btnYes = buildGlassButton(T('reset_confirm2_yes'), 'st-btn-danger');
     const btnNo  = buildGlassButton(T('reset_no'), 'st-btn-secondary');
     btnYes.addEventListener('click', async () => {
+      if (isLocked()) return;
       vibrateButton();
       box.innerHTML = '<h3>' + T('reset_doing') + '</h3><p>...</p>';
-      try { playSFX('set_sfx_save', 1.0); } catch (e) {}
+      try { playSFX('set_sfx_save', 1.0, 500); } catch (e) {}
       await doFullReset();
     });
     btnNo.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 1.0);
+      playSFX('set_sfx_btn', 1.0, 350);
       overlay.classList.remove('show');
       setTimeout(() => { overlay.remove(); modalOpen = false; }, 500);
     });
@@ -1006,6 +1033,7 @@
     try { if (window.Sound) Sound.stopMusic(0); } catch (e) {}
     try { if (window.Sound && Sound.unloadAll) Sound.unloadAll(); } catch (e) {}
     try { if (window.Sound && Sound.pauseAll)  Sound.pauseAll();  } catch (e) {}
+    try { if (window.Troll && Troll.resetAll) Troll.resetAll(); } catch (e) {}
     try { localStorage.clear(); } catch (e) {}
     try { sessionStorage.clear(); } catch (e) {}
     try {
@@ -1048,9 +1076,9 @@
     if (window.ORBITS && ORBITS.back) await ORBITS.back();
   }
 
-  // ===== СТИЛИ =====
+  // ============ CSS ============
   function injectStyles() {
-    if (document.getElementById('orbits-settings-styles-v8')) return;
+    if (document.getElementById('orbits-settings-styles-v9')) return;
     const css = `
       .st-root { position: absolute; inset: 0; z-index: 50; overflow: hidden; opacity: 0;
         transition: opacity 0.85s cubic-bezier(0.16,1,0.3,1); pointer-events: auto; color: #fff; }
@@ -1083,14 +1111,15 @@
         backdrop-filter: blur(22px) saturate(200%) contrast(115%); -webkit-backdrop-filter: blur(22px) saturate(200%) contrast(115%);
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.3),
           0 8px 24px rgba(0,0,0,0.55), 0 0 24px rgba(120,80,220,0.3);
-        transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), background 0.35s ease, opacity 0.35s ease; }
+        transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), background 0.35s ease, opacity 0.35s ease;
+        position: relative; overflow: hidden; }
       .st-arrow:active { transform: scale(0.9); }
       .st-arrow.inactive { opacity: 0.28; pointer-events: none; filter: saturate(0.5); }
       .st-arrow-left { padding-right: 3px; }
       .st-arrow-right { padding-left: 3px; }
-      .st-list { position: absolute; top: 11vh; left: 50%; transform: translateX(-50%);
-        width: min(80vw, 820px); display: flex; flex-direction: column; gap: 1.2vh; z-index: 5; }
-      .st-row { position: relative; display: flex; align-items: center; gap: 1.6vw; padding: 1.1vh 2.2vh; border-radius: 26px;
+      .st-list { position: absolute; top: 12vh; left: 50%; transform: translateX(-50%);
+        width: min(80vw, 820px); display: flex; flex-direction: column; gap: 1.5vh; z-index: 5; }
+      .st-row { position: relative; display: flex; align-items: center; gap: 2vw; padding: 1.25vh 2.4vh; border-radius: 26px;
         background: linear-gradient(155deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.09) 32%,
           rgba(180,140,255,0.07) 68%, rgba(120,80,220,0.13) 100%);
         border: 1px solid rgba(255,255,255,0.34);
@@ -1106,256 +1135,181 @@
       .st-row::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 25%;
         background: linear-gradient(0deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 100%); pointer-events: none; }
       .st-row.show { opacity: 1; transform: translateX(0) scale(1); }
-      .st-label { flex: 0 0 26%; font-size: 14px; letter-spacing: 2.4px; text-transform: uppercase; color: #f0eaff;
-        text-shadow: 0 0 10px rgba(180,120,255,0.85), 0 1px 0 rgba(0,0,0,0.45); position: relative; z-index: 2; font-weight: 800;
-        display: flex; align-items: center; gap: 6px; }
-      .st-label-text { display: inline-block; }
-      .st-help-btn {
-        display: inline-flex; align-items: center; justify-content: center;
-        width: 18px; height: 18px; border-radius: 50%;
-        background: rgba(255,255,255,0.18);
-        border: 1px solid rgba(255,255,255,0.4);
-        color: #fff; font-size: 12px; font-weight: 900;
-        cursor: pointer; user-select: none;
-        transition: background 0.2s ease, transform 0.2s ease;
-        flex-shrink: 0;
-      }
-      .st-help-btn:active { transform: scale(0.9); background: rgba(255,200,60,0.8); }
-      .st-slider-track { position: relative; flex: 1 1 auto; height: 42px; display: flex; align-items: center; padding: 0 22px; touch-action: none; }
-      .st-slider-track-inner { position: relative; width: 100%; height: 14px;
+      .st-row.disabled { opacity: 0.4 !important; pointer-events: none; }
+
+      .st-label-wrap { flex: 0 0 32%; display: flex; align-items: center; gap: 8px; position: relative; z-index: 2; }
+      .st-label { font-size: 14px; letter-spacing: 2.4px; text-transform: uppercase; color: #f0eaff;
+        text-shadow: 0 0 10px rgba(180,120,255,0.85), 0 1px 0 rgba(0,0,0,0.45); font-weight: 800; }
+
+      .st-help { width: 20px; height: 20px; border-radius: 50%;
+        background: linear-gradient(140deg, rgba(255,255,255,0.35) 0%, rgba(180,140,255,0.25) 100%);
+        border: 1px solid rgba(255,255,255,0.5);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 900; color: #fff; cursor: pointer; flex: 0 0 auto;
+        text-shadow: 0 1px 0 rgba(0,0,0,0.5);
+        transition: transform 0.2s ease, background 0.2s ease;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 6px rgba(0,0,0,0.4); }
+      .st-help:active { transform: scale(0.9); }
+
+      .st-tooltip { position: absolute; z-index: 100; max-width: 300px; padding: 10px 14px;
+        background: rgba(20,15,40,0.96); border: 1px solid rgba(180,140,255,0.5);
+        border-radius: 12px; color: #e0d8ff; font-size: 12px; line-height: 1.5;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.8), 0 0 30px rgba(160,100,255,0.3);
+        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        opacity: 0; transform: translateY(-6px); pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease; }
+      .st-tooltip.show { opacity: 1; transform: translateY(0); }
+
+      .st-slider-track { position: relative; flex: 1 1 auto; height: 46px; display: flex; align-items: center; padding: 0 22px; touch-action: none; }
+      .st-slider-track-inner { position: relative; width: 100%; height: 15px;
         background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(60,30,120,0.32) 40%, rgba(255,255,255,0.10) 100%);
         border: 1px solid rgba(255,255,255,0.18); border-radius: 20px;
         box-shadow: inset 0 3px 8px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.2); overflow: visible; }
       .st-slider-fill { position: absolute; left: 0; top: 0; bottom: 0;
         background: linear-gradient(90deg, rgba(106,58,255,1) 0%, rgba(176,107,255,1) 50%, rgba(170,150,255,1) 100%);
-        border-radius: 20px; box-shadow: 0 0 22px rgba(160,80,255,1), 0 0 42px rgba(140,70,220,0.55),
-          inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1.5px 0 rgba(0,0,0,0.3);
+        border-radius: 20px; box-shadow: 0 0 22px rgba(160,80,255,1), 0 0 42px rgba(140,70,220,0.55);
         pointer-events: none; transition: width 0.08s linear; }
-      .st-slider-knob { position: absolute; top: 50%; left: 0; width: 30px; height: 30px; border-radius: 50%;
+      .st-slider-knob { position: absolute; top: 50%; left: 0; width: 32px; height: 32px; border-radius: 50%;
         background: radial-gradient(circle at 32% 26%, rgba(255,255,255,0.98) 0%, rgba(240,225,255,0.75) 20%,
           rgba(210,180,255,0.55) 50%, rgba(170,130,250,0.6) 80%, rgba(140,100,220,0.65) 100%);
         border: 1.5px solid rgba(255,255,255,0.85);
-        box-shadow: inset 0 0 14px rgba(255,255,255,1), inset 0 -5px 10px rgba(140,100,220,0.45),
-          inset 0 5px 10px rgba(255,255,255,0.7), 0 0 26px rgba(180,120,255,1),
+        box-shadow: inset 0 0 14px rgba(255,255,255,1), 0 0 26px rgba(180,120,255,1),
           0 0 52px rgba(140,80,255,0.6), 0 8px 20px rgba(0,0,0,0.5);
         transform: translate(-50%, -50%) scale(1); pointer-events: none; overflow: hidden;
-        backdrop-filter: blur(10px) saturate(200%); -webkit-backdrop-filter: blur(10px) saturate(200%);
-        transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.35s ease; }
+        transition: transform 0.35s cubic-bezier(0.16,1,0.3,1); }
       .st-slider-knob-shine { position: absolute; top: 8%; left: 15%; width: 60%; height: 42%;
         background: radial-gradient(ellipse at 35% 30%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.65) 40%, rgba(255,255,255,0) 82%);
         border-radius: 50%; pointer-events: none; }
       .st-slider-knob-reflect { position: absolute; bottom: 6%; right: 12%; width: 40%; height: 30%;
         background: radial-gradient(ellipse at 60% 60%, rgba(200,160,255,0.6) 0%, rgba(200,160,255,0) 80%);
         border-radius: 50%; pointer-events: none; }
-      .st-slider-knob.st-knob-active { transform: translate(-50%, -50%) scale(1.7);
-        box-shadow: inset 0 0 20px rgba(255,255,255,1), inset 0 -8px 16px rgba(140,100,220,0.55),
-          inset 0 8px 16px rgba(255,255,255,0.85), 0 0 48px rgba(220,180,255,1),
-          0 0 96px rgba(160,100,255,0.9), 0 14px 34px rgba(0,0,0,0.6); }
+      .st-slider-knob.st-knob-active { transform: translate(-50%, -50%) scale(1.7); }
       .st-value { flex: 0 0 10%; text-align: right; font-size: 13px; color: #fff;
         text-shadow: 0 0 10px rgba(180,120,255,0.9), 0 1px 0 rgba(0,0,0,0.45);
         font-variant-numeric: tabular-nums; position: relative; z-index: 2; font-weight: 700; }
+
       .st-mini-track { position: relative; flex: 0 0 66px; height: 32px;
         background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(60,30,120,0.28) 45%, rgba(255,255,255,0.14) 100%);
         border: 1px solid rgba(255,255,255,0.26); border-radius: 40px; cursor: pointer;
-        backdrop-filter: blur(22px) saturate(200%); -webkit-backdrop-filter: blur(22px) saturate(200%);
-        box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), inset 0 -1px 0 rgba(255,255,255,0.22), 0 6px 18px rgba(0,0,0,0.45);
-        transition: background 0.5s ease, box-shadow 0.5s ease, transform 0.3s cubic-bezier(0.16,1,0.3,1); touch-action: none; }
+        box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), 0 6px 18px rgba(0,0,0,0.45);
+        transition: background 0.5s ease, box-shadow 0.5s ease, transform 0.3s ease; touch-action: none; }
       .st-mini-track:active, .st-mini-track.st-mini-hold { transform: scale(1.08); }
       .st-mini-track.on { background: linear-gradient(135deg, rgba(140,70,255,0.95) 0%, rgba(190,110,255,0.95) 100%);
-        box-shadow: inset 0 3px 8px rgba(0,0,0,0.28), inset 0 -1px 0 rgba(255,255,255,0.55),
-          0 0 28px rgba(190,110,255,1), 0 0 56px rgba(140,80,255,0.7), 0 6px 20px rgba(60,20,120,0.55); }
-      .st-mini-track.disabled { opacity: 0.35; pointer-events: none; filter: saturate(0.4); }
-      .st-mini-knob, .st-multi-knob { position: absolute; top: 50%; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+        box-shadow: 0 0 28px rgba(190,110,255,1), 0 0 56px rgba(140,80,255,0.7); }
+      .st-mini-knob { position: absolute; top: 50%; left: 3px; width: 26px; height: 26px; border-radius: 50%;
         background: radial-gradient(circle at 32% 26%, rgba(255,255,255,1) 0%, rgba(240,225,255,0.8) 22%,
-          rgba(210,180,255,0.55) 52%, rgba(170,130,250,0.55) 82%, rgba(140,100,220,0.6) 100%);
+          rgba(210,180,255,0.55) 52%, rgba(170,130,250,0.55) 82%);
         border: 1.5px solid rgba(255,255,255,0.85);
-        box-shadow: inset 0 0 12px rgba(255,255,255,1), inset 0 -4px 8px rgba(140,100,220,0.45),
-          inset 0 4px 8px rgba(255,255,255,0.6), 0 0 20px rgba(180,120,255,1),
-          0 0 40px rgba(140,80,255,0.55), 0 5px 12px rgba(0,0,0,0.5);
-        transform: translateY(-50%) translateX(0); overflow: hidden; pointer-events: none; will-change: transform; }
-      .st-mini-shine, .st-multi-shine { position: absolute; top: 10%; left: 18%; width: 55%; height: 40%;
-        background: radial-gradient(ellipse at 35% 30%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.55) 45%, rgba(255,255,255,0) 82%);
+        box-shadow: inset 0 0 12px rgba(255,255,255,1), 0 0 20px rgba(180,120,255,1);
+        transform: translateY(-50%) translateX(0); overflow: hidden; pointer-events: none; }
+      .st-mini-shine { position: absolute; top: 10%; left: 18%; width: 55%; height: 40%;
+        background: radial-gradient(ellipse at 35% 30%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 82%);
         border-radius: 50%; pointer-events: none; }
-      .st-mini-reflect, .st-multi-reflect { position: absolute; bottom: 8%; right: 15%; width: 38%; height: 28%;
+      .st-mini-reflect { position: absolute; bottom: 8%; right: 15%; width: 38%; height: 28%;
         background: radial-gradient(ellipse at 60% 60%, rgba(200,160,255,0.55) 0%, rgba(200,160,255,0) 80%);
         border-radius: 50%; pointer-events: none; }
 
-      /* Кнопки аудио-режима */
-      .st-audio-row { flex-wrap: nowrap; }
-      .st-audio-buttons {
-        flex: 1 1 auto;
-        display: flex; gap: 8px;
-        position: relative; z-index: 2;
-      }
-      .st-audio-btn {
-        flex: 1 1 0;
-        padding: 10px 8px;
-        font-family: inherit;
-        font-size: 13px;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        font-weight: 800;
-        text-align: center;
-        color: rgba(255,255,255,0.7);
-        background: linear-gradient(155deg,
-          rgba(255,255,255,0.14) 0%,
-          rgba(255,255,255,0.05) 100%);
-        border: 1px solid rgba(255,255,255,0.28);
-        border-radius: 14px;
-        cursor: pointer;
-        user-select: none;
-        transition: background 0.35s ease, color 0.35s ease, transform 0.2s ease, box-shadow 0.35s ease;
-      }
-      .st-audio-btn:active { transform: scale(0.96); }
-      .st-audio-btn.active {
-        color: #fff;
+      /* ★ Сегментированный контрол (Моно/Стерео/Пространство) */
+      .st-seg { flex: 1 1 auto; display: flex; gap: 8px; position: relative; z-index: 2; }
+      .st-seg-btn { flex: 1 1 0; padding: 10px 8px; text-align: center;
+        font-size: 13px; letter-spacing: 1.4px; font-weight: 800; text-transform: uppercase;
+        color: rgba(255,255,255,0.7); cursor: pointer;
+        background: linear-gradient(155deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%);
+        border: 1px solid rgba(255,255,255,0.20); border-radius: 14px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 12px rgba(0,0,0,0.3);
+        transition: all 0.3s cubic-bezier(0.16,1,0.3,1); user-select: none; }
+      .st-seg-btn.active { color: #fff;
         background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
-        border-color: rgba(220,180,255,0.85);
-        box-shadow:
-          inset 0 1.5px 0 rgba(255,255,255,0.85),
-          0 10px 26px rgba(130,60,255,0.7),
-          0 0 34px rgba(170,100,255,0.5);
-      }
-      .st-audio-btn.disabled {
-        opacity: 0.3;
-        pointer-events: none;
-        filter: saturate(0.3);
-      }
+        border-color: rgba(220,180,255,0.8);
+        box-shadow: 0 0 24px rgba(180,100,255,0.7), 0 0 48px rgba(140,80,255,0.4),
+          inset 0 1px 0 rgba(255,255,255,0.5); }
+      .st-seg-btn.disabled { opacity: 0.3; pointer-events: none; filter: grayscale(0.7); }
+      .st-seg-btn:active:not(.disabled) { transform: scale(0.96); }
 
-      .st-audio-extra-row {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-        opacity: 0;
-        max-height: 0;
-        padding-top: 0; padding-bottom: 0;
-        transition: opacity 0.5s ease, max-height 0.5s ease, padding 0.4s ease;
-      }
-      .st-audio-extra-row.show {
-        opacity: 1;
-        max-height: 200px;
-        padding-top: 1.1vh; padding-bottom: 1.1vh;
-      }
-      .st-audio-extra-toggle {
-        display: flex; align-items: center; gap: 1.6vw;
-      }
-      .st-audio-extra-toggle .st-label {
-        flex: 1 1 auto;
-      }
-      .st-audio-calib-btn {
-        width: 100%;
-        padding: 12px 20px;
-        font-family: inherit;
-        font-size: 14px;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        font-weight: 800;
-        color: #fff;
-        background: linear-gradient(135deg, rgba(140,70,255,0.85), rgba(190,110,255,0.85));
-        border: 1px solid rgba(220,180,255,0.7);
-        border-radius: 16px;
-        cursor: pointer;
-        box-shadow:
-          inset 0 1.5px 0 rgba(255,255,255,0.7),
-          0 8px 22px rgba(130,60,255,0.5);
-        transition: transform 0.2s ease, background 0.25s ease;
-      }
-      .st-audio-calib-btn:active { transform: scale(0.96); }
-      .st-audio-calib-btn.disabled { opacity: 0.35; pointer-events: none; filter: saturate(0.3); }
+      .st-multi-wrap { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+      .st-multi-labels { display: flex; padding: 0; font-size: 14px; letter-spacing: 2.4px;
+        color: rgba(255,255,255,0.55); font-weight: 800; user-select: none; }
+      .st-multi-label { flex: 1 1 0; text-align: center; cursor: pointer;
+        transition: color 0.35s ease, text-shadow 0.35s ease, transform 0.35s ease; }
+      .st-multi-label.active { color: #fff;
+        text-shadow: 0 0 14px rgba(220,170,255,1), 0 0 30px rgba(170,100,255,0.9);
+        transform: translateY(-1px); }
+      .st-multi-track { position: relative; height: 32px;
+        background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(60,30,120,0.28) 45%, rgba(255,255,255,0.14) 100%);
+        border: 1px solid rgba(255,255,255,0.26); border-radius: 40px; cursor: pointer;
+        box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), 0 6px 18px rgba(0,0,0,0.45);
+        touch-action: none; width: 100%; overflow: hidden; }
+      .st-multi-track:active, .st-multi-track.st-multi-hold { transform: scale(1.03); }
+      .st-multi-knob { position: absolute; top: 50%; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+        background: radial-gradient(circle at 32% 26%, rgba(255,255,255,1) 0%, rgba(240,225,255,0.8) 22%,
+          rgba(210,180,255,0.55) 52%, rgba(170,130,250,0.55) 82%);
+        border: 1.5px solid rgba(255,255,255,0.85);
+        box-shadow: inset 0 0 12px rgba(255,255,255,1), 0 0 20px rgba(180,120,255,1);
+        transform: translateY(-50%); overflow: hidden; pointer-events: none; }
+      .st-multi-shine { position: absolute; top: 10%; left: 18%; width: 55%; height: 40%;
+        background: radial-gradient(ellipse at 35% 30%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 82%);
+        border-radius: 50%; pointer-events: none; }
+      .st-multi-reflect { position: absolute; bottom: 8%; right: 15%; width: 38%; height: 28%;
+        background: radial-gradient(ellipse at 60% 60%, rgba(200,160,255,0.55) 0%, rgba(200,160,255,0) 80%);
+        border-radius: 50%; pointer-events: none; }
+      .st-multi-knob.st-multi-knob-active { transform: translateY(-50%) scale(1.5); }
 
-      /* Ник */
       .st-nick-wrap { flex: 1 1 auto; position: relative; z-index: 2; }
       .st-nick-input { width: 100%; padding: 10px 18px;
         background: linear-gradient(180deg, rgba(0,0,0,0.32) 0%, rgba(60,30,120,0.22) 50%, rgba(255,255,255,0.10) 100%);
         border: 1px solid rgba(255,255,255,0.28); border-radius: 18px; color: #fff; font-size: 15px;
-        letter-spacing: 1px; outline: none;
-        backdrop-filter: blur(16px) saturate(200%); -webkit-backdrop-filter: blur(16px) saturate(200%);
-        box-shadow: inset 0 3px 8px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(255,255,255,0.22); }
-      .st-nick-input:focus { border-color: rgba(200,150,255,0.95);
-        box-shadow: inset 0 3px 8px rgba(0,0,0,0.5), 0 0 24px rgba(180,100,255,0.8), 0 0 48px rgba(150,80,255,0.4); }
+        letter-spacing: 1px; outline: none; box-shadow: inset 0 3px 8px rgba(0,0,0,0.5); }
+      .st-nick-input:focus { border-color: rgba(200,150,255,0.95); }
 
-      /* Нижние кнопки */
-      .st-btn-back, .st-btn-save { position: absolute; bottom: 3vh; padding: 1.2vh 3.4vh;
-        color: #fff; font-family: inherit; font-size: 17px; letter-spacing: 2.2px;
+      .st-btn-back, .st-btn-save { position: absolute; bottom: 4vh; padding: 1.3vh 3.6vh;
+        color: #fff; font-family: inherit; font-size: 18px; letter-spacing: 2.5px;
         text-transform: uppercase; font-weight: 900; border-radius: 22px; cursor: pointer; z-index: 8;
-        backdrop-filter: blur(24px) saturate(210%); -webkit-backdrop-filter: blur(24px) saturate(210%);
-        transition: transform 0.28s cubic-bezier(0.16,1,0.3,1), background 0.3s ease, box-shadow 0.3s ease; }
-      .st-btn-back { left: 4vw;
-        background: linear-gradient(135deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.08) 100%);
-        border: 1px solid rgba(255,255,255,0.42);
-        box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.55); }
-      .st-btn-back:active { transform: scale(0.94) translateY(2px);
-        background: linear-gradient(135deg, rgba(255,200,60,0.95) 0%, rgba(210,150,0,0.95) 100%); }
-      .st-btn-save { right: 4vw;
-        background: linear-gradient(135deg, rgba(140,70,255,0.95) 0%, rgba(190,110,255,0.95) 100%);
-        border: 1px solid rgba(220,180,255,0.75);
-        box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.75), inset 0 -1px 0 rgba(0,0,0,0.3),
-          0 12px 34px rgba(130,60,255,0.75), 0 0 48px rgba(160,90,255,0.5); }
-      .st-btn-save:active { transform: scale(0.94) translateY(2px); }
+        transition: transform 0.28s ease; }
+      .st-btn-back { left: 4vw; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.42); }
+      .st-btn-save { right: 4vw; background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
+        border: 1px solid rgba(220,180,255,0.75); }
+      .st-btn-back:active, .st-btn-save:active { transform: scale(0.94); }
 
-      .st-multi-wrap { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-      .st-multi-labels { display: flex; padding: 0; font-size: 14px; letter-spacing: 2.4px;
-        color: rgba(255,255,255,0.55); text-shadow: 0 1px 0 rgba(0,0,0,0.5); font-weight: 800; user-select: none; }
-      .st-multi-label { flex: 1 1 0; text-align: center; cursor: pointer;
-        transition: color 0.35s ease, text-shadow 0.35s ease; }
-      .st-multi-label.active { color: #fff;
-        text-shadow: 0 0 14px rgba(220,170,255,1), 0 0 30px rgba(170,100,255,0.9); }
-      .st-multi-track { position: relative; height: 30px;
-        background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(60,30,120,0.28) 45%, rgba(255,255,255,0.14) 100%);
-        border: 1px solid rgba(255,255,255,0.26); border-radius: 40px; cursor: pointer;
-        backdrop-filter: blur(22px) saturate(200%); -webkit-backdrop-filter: blur(22px) saturate(200%);
-        box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), inset 0 -1px 0 rgba(255,255,255,0.22), 0 6px 18px rgba(0,0,0,0.45);
-        touch-action: none; width: 100%; margin: 0; overflow: hidden; }
-      .st-multi-knob.st-multi-knob-active { transform: translateY(-50%) scale(1.5); }
-
-      .st-reset-row { justify-content: center; padding: 1.1vh 2.2vh;
-        background: linear-gradient(155deg, rgba(255,80,80,0.14) 0%, rgba(200,50,50,0.08) 50%, rgba(150,30,30,0.12) 100%);
+      .st-reset-row { justify-content: center; padding: 1.2vh 2.4vh;
+        background: linear-gradient(155deg, rgba(255,80,80,0.14) 0%, rgba(200,50,50,0.08) 100%);
         border: 1px solid rgba(255,120,120,0.4); }
-      .st-reset-btn { width: 100%; padding: 12px 24px; font-family: inherit; font-size: 14px;
-        letter-spacing: 2.2px; text-transform: uppercase; font-weight: 900; color: #ffb8b8;
-        background: linear-gradient(135deg, rgba(255,80,80,0.25) 0%, rgba(200,50,50,0.20) 100%);
-        border: 1px solid rgba(255,140,140,0.55); border-radius: 16px; cursor: pointer;
-        text-shadow: 0 0 12px rgba(255,80,80,0.8); }
-      .st-reset-btn:active { transform: scale(0.96); }
+      .st-reset-btn { width: 100%; padding: 13px 26px; font-family: inherit; font-size: 15px;
+        letter-spacing: 2.4px; text-transform: uppercase; font-weight: 900; color: #ffb8b8;
+        background: rgba(255,80,80,0.20); border: 1px solid rgba(255,140,140,0.55);
+        border-radius: 16px; cursor: pointer; }
+
+      .st-row-error { position: absolute; bottom: -16px; left: 0; right: 0;
+        font-size: 10px; color: #ff8080; text-align: center; letter-spacing: 0.8px;
+        text-shadow: 0 0 8px rgba(255,80,80,0.8); }
 
       .st-modal { position: absolute; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
-        background: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px);
-        opacity: 0; transition: opacity 0.55s ease, background 0.55s ease, backdrop-filter 0.55s ease; }
-      .st-modal.show { opacity: 1; background: rgba(0,0,0,0.62);
-        backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-      .st-modal-box { width: min(88vw, 480px); padding: 28px 24px;
-        background: linear-gradient(155deg, rgba(45,30,75,0.96) 0%, rgba(65,40,110,0.96) 100%);
-        border: 1px solid rgba(220,180,255,0.65); border-radius: 30px; text-align: center; color: #e0d8ff;
-        backdrop-filter: blur(24px) saturate(200%); -webkit-backdrop-filter: blur(24px) saturate(200%);
-        box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.4), 0 0 60px rgba(160,90,255,0.5), 0 24px 80px rgba(0,0,0,0.9);
-        transform: scale(0.55) rotate(-3deg); opacity: 0;
+        background: rgba(0,0,0,0); opacity: 0; transition: opacity 0.55s ease, background 0.55s ease; }
+      .st-modal.show { opacity: 1; background: rgba(0,0,0,0.62); }
+      .st-modal-box { width: min(88vw, 480px); padding: 30px 26px;
+        background: linear-gradient(155deg, rgba(45,30,75,0.96), rgba(65,40,110,0.96));
+        border: 1px solid rgba(220,180,255,0.65); border-radius: 30px; text-align: center;
+        color: #e0d8ff; transform: scale(0.55) rotate(-3deg); opacity: 0;
         transition: transform 0.6s cubic-bezier(0.16,1,0.3,1), opacity 0.6s ease; }
-      .st-modal.show .st-modal-box { transform: scale(1) rotate(0deg); opacity: 1; }
-      .st-modal-box h3 { font-size: 20px; margin-bottom: 12px; color: #fff; }
-      .st-modal-box p { font-size: 14px; line-height: 1.65; margin-bottom: 18px; }
-      .st-modal-box .st-btn { display: block; width: 100%; margin-top: 10px; font-size: 15px; padding: 13px 22px; }
+      .st-modal.show .st-modal-box { transform: scale(1) rotate(0); opacity: 1; }
+      .st-modal-box h3 { font-size: 21px; margin-bottom: 14px; color: #fff; }
+      .st-modal-box p { font-size: 14px; line-height: 1.65; margin-bottom: 22px; }
       .st-modal-danger { border-color: rgba(255,100,100,0.75) !important;
-        background: linear-gradient(155deg, rgba(60,20,25,0.98) 0%, rgba(40,15,20,0.98) 100%) !important; }
+        background: linear-gradient(155deg, rgba(60,20,25,0.98), rgba(40,15,20,0.98)) !important; }
       .st-modal-danger h3 { color: #ff7070 !important; }
-      .st-modal-danger p { color: #ffd0d0 !important; }
-      .st-btn { padding: 14px 32px; font-family: inherit; font-size: 16px; letter-spacing: 2.2px;
+      .st-btn { padding: 15px 34px; font-family: inherit; font-size: 17px; letter-spacing: 2.4px;
         text-transform: uppercase; font-weight: 900; color: #fff; background: rgba(255,255,255,0.10);
         border: 1px solid rgba(255,255,255,0.32); border-radius: 22px; cursor: pointer;
-        backdrop-filter: blur(18px) saturate(200%); -webkit-backdrop-filter: blur(18px) saturate(200%); }
-      .st-btn:active { transform: scale(0.95); }
-      .st-btn-primary { background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
-        border-color: rgba(220,180,255,0.8); }
-      .st-btn-danger { background: linear-gradient(135deg, rgba(255,80,80,0.92), rgba(210,50,50,0.92));
-        border-color: rgba(255,170,170,0.75); }
+        display: block; width: 100%; margin-top: 10px; }
+      .st-btn-primary { background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95)); }
+      .st-btn-danger { background: linear-gradient(135deg, rgba(255,80,80,0.92), rgba(210,50,50,0.92)); }
       .st-btn-secondary { background: rgba(255,255,255,0.10); }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-settings-styles-v8';
+    style.id = 'orbits-settings-styles-v9';
     style.textContent = css;
     document.head.appendChild(style);
   }
 
-  // ===== СТРАНИЦЫ =====
   function buildBg() {
     const bg = el('div', 'st-bg');
     bg.style.backgroundImage = "url('" + ASSETS.bg + "')";
@@ -1367,18 +1321,20 @@
     const header = el('div', 'st-header');
     const arrowLeft = el('div', 'st-arrow st-arrow-left', '‹');
     arrowLeft.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_back', 0.9);
+      playSFX('set_sfx_btn', 0.9, 350);
       goToPage('main');
     });
     header.appendChild(arrowLeft);
     const title = el('div', 'st-title', '');
-    title.textContent = currentPage === 'lang' ? T('lang_title') : T('title');
+    title.textContent = T('title');
     header.appendChild(title);
     const arrowRight = el('div', 'st-arrow st-arrow-right', '›');
     arrowRight.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 0.9);
+      playSFX('set_sfx_btn', 0.9, 350);
       goToPage('lang');
     });
     header.appendChild(arrowRight);
@@ -1394,57 +1350,69 @@
       left.classList.remove('inactive');
       right.classList.add('inactive');
     }
-    if (title) title.textContent = currentPage === 'lang' ? T('lang_title') : T('title');
   }
+
+  let currentPage = 'main';
 
   function buildMainPageInto(pageEl) {
     const list = el('div', 'st-list');
     pageEl.appendChild(list);
 
-    const rowNick    = buildNickInput(working.nickname);
-    const rowMusic   = buildSlider('musicVolume', T('music'), 0, 100, working.musicVolume, v => v + '%');
-    const rowSfx     = buildSlider('sfxVolume',   T('sfx'),   0, 100, working.sfxVolume,   v => v + '%');
-    const rowAudio   = buildAudioModeRow();
-    const rowVibe    = buildMiniToggle('vibration', T('vibration'), working.vibration);
-    const rowBright  = buildSlider('brightness',  T('brightness'), 0, 150, working.brightness, v => v);
+    const rowNick   = buildNickInput(working.nickname);
+    const rowMusic  = buildSlider('musicVolume', T('music'), 0, 100, working.musicVolume, v => v + '%');
+    const rowSfx    = buildSlider('sfxVolume',   T('sfx'),   0, 100, working.sfxVolume,   v => v + '%');
+    const rowVibe   = buildMiniToggle('vibration', T('vibration'), working.vibration, T('hint_vibration'));
+    const rowBright = buildSlider('brightness',  T('brightness'), 0, 150, working.brightness, v => v);
+
+    // ★ Сегментированный контрол Моно/Стерео/Пространство
+    const caps = (window.Settings && Settings.getAudioCapabilities)
+      ? Settings.getAudioCapabilities()
+      : { mono: true, stereo: false, spatial: false, spatial3D: false };
+
+    const rowAudio = buildSegmented('audioMode', T('audio_mode'), [
+      { label: T('audio_mono'),    value: 'mono',    disabled: !caps.mono },
+      { label: T('audio_stereo'),  value: 'stereo',  disabled: !caps.stereo },
+      { label: T('audio_spatial'), value: 'spatial', disabled: !caps.spatial }
+    ], working.audioMode, T('hint_audio_mode'));
+    list.appendChild(rowAudio);
+
+    // ★ Контейнер для зависимых опций
+    dependentContainer = el('div', 'st-dependent');
+    list.appendChild(dependentContainer);
 
     list.appendChild(rowNick);
     list.appendChild(rowMusic);
     list.appendChild(rowSfx);
-    list.appendChild(rowAudio);
     list.appendChild(rowVibe);
     list.appendChild(rowBright);
 
-    // Если выбран spatial — показываем доп. блок
-    if (working.audioMode === 'spatial') {
-      const extra = buildAudioExtraRow();
-      list.insertBefore(extra, rowVibe);
-    }
+    // Показ и обновление зависимых
+    updateDependentRows();
 
-    const rows = [rowNick, rowMusic, rowSfx, rowAudio, rowVibe, rowBright];
-    rows.forEach((r, i) => setTimeout(() => r.classList.add('show'), 80 + i * 100));
-
-    // Доп. строка
-    const extra = list.querySelector('.st-audio-extra-row');
-    if (extra) setTimeout(() => extra.classList.add('show'), 80 + 4 * 100);
+    const rows = [rowAudio, rowNick, rowMusic, rowSfx, rowVibe, rowBright];
+    rows.forEach((r, i) => setTimeout(() => r.classList.add('show'), 100 + i * 130));
   }
 
   function buildLangPageInto(pageEl) {
     const list = el('div', 'st-list');
     pageEl.appendChild(list);
-    const rowLang = buildMultiToggle('language', LANG_LABELS, working.language);
+
+    const rowLang = buildMultiToggle('language', ['RU', 'EN', 'FR', 'ES'], working.language);
     list.appendChild(rowLang);
+
     const rowReset = el('div', 'st-row st-reset-row');
     const resetBtn = el('button', 'st-reset-btn');
     resetBtn.type = 'button';
     resetBtn.textContent = T('reset_btn');
     resetBtn.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
-      playSFX('set_sfx_btn', 1.0);
+      playSFX('set_sfx_btn', 1.0, 350);
       showResetModal1();
     });
     rowReset.appendChild(resetBtn);
     list.appendChild(rowReset);
+
     setTimeout(() => {
       rowLang.classList.add('show');
       setTimeout(() => rowReset.classList.add('show'), 140);
@@ -1461,83 +1429,67 @@
     btnSave.textContent = T('save');
     root.appendChild(btnSave);
     btnBack.addEventListener('click', () => {
+      if (isLocked()) return;
       vibrateButton();
       if (dirty) {
-        playSFX('set_sfx_btn', 1.0);
+        playSFX('set_sfx_btn', 1.0, 350);
         showUnsavedModal();
       } else {
-        playSFX('set_sfx_back', 0.9);
+        playSFX('set_sfx_backMenu', 0.9, 500);
         exitToMenu();
       }
     });
     btnSave.addEventListener('click', () => {
-      playSFX('set_sfx_save', 1.0);
+      if (isLocked()) return;
+      playSFX('set_sfx_save', 1.0, 450);
       vibrateButton();
       commit();
-      btnSave.style.transform = 'scale(0.9) translateY(2px)';
-      setTimeout(() => { btnSave.style.transform = ''; }, 200);
     });
   }
 
   async function buildAll() {
     root.innerHTML = '';
     buildBg();
-    viewportEl = el('div', 'st-viewport');
-    viewportEl.dataset.page = currentPage;
-    root.appendChild(viewportEl);
     const mainPage = el('div', 'st-page st-page-main');
     const langPage = el('div', 'st-page st-page-lang');
-    viewportEl.appendChild(mainPage);
-    viewportEl.appendChild(langPage);
+    root.appendChild(mainPage);
+    root.appendChild(langPage);
     buildMainPageInto(mainPage);
     buildLangPageInto(langPage);
     buildHeader();
     buildBottomButtons();
   }
-  async function rebuildPagesContent() {
-    if (!viewportEl) return;
-    const main = viewportEl.querySelector('.st-page-main');
-    const lang = viewportEl.querySelector('.st-page-lang');
-    if (!main || !lang) return;
-    main.innerHTML = '';
-    lang.innerHTML = '';
-    buildMainPageInto(main);
-    buildLangPageInto(lang);
-    const btnBack = root.querySelector('.st-btn-back');
-    const btnSave = root.querySelector('.st-btn-save');
-    if (btnBack) btnBack.textContent = T('back');
-    if (btnSave) btnSave.textContent = T('save');
-    const title = root.querySelector('.st-title');
-    if (title) title.textContent = currentPage === 'lang' ? T('lang_title') : T('title');
-  }
+
   async function goToPage(page) {
     if (page === currentPage) return;
-    const title = root.querySelector('.st-title');
-    if (title) {
-      title.classList.add('fade-out');
-      await sleep(300);
-    }
     currentPage = page;
-    viewportEl.dataset.page = page;
-    if (title) {
-      title.textContent = page === 'lang' ? T('lang_title') : T('title');
-      title.classList.remove('fade-out');
-    }
+    const mainPage = root.querySelector('.st-page-main');
+    const langPage = root.querySelector('.st-page-lang');
+    if (mainPage) mainPage.style.transform = page === 'lang' ? 'translateX(-100%)' : 'translateX(0)';
+    if (langPage) langPage.style.transform = page === 'lang' ? 'translateX(0)' : 'translateX(100%)';
     const left = root.querySelector('.st-arrow-left');
     const right = root.querySelector('.st-arrow-right');
-    updateHeaderArrows(left, right, title);
+    updateHeaderArrows(left, right);
+    const title = root.querySelector('.st-title');
+    if (title) {
+      title.textContent = page === 'lang' ? T('title') : T('title');
+    }
   }
 
   async function start() {
     ['orbits-settings-styles', 'orbits-settings-styles-v2', 'orbits-settings-styles-v3',
      'orbits-settings-styles-v4', 'orbits-settings-styles-v5', 'orbits-settings-styles-v6',
-     'orbits-settings-styles-v7'].forEach(id => {
+     'orbits-settings-styles-v7', 'orbits-settings-styles-v8'].forEach(id => {
       const old = document.getElementById(id);
       if (old) old.remove();
     });
     container = document.getElementById('game-container') || document.body;
     injectStyles();
     await loadSounds();
+
+    try { if (window.Troll) Troll.setBlock('settings'); } catch (e) {}
+    try { if (window.Troll && Troll.setLoadTypes) Troll.setLoadTypes(['blur', 'glass']); } catch (e) {}
+
     savedSnapshot = takeSnapshot();
     working = {
       musicVolume: Math.round(savedSnapshot.musicVolume01 * 100),
@@ -1547,7 +1499,9 @@
       brightness:  savedSnapshot.brightness,
       language:    savedSnapshot.language,
       audioMode:   savedSnapshot.audioMode,
-      spatialEnabled: savedSnapshot.spatialEnabled
+      spatialNoHeadphones: savedSnapshot.spatialNoHeadphones,
+      spatialHeadphones:   savedSnapshot.spatialHeadphones,
+      headTracking:        savedSnapshot.headTracking
     };
     dirty = false;
     currentPage = 'main';

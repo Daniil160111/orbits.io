@@ -1,15 +1,12 @@
 /* =====================================================================
-   ORBITS.IO — SETTINGS BLOCK v9
+   ORBITS.IO — SETTINGS BLOCK v10
    Путь: settings.js
 
-   Что нового:
-   - Блок «Звук»: Моно / Стерео / Пространство (сегменты-переключатели)
-   - Условные опции (серые при не поддержке)
-   - Значки (?) у всех пунктов
+   - Блок «Звук»: Моно / Стерео / Пространство
+   - Стереоскопический 3D звук через камеру
+   - Калибровка (окно с камерой, 5 шагов)
+   - Значки (?) у пунктов
    - Убран блок мощности устройства
-   - Исправлен чёрный экран
-   - Блокировка кнопок при звуке
-   - Правильные звуки (back_select_menu, back, button, save, setting)
    ===================================================================== */
 (function () {
   'use strict';
@@ -42,7 +39,6 @@
       title: 'Настройки', back: 'Назад', save: 'Сохранить',
       nickname: 'Ник', music: 'Музыка', sfx: 'Эффекты',
       vibration: 'Вибрация', brightness: 'Яркость',
-      // Звук
       audio_title: 'Звук',
       audio_mode: 'Режим звука',
       audio_mono: 'Моно',
@@ -50,7 +46,8 @@
       audio_spatial: 'Пространство',
       spatial_3d: 'Стереоскопический 3D звук',
       spatial_3d_hint: 'Использовать камеру для точного объёмного звука',
-      // Подсказки
+      calibrate: 'Калибровать',
+      calibrate_again: 'Калибровать заново',
       hint_music: 'Громкость фоновой музыки',
       hint_sfx: 'Громкость звуковых эффектов',
       hint_vibration: 'Тактильная отдача при действиях',
@@ -58,7 +55,6 @@
       hint_nickname: 'Ваше имя в игре (до 16 символов)',
       hint_audio_mode: 'Моно — 1 канал, Стерео — 2 канала, Пространство — объёмный звук',
       hint_spatial_3d: 'Нужна фронтальная камера. Звук подстраивается под положение головы.',
-      // Модалки
       unsaved_title: 'Несохранённые изменения',
       unsaved_text: 'Вы изменили настройки, но не сохранили их.\nЧто сделать?',
       unsaved_save: 'Сохранить и выйти',
@@ -73,7 +69,6 @@
       reset_confirm2_text: 'Это действие нельзя отменить.',
       reset_confirm2_yes: 'Стереть навсегда',
       reset_doing: 'Очистка...',
-      // Ошибки
       err_camera: 'Камера недоступна',
       err_mediapipe: 'Не удалось загрузить MediaPipe',
       err_not_supported: 'Не поддерживается на этом устройстве'
@@ -89,6 +84,8 @@
       audio_spatial: 'Spatial',
       spatial_3d: 'Stereoscopic 3D sound',
       spatial_3d_hint: 'Use camera for precise spatial audio',
+      calibrate: 'Calibrate',
+      calibrate_again: 'Recalibrate',
       hint_music: 'Background music volume',
       hint_sfx: 'Sound effects volume',
       hint_vibration: 'Haptic feedback on actions',
@@ -125,6 +122,8 @@
       audio_spatial: 'Spatial',
       spatial_3d: 'Son 3D stéréoscopique',
       spatial_3d_hint: 'Utiliser la caméra pour un son spatial précis',
+      calibrate: 'Calibrer',
+      calibrate_again: 'Recalibrer',
       hint_music: 'Volume de la musique de fond',
       hint_sfx: 'Volume des effets sonores',
       hint_vibration: 'Retour haptique sur les actions',
@@ -161,6 +160,8 @@
       audio_spatial: 'Espacial',
       spatial_3d: 'Sonido 3D estereoscópico',
       spatial_3d_hint: 'Usar cámara para audio espacial preciso',
+      calibrate: 'Calibrar',
+      calibrate_again: 'Recalibrar',
       hint_music: 'Volumen de la música de fondo',
       hint_sfx: 'Volumen de los efectos de sonido',
       hint_vibration: 'Respuesta háptica en acciones',
@@ -205,13 +206,15 @@
   let dirty = false;
   let modalOpen = false;
   let vibeTimeouts = [];
+  let currentPage = 'main';
 
   let soundLockActive = false;
   let soundLockTimer = null;
 
-  // ★ Тултип (подсказки «?»)
   let tooltipEl = null;
   let tooltipTimer = null;
+
+  let dependentContainer = null;
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const el = (tag, cls, html) => {
@@ -286,18 +289,18 @@
     ]);
   }
 
-  function playSFX(key, base = 1.0, lockMs = SOUND_LOCK_MS) {
+  function playSFX(key, base, lockMs) {
     if (!window.Sound) return false;
     if (soundLockActive) return false;
     try {
       if (!Sound.hasBuffer(key)) return false;
-      Sound.playSFX(key, { volume: base * sfxVolume() });
+      Sound.playSFX(key, { volume: (base || 1.0) * sfxVolume() });
       soundLockActive = true;
       if (soundLockTimer) clearTimeout(soundLockTimer);
       soundLockTimer = setTimeout(() => {
         soundLockActive = false;
         soundLockTimer = null;
-      }, lockMs);
+      }, lockMs || SOUND_LOCK_MS);
       return true;
     } catch (e) { return false; }
   }
@@ -351,7 +354,6 @@
       try { Sound.stopMusic(0); } catch (e) {}
       await loadBlockMusicWithFallback();
       const v = 0.7 * musicVolume();
-      // ★ Crossfade при повторе (наложение 15 мс)
       await Sound.playMusicCrossfade('set_music', { volume: v, fadeIn: 0.3 });
     } catch (e) {}
   }
@@ -364,13 +366,13 @@
   function takeSnapshot() {
     const all = (window.Settings && Settings.getAll) ? Settings.getAll() : {};
     return {
-      musicVolume01:       (typeof all.musicVolume === 'number') ? all.musicVolume : 0.8,
-      sfxVolume01:         (typeof all.sfxVolume   === 'number') ? all.sfxVolume   : 0.8,
-      vibration:           (typeof all.vibration   === 'boolean') ? all.vibration   : true,
-      nickname:            (typeof all.nickname    === 'string')  ? all.nickname    : '',
-      brightness:          (typeof all.brightness  === 'number')  ? all.brightness  : 100,
-      language:            (typeof all.language    === 'string')  ? all.language    : 'ru',
-      audioMode:           (typeof all.audioMode   === 'string')  ? all.audioMode   : 'spatial',
+      musicVolume01: (typeof all.musicVolume === 'number') ? all.musicVolume : 0.8,
+      sfxVolume01:   (typeof all.sfxVolume   === 'number') ? all.sfxVolume   : 0.8,
+      vibration:     (typeof all.vibration   === 'boolean') ? all.vibration   : true,
+      nickname:      (typeof all.nickname    === 'string')  ? all.nickname    : '',
+      brightness:    (typeof all.brightness  === 'number')  ? all.brightness  : 100,
+      language:      (typeof all.language    === 'string')  ? all.language    : 'ru',
+      audioMode:     (typeof all.audioMode   === 'string')  ? all.audioMode   : 'spatial',
       spatialNoHeadphones: (typeof all.spatialNoHeadphones === 'boolean') ? all.spatialNoHeadphones : true,
       spatialHeadphones:   (typeof all.spatialHeadphones   === 'boolean') ? all.spatialHeadphones   : false,
       headTracking:        (typeof all.headTracking === 'boolean') ? all.headTracking : false
@@ -403,12 +405,17 @@
   }
 
   // ============ SLIDER ============
-  function buildSlider(key, label, min, max, uiValue, formatter) {
+  function buildSlider(key, label, min, max, uiValue, formatter, hint) {
     const row = el('div', 'st-row st-slider-row');
     row.dataset.key = key;
 
     const labelWrap = el('div', 'st-label-wrap');
     labelWrap.appendChild(el('div', 'st-label', label));
+    if (hint) {
+      const help = el('div', 'st-help', '?');
+      bindTooltip(help, hint);
+      labelWrap.appendChild(help);
+    }
     row.appendChild(labelWrap);
 
     const trackWrap = el('div', 'st-slider-track');
@@ -620,7 +627,7 @@
     return row;
   }
 
-  // ============ SEGMENTED CONTROL (Моно/Стерео/Пространство) ============
+  // ============ SEGMENTED ============
   function buildSegmented(key, label, options, value, hint) {
     const row = el('div', 'st-row st-seg-row');
     row.dataset.key = key;
@@ -645,12 +652,11 @@
         if (isLocked()) return;
         if (opt.disabled) return;
         if (working[key] === opt.value) return;
-        Object.values(buttons).forEach(b => b.classList.remove('active'));
+        Object.keys(buttons).forEach(k => buttons[k].classList.remove('active'));
         btn.classList.add('active');
         working[key] = opt.value;
         recomputeDirty();
         playSFX('set_sfx_set', 1.0, 250);
-        // ★ Обновить зависимые элементы
         updateDependentRows();
       });
       buttons[opt.value] = btn;
@@ -660,9 +666,7 @@
     return row;
   }
 
-  // ============ Зависимые строки ============
-  let dependentContainer = null;
-
+  // ============ ЗАВИСИМЫЕ СТРОКИ ============
   function updateDependentRows() {
     if (!dependentContainer) return;
     dependentContainer.innerHTML = '';
@@ -673,7 +677,6 @@
 
     if (working.audioMode !== 'spatial') return;
 
-    // ★ Опция: Стереоскопический 3D звук (через камеру)
     const can3D = caps.spatial3D && caps.spatial;
     const row3D = buildMiniToggle(
       'headTracking',
@@ -685,13 +688,19 @@
       row3D.classList.add('disabled');
       row3D.style.opacity = '0.4';
       row3D.style.pointerEvents = 'none';
-      // ★ Красная метка ошибки
-      if (!caps.spatial) {
-        addRowError(row3D, T('err_not_supported'));
-      } else if (!caps.spatial3D) {
-        addRowError(row3D, T('err_camera'));
-      }
+      if (!caps.spatial) addRowError(row3D, T('err_not_supported'));
+      else if (!caps.spatial3D) addRowError(row3D, T('err_camera'));
+    } else {
+      const calBtn = el('div', 'st-calibrate-btn');
+      const isCal = window.HeadTracking && HeadTracking.isCalibrated();
+      calBtn.textContent = isCal ? T('calibrate_again') : T('calibrate');
+      calBtn.addEventListener('click', () => {
+        if (isLocked()) return;
+        startCalibrationFlow();
+      });
+      row3D.appendChild(calBtn);
     }
+
     dependentContainer.appendChild(row3D);
     setTimeout(() => row3D.classList.add('show'), 80);
   }
@@ -699,6 +708,116 @@
   function addRowError(row, text) {
     const err = el('div', 'st-row-error', text);
     row.appendChild(err);
+  }
+
+  // ============ КАЛИБРОВКА ============
+  async function startCalibrationFlow() {
+    if (!window.HeadTracking) {
+      console.warn('[Settings] HeadTracking не загружен');
+      return;
+    }
+
+    // Проверяем поддержку
+    if (!HeadTracking.isAvailable()) {
+      alert('Камера недоступна');
+      return;
+    }
+
+    // Overlay
+    const overlay = el('div', 'st-cal-overlay');
+    const video = document.createElement('video');
+    video.setAttribute('playsinline', '');
+    video.setAttribute('muted', '');
+    video.muted = true;
+    video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);z-index:1;';
+    overlay.appendChild(video);
+
+    const info = el('div', 'st-cal-info');
+    const label = el('div', 'st-cal-label', 'Загрузка...');
+    const step = el('div', 'st-cal-step', '');
+    const counter = el('div', 'st-cal-counter', '');
+    info.appendChild(label);
+    info.appendChild(step);
+    info.appendChild(counter);
+    overlay.appendChild(info);
+
+    const cancelBtn = el('button', 'st-cal-cancel', 'Отмена');
+    cancelBtn.addEventListener('click', () => {
+      if (window.HeadTracking) HeadTracking.cancelCalibration();
+      cleanup();
+    });
+    overlay.appendChild(cancelBtn);
+
+    root.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+
+    let cameraStream = null;
+
+    function cleanup() {
+      overlay.classList.remove('show');
+      setTimeout(() => {
+        if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+        overlay.remove();
+        // Обновляем кнопку
+        updateDependentRows();
+      }, 600);
+    }
+
+    // Запрос камеры
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: 640, height: 480 },
+        audio: false
+      });
+      video.srcObject = cameraStream;
+      await video.play();
+    } catch (e) {
+      label.textContent = T('err_camera');
+      setTimeout(cleanup, 2000);
+      return;
+    }
+
+    // Метаданные шагов
+    const STEP_META = {
+      center: { label: 'Смотрите прямо в камеру', icon: '⬤' },
+      left:   { label: 'Поверните голову ВЛЕВО',  icon: '⬅' },
+      right:  { label: 'Поверните голову ВПРАВО', icon: '➡' },
+      up:     { label: 'Поверните голову ВВЕРХ',  icon: '⬆' },
+      down:   { label: 'Поверните голову ВНИЗ',   icon: '⬇' }
+    };
+
+    // Стартуем калибровку
+    const ok = await HeadTracking.startCalibration((stepId, index, total) => {
+      const meta = STEP_META[stepId] || { label: stepId, icon: '·' };
+      label.textContent = meta.icon + ' ' + meta.label;
+      step.textContent = 'Шаг ' + (index + 1) + ' из ' + total;
+      counter.textContent = '';
+    });
+
+    if (!ok) {
+      label.textContent = T('err_mediapipe');
+      setTimeout(cleanup, 2000);
+      return;
+    }
+
+    // Проверка завершения
+    const checkDone = setInterval(() => {
+      if (HeadTracking.isCalibrated()) {
+        clearInterval(checkDone);
+        label.textContent = 'Готово!';
+        step.textContent = 'Калибровка сохранена';
+        counter.textContent = '';
+        setTimeout(cleanup, 1500);
+      }
+    }, 300);
+
+    // Если калибровка отменена
+    const checkCancel = setInterval(() => {
+      if (!overlay.parentNode) {
+        clearInterval(checkCancel);
+        clearInterval(checkDone);
+      }
+    }, 500);
   }
 
   // ============ MULTI TOGGLE (язык) ============
@@ -1034,6 +1153,7 @@
     try { if (window.Sound && Sound.unloadAll) Sound.unloadAll(); } catch (e) {}
     try { if (window.Sound && Sound.pauseAll)  Sound.pauseAll();  } catch (e) {}
     try { if (window.Troll && Troll.resetAll) Troll.resetAll(); } catch (e) {}
+    try { if (window.HeadTracking && HeadTracking.destroy) HeadTracking.destroy(); } catch (e) {}
     try { localStorage.clear(); } catch (e) {}
     try { sessionStorage.clear(); } catch (e) {}
     try {
@@ -1078,7 +1198,7 @@
 
   // ============ CSS ============
   function injectStyles() {
-    if (document.getElementById('orbits-settings-styles-v9')) return;
+    if (document.getElementById('orbits-settings-styles-v10')) return;
     const css = `
       .st-root { position: absolute; inset: 0; z-index: 50; overflow: hidden; opacity: 0;
         transition: opacity 0.85s cubic-bezier(0.16,1,0.3,1); pointer-events: auto; color: #fff; }
@@ -1090,31 +1210,21 @@
           radial-gradient(ellipse at 80% 90%, rgba(120,80,220,0.15) 0%, rgba(0,0,0,0) 60%),
           linear-gradient(135deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.42) 100%);
         z-index: 2; pointer-events: none; }
-      .st-viewport { position: absolute; inset: 0; overflow: hidden; z-index: 5; }
       .st-page { position: absolute; inset: 0; transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
       .st-page-main { transform: translateX(0); }
       .st-page-lang { transform: translateX(100%); }
-      .st-viewport[data-page="lang"] .st-page-main { transform: translateX(-100%); }
-      .st-viewport[data-page="lang"] .st-page-lang { transform: translateX(0); }
       .st-header { position: absolute; top: 1.2vh; left: 0; right: 0;
         display: flex; align-items: center; justify-content: center; z-index: 8; gap: 18px; pointer-events: none; }
       .st-title { font-size: 30px; font-weight: 900; letter-spacing: 7px; text-transform: uppercase; color: #fff;
         text-shadow: 0 0 14px rgba(180,120,255,0.95), 0 0 34px rgba(120,60,255,0.7), 0 2px 0 rgba(0,0,0,0.5);
-        opacity: 0; transition: opacity 0.65s cubic-bezier(0.16,1,0.3,1), letter-spacing 0.4s ease; }
+        opacity: 0; transition: opacity 0.65s ease; }
       .st-title.show { opacity: 1; }
-      .st-title.fade-out { opacity: 0; letter-spacing: 14px; }
       .st-arrow { pointer-events: auto; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
-        background: linear-gradient(140deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.08) 40%,
-          rgba(180,140,255,0.10) 70%, rgba(120,80,220,0.14) 100%);
+        background: linear-gradient(140deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.08) 100%);
         border: 1px solid rgba(255,255,255,0.42); border-radius: 50%; color: #fff;
-        font-size: 26px; font-weight: 900; line-height: 1; cursor: pointer;
-        backdrop-filter: blur(22px) saturate(200%) contrast(115%); -webkit-backdrop-filter: blur(22px) saturate(200%) contrast(115%);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.3),
-          0 8px 24px rgba(0,0,0,0.55), 0 0 24px rgba(120,80,220,0.3);
-        transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), background 0.35s ease, opacity 0.35s ease;
-        position: relative; overflow: hidden; }
+        font-size: 26px; font-weight: 900; line-height: 1; cursor: pointer; }
       .st-arrow:active { transform: scale(0.9); }
-      .st-arrow.inactive { opacity: 0.28; pointer-events: none; filter: saturate(0.5); }
+      .st-arrow.inactive { opacity: 0.28; pointer-events: none; }
       .st-arrow-left { padding-right: 3px; }
       .st-arrow-right { padding-left: 3px; }
       .st-list { position: absolute; top: 12vh; left: 50%; transform: translateX(-50%);
@@ -1123,165 +1233,128 @@
         background: linear-gradient(155deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.09) 32%,
           rgba(180,140,255,0.07) 68%, rgba(120,80,220,0.13) 100%);
         border: 1px solid rgba(255,255,255,0.34);
-        backdrop-filter: blur(30px) saturate(210%) contrast(118%); -webkit-backdrop-filter: blur(30px) saturate(210%) contrast(118%);
-        box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.65), inset 0 -1px 0 rgba(0,0,0,0.3),
-          inset 1.5px 0 0 rgba(255,255,255,0.2), inset -1.5px 0 0 rgba(120,80,200,0.25),
-          0 14px 44px rgba(0,0,0,0.5), 0 4px 14px rgba(60,20,120,0.42);
+        box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.65), 0 14px 44px rgba(0,0,0,0.5);
         overflow: hidden; opacity: 0; transform: translateX(-40px) scale(0.96);
-        transition: opacity 0.75s cubic-bezier(0.16,1,0.3,1), transform 0.75s cubic-bezier(0.16,1,0.3,1), box-shadow 0.35s ease; }
-      .st-row::before { content: ''; position: absolute; left: 4%; right: 4%; top: 0; height: 42%;
-        background: linear-gradient(180deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.10) 60%, rgba(255,255,255,0) 100%);
-        pointer-events: none; }
-      .st-row::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 25%;
-        background: linear-gradient(0deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 100%); pointer-events: none; }
+        transition: opacity 0.75s ease, transform 0.75s ease; }
       .st-row.show { opacity: 1; transform: translateX(0) scale(1); }
       .st-row.disabled { opacity: 0.4 !important; pointer-events: none; }
-
       .st-label-wrap { flex: 0 0 32%; display: flex; align-items: center; gap: 8px; position: relative; z-index: 2; }
       .st-label { font-size: 14px; letter-spacing: 2.4px; text-transform: uppercase; color: #f0eaff;
-        text-shadow: 0 0 10px rgba(180,120,255,0.85), 0 1px 0 rgba(0,0,0,0.45); font-weight: 800; }
-
+        text-shadow: 0 0 10px rgba(180,120,255,0.85); font-weight: 800; }
       .st-help { width: 20px; height: 20px; border-radius: 50%;
         background: linear-gradient(140deg, rgba(255,255,255,0.35) 0%, rgba(180,140,255,0.25) 100%);
         border: 1px solid rgba(255,255,255,0.5);
         display: flex; align-items: center; justify-content: center;
-        font-size: 12px; font-weight: 900; color: #fff; cursor: pointer; flex: 0 0 auto;
-        text-shadow: 0 1px 0 rgba(0,0,0,0.5);
-        transition: transform 0.2s ease, background 0.2s ease;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 6px rgba(0,0,0,0.4); }
+        font-size: 12px; font-weight: 900; color: #fff; cursor: pointer; flex: 0 0 auto; }
       .st-help:active { transform: scale(0.9); }
-
       .st-tooltip { position: absolute; z-index: 100; max-width: 300px; padding: 10px 14px;
         background: rgba(20,15,40,0.96); border: 1px solid rgba(180,140,255,0.5);
         border-radius: 12px; color: #e0d8ff; font-size: 12px; line-height: 1.5;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.8), 0 0 30px rgba(160,100,255,0.3);
-        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.8);
         opacity: 0; transform: translateY(-6px); pointer-events: none;
         transition: opacity 0.25s ease, transform 0.25s ease; }
       .st-tooltip.show { opacity: 1; transform: translateY(0); }
-
       .st-slider-track { position: relative; flex: 1 1 auto; height: 46px; display: flex; align-items: center; padding: 0 22px; touch-action: none; }
       .st-slider-track-inner { position: relative; width: 100%; height: 15px;
-        background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(60,30,120,0.32) 40%, rgba(255,255,255,0.10) 100%);
+        background: linear-gradient(180deg, rgba(0,0,0,0.42), rgba(60,30,120,0.32) 40%, rgba(255,255,255,0.10));
         border: 1px solid rgba(255,255,255,0.18); border-radius: 20px;
-        box-shadow: inset 0 3px 8px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.2); overflow: visible; }
+        box-shadow: inset 0 3px 8px rgba(0,0,0,0.6); }
       .st-slider-fill { position: absolute; left: 0; top: 0; bottom: 0;
-        background: linear-gradient(90deg, rgba(106,58,255,1) 0%, rgba(176,107,255,1) 50%, rgba(170,150,255,1) 100%);
-        border-radius: 20px; box-shadow: 0 0 22px rgba(160,80,255,1), 0 0 42px rgba(140,70,220,0.55);
-        pointer-events: none; transition: width 0.08s linear; }
+        background: linear-gradient(90deg, rgba(106,58,255,1) 0%, rgba(176,107,255,1) 100%);
+        border-radius: 20px; box-shadow: 0 0 22px rgba(160,80,255,1); pointer-events: none; }
       .st-slider-knob { position: absolute; top: 50%; left: 0; width: 32px; height: 32px; border-radius: 50%;
-        background: radial-gradient(circle at 32% 26%, rgba(255,255,255,0.98) 0%, rgba(240,225,255,0.75) 20%,
-          rgba(210,180,255,0.55) 50%, rgba(170,130,250,0.6) 80%, rgba(140,100,220,0.65) 100%);
+        background: radial-gradient(circle at 32% 26%, rgba(255,255,255,0.98) 0%, rgba(210,180,255,0.55) 50%, rgba(140,100,220,0.65) 100%);
         border: 1.5px solid rgba(255,255,255,0.85);
-        box-shadow: inset 0 0 14px rgba(255,255,255,1), 0 0 26px rgba(180,120,255,1),
-          0 0 52px rgba(140,80,255,0.6), 0 8px 20px rgba(0,0,0,0.5);
-        transform: translate(-50%, -50%) scale(1); pointer-events: none; overflow: hidden;
-        transition: transform 0.35s cubic-bezier(0.16,1,0.3,1); }
-      .st-slider-knob-shine { position: absolute; top: 8%; left: 15%; width: 60%; height: 42%;
-        background: radial-gradient(ellipse at 35% 30%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.65) 40%, rgba(255,255,255,0) 82%);
-        border-radius: 50%; pointer-events: none; }
-      .st-slider-knob-reflect { position: absolute; bottom: 6%; right: 12%; width: 40%; height: 30%;
-        background: radial-gradient(ellipse at 60% 60%, rgba(200,160,255,0.6) 0%, rgba(200,160,255,0) 80%);
-        border-radius: 50%; pointer-events: none; }
+        box-shadow: 0 0 26px rgba(180,120,255,1);
+        transform: translate(-50%, -50%) scale(1); pointer-events: none; overflow: hidden; }
       .st-slider-knob.st-knob-active { transform: translate(-50%, -50%) scale(1.7); }
-      .st-value { flex: 0 0 10%; text-align: right; font-size: 13px; color: #fff;
-        text-shadow: 0 0 10px rgba(180,120,255,0.9), 0 1px 0 rgba(0,0,0,0.45);
-        font-variant-numeric: tabular-nums; position: relative; z-index: 2; font-weight: 700; }
-
+      .st-value { flex: 0 0 10%; text-align: right; font-size: 13px; color: #fff; font-weight: 700; }
       .st-mini-track { position: relative; flex: 0 0 66px; height: 32px;
-        background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(60,30,120,0.28) 45%, rgba(255,255,255,0.14) 100%);
+        background: linear-gradient(180deg, rgba(0,0,0,0.42), rgba(60,30,120,0.28) 45%, rgba(255,255,255,0.14));
         border: 1px solid rgba(255,255,255,0.26); border-radius: 40px; cursor: pointer;
-        box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), 0 6px 18px rgba(0,0,0,0.45);
-        transition: background 0.5s ease, box-shadow 0.5s ease, transform 0.3s ease; touch-action: none; }
-      .st-mini-track:active, .st-mini-track.st-mini-hold { transform: scale(1.08); }
-      .st-mini-track.on { background: linear-gradient(135deg, rgba(140,70,255,0.95) 0%, rgba(190,110,255,0.95) 100%);
-        box-shadow: 0 0 28px rgba(190,110,255,1), 0 0 56px rgba(140,80,255,0.7); }
+        touch-action: none; }
+      .st-mini-track.on { background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
+        box-shadow: 0 0 28px rgba(190,110,255,1); }
       .st-mini-knob { position: absolute; top: 50%; left: 3px; width: 26px; height: 26px; border-radius: 50%;
-        background: radial-gradient(circle at 32% 26%, rgba(255,255,255,1) 0%, rgba(240,225,255,0.8) 22%,
-          rgba(210,180,255,0.55) 52%, rgba(170,130,250,0.55) 82%);
+        background: radial-gradient(circle at 32% 26%, rgba(255,255,255,1) 0%, rgba(210,180,255,0.55) 52%, rgba(140,100,220,0.6) 100%);
         border: 1.5px solid rgba(255,255,255,0.85);
-        box-shadow: inset 0 0 12px rgba(255,255,255,1), 0 0 20px rgba(180,120,255,1);
-        transform: translateY(-50%) translateX(0); overflow: hidden; pointer-events: none; }
-      .st-mini-shine { position: absolute; top: 10%; left: 18%; width: 55%; height: 40%;
-        background: radial-gradient(ellipse at 35% 30%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 82%);
-        border-radius: 50%; pointer-events: none; }
-      .st-mini-reflect { position: absolute; bottom: 8%; right: 15%; width: 38%; height: 28%;
-        background: radial-gradient(ellipse at 60% 60%, rgba(200,160,255,0.55) 0%, rgba(200,160,255,0) 80%);
-        border-radius: 50%; pointer-events: none; }
-
-      /* ★ Сегментированный контрол (Моно/Стерео/Пространство) */
+        box-shadow: 0 0 20px rgba(180,120,255,1);
+        transform: translateY(-50%); overflow: hidden; pointer-events: none; }
       .st-seg { flex: 1 1 auto; display: flex; gap: 8px; position: relative; z-index: 2; }
       .st-seg-btn { flex: 1 1 0; padding: 10px 8px; text-align: center;
         font-size: 13px; letter-spacing: 1.4px; font-weight: 800; text-transform: uppercase;
         color: rgba(255,255,255,0.7); cursor: pointer;
-        background: linear-gradient(155deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%);
+        background: linear-gradient(155deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
         border: 1px solid rgba(255,255,255,0.20); border-radius: 14px;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 12px rgba(0,0,0,0.3);
-        transition: all 0.3s cubic-bezier(0.16,1,0.3,1); user-select: none; }
+        transition: all 0.3s ease; user-select: none; }
       .st-seg-btn.active { color: #fff;
         background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
         border-color: rgba(220,180,255,0.8);
-        box-shadow: 0 0 24px rgba(180,100,255,0.7), 0 0 48px rgba(140,80,255,0.4),
-          inset 0 1px 0 rgba(255,255,255,0.5); }
+        box-shadow: 0 0 24px rgba(180,100,255,0.7); }
       .st-seg-btn.disabled { opacity: 0.3; pointer-events: none; filter: grayscale(0.7); }
       .st-seg-btn:active:not(.disabled) { transform: scale(0.96); }
-
       .st-multi-wrap { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-      .st-multi-labels { display: flex; padding: 0; font-size: 14px; letter-spacing: 2.4px;
-        color: rgba(255,255,255,0.55); font-weight: 800; user-select: none; }
+      .st-multi-labels { display: flex; font-size: 14px; letter-spacing: 2.4px;
+        color: rgba(255,255,255,0.55); font-weight: 800; }
       .st-multi-label { flex: 1 1 0; text-align: center; cursor: pointer;
-        transition: color 0.35s ease, text-shadow 0.35s ease, transform 0.35s ease; }
-      .st-multi-label.active { color: #fff;
-        text-shadow: 0 0 14px rgba(220,170,255,1), 0 0 30px rgba(170,100,255,0.9);
-        transform: translateY(-1px); }
+        transition: color 0.35s ease; }
+      .st-multi-label.active { color: #fff; text-shadow: 0 0 14px rgba(220,170,255,1); }
       .st-multi-track { position: relative; height: 32px;
-        background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(60,30,120,0.28) 45%, rgba(255,255,255,0.14) 100%);
+        background: linear-gradient(180deg, rgba(0,0,0,0.42), rgba(60,30,120,0.28) 45%, rgba(255,255,255,0.14));
         border: 1px solid rgba(255,255,255,0.26); border-radius: 40px; cursor: pointer;
-        box-shadow: inset 0 3px 8px rgba(0,0,0,0.55), 0 6px 18px rgba(0,0,0,0.45);
         touch-action: none; width: 100%; overflow: hidden; }
-      .st-multi-track:active, .st-multi-track.st-multi-hold { transform: scale(1.03); }
       .st-multi-knob { position: absolute; top: 50%; left: 3px; width: 26px; height: 26px; border-radius: 50%;
-        background: radial-gradient(circle at 32% 26%, rgba(255,255,255,1) 0%, rgba(240,225,255,0.8) 22%,
-          rgba(210,180,255,0.55) 52%, rgba(170,130,250,0.55) 82%);
+        background: radial-gradient(circle at 32% 26%, rgba(255,255,255,1) 0%, rgba(210,180,255,0.55) 52%, rgba(140,100,220,0.6) 100%);
         border: 1.5px solid rgba(255,255,255,0.85);
-        box-shadow: inset 0 0 12px rgba(255,255,255,1), 0 0 20px rgba(180,120,255,1);
+        box-shadow: 0 0 20px rgba(180,120,255,1);
         transform: translateY(-50%); overflow: hidden; pointer-events: none; }
-      .st-multi-shine { position: absolute; top: 10%; left: 18%; width: 55%; height: 40%;
-        background: radial-gradient(ellipse at 35% 30%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 82%);
-        border-radius: 50%; pointer-events: none; }
-      .st-multi-reflect { position: absolute; bottom: 8%; right: 15%; width: 38%; height: 28%;
-        background: radial-gradient(ellipse at 60% 60%, rgba(200,160,255,0.55) 0%, rgba(200,160,255,0) 80%);
-        border-radius: 50%; pointer-events: none; }
-      .st-multi-knob.st-multi-knob-active { transform: translateY(-50%) scale(1.5); }
-
       .st-nick-wrap { flex: 1 1 auto; position: relative; z-index: 2; }
       .st-nick-input { width: 100%; padding: 10px 18px;
-        background: linear-gradient(180deg, rgba(0,0,0,0.32) 0%, rgba(60,30,120,0.22) 50%, rgba(255,255,255,0.10) 100%);
+        background: linear-gradient(180deg, rgba(0,0,0,0.32), rgba(60,30,120,0.22) 50%, rgba(255,255,255,0.10));
         border: 1px solid rgba(255,255,255,0.28); border-radius: 18px; color: #fff; font-size: 15px;
-        letter-spacing: 1px; outline: none; box-shadow: inset 0 3px 8px rgba(0,0,0,0.5); }
-      .st-nick-input:focus { border-color: rgba(200,150,255,0.95); }
-
+        outline: none; }
       .st-btn-back, .st-btn-save { position: absolute; bottom: 4vh; padding: 1.3vh 3.6vh;
         color: #fff; font-family: inherit; font-size: 18px; letter-spacing: 2.5px;
-        text-transform: uppercase; font-weight: 900; border-radius: 22px; cursor: pointer; z-index: 8;
-        transition: transform 0.28s ease; }
+        text-transform: uppercase; font-weight: 900; border-radius: 22px; cursor: pointer; z-index: 8; }
       .st-btn-back { left: 4vw; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.42); }
       .st-btn-save { right: 4vw; background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
         border: 1px solid rgba(220,180,255,0.75); }
       .st-btn-back:active, .st-btn-save:active { transform: scale(0.94); }
-
       .st-reset-row { justify-content: center; padding: 1.2vh 2.4vh;
-        background: linear-gradient(155deg, rgba(255,80,80,0.14) 0%, rgba(200,50,50,0.08) 100%);
+        background: linear-gradient(155deg, rgba(255,80,80,0.14), rgba(200,50,50,0.08));
         border: 1px solid rgba(255,120,120,0.4); }
       .st-reset-btn { width: 100%; padding: 13px 26px; font-family: inherit; font-size: 15px;
         letter-spacing: 2.4px; text-transform: uppercase; font-weight: 900; color: #ffb8b8;
         background: rgba(255,80,80,0.20); border: 1px solid rgba(255,140,140,0.55);
         border-radius: 16px; cursor: pointer; }
-
       .st-row-error { position: absolute; bottom: -16px; left: 0; right: 0;
-        font-size: 10px; color: #ff8080; text-align: center; letter-spacing: 0.8px;
-        text-shadow: 0 0 8px rgba(255,80,80,0.8); }
-
+        font-size: 10px; color: #ff8080; text-align: center; letter-spacing: 0.8px; }
+      .st-calibrate-btn { margin-left: 12px; padding: 8px 16px;
+        background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
+        border-radius: 12px; font-size: 12px; font-weight: 800;
+        letter-spacing: 1px; text-transform: uppercase;
+        color: #fff; cursor: pointer; flex: 0 0 auto;
+        box-shadow: 0 4px 16px rgba(140,80,255,0.6);
+        transition: transform 0.2s ease; }
+      .st-calibrate-btn:active { transform: scale(0.95); }
+      /* ★ Калибровка */
+      .st-cal-overlay { position: absolute; inset: 0; z-index: 100;
+        background: #000; opacity: 0; transition: opacity 0.6s ease; pointer-events: auto; }
+      .st-cal-overlay.show { opacity: 1; }
+      .st-cal-info { position: absolute; bottom: 8vh; left: 50%; transform: translateX(-50%);
+        z-index: 3; text-align: center; color: #fff;
+        width: min(80vw, 500px); pointer-events: none; }
+      .st-cal-label { font-size: 24px; font-weight: 900; letter-spacing: 2px;
+        text-shadow: 0 0 20px rgba(180,120,255,1); margin-bottom: 12px; }
+      .st-cal-step { font-size: 14px; color: rgba(255,255,255,0.7);
+        letter-spacing: 1.5px; margin-bottom: 6px; }
+      .st-cal-counter { font-size: 13px; color: rgba(255,255,255,0.5); letter-spacing: 2px; }
+      .st-cal-cancel { position: absolute; top: 3vh; right: 4vw; z-index: 4;
+        padding: 10px 24px; font-family: inherit; font-size: 14px;
+        font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+        color: #fff; background: rgba(255,80,80,0.25);
+        border: 1px solid rgba(255,120,120,0.5); border-radius: 12px;
+        cursor: pointer; }
       .st-modal { position: absolute; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
         background: rgba(0,0,0,0); opacity: 0; transition: opacity 0.55s ease, background 0.55s ease; }
       .st-modal.show { opacity: 1; background: rgba(0,0,0,0.62); }
@@ -1289,7 +1362,7 @@
         background: linear-gradient(155deg, rgba(45,30,75,0.96), rgba(65,40,110,0.96));
         border: 1px solid rgba(220,180,255,0.65); border-radius: 30px; text-align: center;
         color: #e0d8ff; transform: scale(0.55) rotate(-3deg); opacity: 0;
-        transition: transform 0.6s cubic-bezier(0.16,1,0.3,1), opacity 0.6s ease; }
+        transition: transform 0.6s ease, opacity 0.6s ease; }
       .st-modal.show .st-modal-box { transform: scale(1) rotate(0); opacity: 1; }
       .st-modal-box h3 { font-size: 21px; margin-bottom: 14px; color: #fff; }
       .st-modal-box p { font-size: 14px; line-height: 1.65; margin-bottom: 22px; }
@@ -1305,7 +1378,7 @@
       .st-btn-secondary { background: rgba(255,255,255,0.10); }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-settings-styles-v9';
+    style.id = 'orbits-settings-styles-v10';
     style.textContent = css;
     document.head.appendChild(style);
   }
@@ -1327,8 +1400,7 @@
       goToPage('main');
     });
     header.appendChild(arrowLeft);
-    const title = el('div', 'st-title', '');
-    title.textContent = T('title');
+    const title = el('div', 'st-title', T('title'));
     header.appendChild(title);
     const arrowRight = el('div', 'st-arrow st-arrow-right', '›');
     arrowRight.addEventListener('click', () => {
@@ -1340,9 +1412,9 @@
     header.appendChild(arrowRight);
     root.appendChild(header);
     requestAnimationFrame(() => title.classList.add('show'));
-    updateHeaderArrows(arrowLeft, arrowRight, title);
+    updateHeaderArrows(arrowLeft, arrowRight);
   }
-  function updateHeaderArrows(left, right, title) {
+  function updateHeaderArrows(left, right) {
     if (currentPage === 'main') {
       left.classList.add('inactive');
       right.classList.remove('inactive');
@@ -1352,19 +1424,10 @@
     }
   }
 
-  let currentPage = 'main';
-
   function buildMainPageInto(pageEl) {
     const list = el('div', 'st-list');
     pageEl.appendChild(list);
 
-    const rowNick   = buildNickInput(working.nickname);
-    const rowMusic  = buildSlider('musicVolume', T('music'), 0, 100, working.musicVolume, v => v + '%');
-    const rowSfx    = buildSlider('sfxVolume',   T('sfx'),   0, 100, working.sfxVolume,   v => v + '%');
-    const rowVibe   = buildMiniToggle('vibration', T('vibration'), working.vibration, T('hint_vibration'));
-    const rowBright = buildSlider('brightness',  T('brightness'), 0, 150, working.brightness, v => v);
-
-    // ★ Сегментированный контрол Моно/Стерео/Пространство
     const caps = (window.Settings && Settings.getAudioCapabilities)
       ? Settings.getAudioCapabilities()
       : { mono: true, stereo: false, spatial: false, spatial3D: false };
@@ -1376,9 +1439,14 @@
     ], working.audioMode, T('hint_audio_mode'));
     list.appendChild(rowAudio);
 
-    // ★ Контейнер для зависимых опций
     dependentContainer = el('div', 'st-dependent');
     list.appendChild(dependentContainer);
+
+    const rowNick   = buildNickInput(working.nickname);
+    const rowMusic  = buildSlider('musicVolume', T('music'), 0, 100, working.musicVolume, v => v + '%', T('hint_music'));
+    const rowSfx    = buildSlider('sfxVolume',   T('sfx'),   0, 100, working.sfxVolume,   v => v + '%', T('hint_sfx'));
+    const rowVibe   = buildMiniToggle('vibration', T('vibration'), working.vibration, T('hint_vibration'));
+    const rowBright = buildSlider('brightness',  T('brightness'), 0, 150, working.brightness, v => String(v), T('hint_brightness'));
 
     list.appendChild(rowNick);
     list.appendChild(rowMusic);
@@ -1386,7 +1454,6 @@
     list.appendChild(rowVibe);
     list.appendChild(rowBright);
 
-    // Показ и обновление зависимых
     updateDependentRows();
 
     const rows = [rowAudio, rowNick, rowMusic, rowSfx, rowVibe, rowBright];
@@ -1460,6 +1527,20 @@
     buildBottomButtons();
   }
 
+  async function rebuildPagesContent() {
+    const main = root.querySelector('.st-page-main');
+    const lang = root.querySelector('.st-page-lang');
+    if (!main || !lang) return;
+    main.innerHTML = '';
+    lang.innerHTML = '';
+    buildMainPageInto(main);
+    buildLangPageInto(lang);
+    const btnBack = root.querySelector('.st-btn-back');
+    const btnSave = root.querySelector('.st-btn-save');
+    if (btnBack) btnBack.textContent = T('back');
+    if (btnSave) btnSave.textContent = T('save');
+  }
+
   async function goToPage(page) {
     if (page === currentPage) return;
     currentPage = page;
@@ -1470,16 +1551,12 @@
     const left = root.querySelector('.st-arrow-left');
     const right = root.querySelector('.st-arrow-right');
     updateHeaderArrows(left, right);
-    const title = root.querySelector('.st-title');
-    if (title) {
-      title.textContent = page === 'lang' ? T('title') : T('title');
-    }
   }
 
   async function start() {
     ['orbits-settings-styles', 'orbits-settings-styles-v2', 'orbits-settings-styles-v3',
      'orbits-settings-styles-v4', 'orbits-settings-styles-v5', 'orbits-settings-styles-v6',
-     'orbits-settings-styles-v7', 'orbits-settings-styles-v8'].forEach(id => {
+     'orbits-settings-styles-v7', 'orbits-settings-styles-v8', 'orbits-settings-styles-v9'].forEach(id => {
       const old = document.getElementById(id);
       if (old) old.remove();
     });

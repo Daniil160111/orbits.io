@@ -248,7 +248,7 @@
     transition: opacity 0.7s ease;
   }
 
-  /* ★ Окно загрузки материала */
+  /* Окно загрузки материала */
   #download-dialog {
     position: fixed; inset: 0; z-index: 200000;
     display: none; align-items: center; justify-content: center;
@@ -389,7 +389,7 @@
   <div id="white-flash"></div>
   <div id="transition-logo"><img src="icon/name.png" alt=""></div>
 
-  <!-- ★ Окно загрузки материала -->
+  <!-- Окно загрузки материала -->
   <div id="download-dialog">
     <div class="dd-box">
       <h3 id="dd-title">Требуется загрузка материала</h3>
@@ -410,6 +410,7 @@
 <script src="./error-manager.js"></script>
 <script src="./settings-manager.js"></script>
 <script src="./sounds.js"></script>
+<script src="./head-tracking.js"></script>
 <script src="./troll.js"></script>
 <script>
 (() => {
@@ -450,7 +451,6 @@
       install_done_text: 'Приложение установлено. Запустите его с рабочего стола.',
       err_load_title: 'Ошибка загрузки',
       err_bg: 'Не удалось загрузить фон',
-      // ★ Окна загрузки
       dl_title_first: 'Требуется загрузка материала',
       dl_title_update: 'Требуется обновить материал',
       dl_title_new: 'Требуется загрузить новый материал',
@@ -602,7 +602,6 @@
     }
   }
 
-  // ===== URL-константы =====
   const URL_LOAD_BG      = './Текстуры/Меню/Load1.jpg';
   const URL_DISCLAIMER   = './Текстуры/Меню/D1.jpg';
   const URL_STARTUP      = './Звуки/Меню/Startup.mp3';
@@ -693,7 +692,6 @@
     el.textContent = loaded.toFixed(1) + ' МБ / ' + total.toFixed(1) + ' МБ';
   }
 
-  // ===== IndexedDB =====
   function openDB() {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -750,7 +748,6 @@
     return 'fnv_' + h.toString(16).padStart(8, '0') + '_len_' + bytes.length.toString(16);
   }
 
-  // ===== WebGL — усиленный флаг =====
   const VERT_SHADER = `
     attribute vec2 a_uv;
     uniform float u_time;
@@ -968,10 +965,8 @@
     await Promise.all(tasks);
   }
 
-  // ★ Приоритетная загрузка ключевых файлов
   async function preloadCriticalForDialogs() {
     if (!window.Sound) return;
-    // 1. Картинка предупреждения
     await new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -979,13 +974,9 @@
       img.onerror = () => resolve();
       img.src = URL_DISCLAIMER;
     });
-    // 2. Звук ошибки (в самом начале — для возможных ошибок в диалогах)
     await Sound.loadBuffer('sys_error', URL_ERROR_SND).catch(() => {});
-    // 3. Звук кнопки
     await Sound.loadBuffer('sys_button', URL_CONTINUE_SND).catch(() => {});
-    // 4. Звук окна
     await Sound.loadBuffer('sys_window', URL_WINDOW_SND).catch(() => {});
-    // 5. Звук загрузки
     await Sound.loadBuffer('music_startup', URL_STARTUP).catch(() => {});
   }
 
@@ -1059,7 +1050,6 @@
     await runLoaderPipeline();
   }
 
-  // ===== СКАЧИВАНИЕ =====
   async function downloadOnce(url) {
     const resp = await fetch(url, {
       mode: 'cors', credentials: 'omit', cache: 'no-store'
@@ -1236,7 +1226,6 @@
     await sleep(50);
   }
 
-  // ===== API =====
   window.ORBITS = window.ORBITS || {
     assets: [],
     registerAssets: function (list) {
@@ -1307,18 +1296,15 @@
     await openBlockByUrl(prev);
   }
 
-  // ★ Переход index → menu (1.5 сек все 3 одновременно)
   async function goToMenuWithTransition() {
     const flash = $('white-flash');
     const logo = $('transition-logo');
 
-    // Сброс логотипа
     logo.style.transition = 'none';
     logo.style.display = 'flex';
     logo.style.opacity = '0';
     void logo.offsetWidth;
 
-    // Логотип появляется за 0.6 сек, растёт за 1.5 сек
     logo.style.transition = 'opacity 0.6s ease';
     logo.classList.add('show');
     const img = logo.querySelector('img');
@@ -1327,25 +1313,20 @@
     void img.offsetWidth;
     img.style.transform = 'scale(2.2)';
 
-    // Музыка затихает за 1.5 сек
     if (window.Sound) {
       try { Sound.setMusicVolume(0.0001, 1.5); } catch (e) {}
     }
 
-    // Белый оверлей за 1.5 сек
     flash.style.transition = 'opacity 1.5s ease';
     flash.classList.add('show');
 
-    // ★ Все 3 параметра завершены одновременно
     await sleep(1500);
 
-    // Под белым — переключаем
     $('screen-loader').style.display = 'none';
     $('game-container').style.display = 'block';
 
     try { if (window.Troll) Troll.setBlock('menu'); } catch (e) {}
 
-    // Сброс громкости музыки для menu
     if (window.Sound) {
       try { Sound.setMusicVolume(0.0001, 0); } catch (e) {}
     }
@@ -1358,11 +1339,9 @@
 
     await sleep(200);
 
-    // Убираем белый за 0.9 сек (menu плавно появляется)
     flash.style.transition = 'opacity 0.9s ease';
     flash.classList.remove('show');
 
-    // Логотип уменьшается
     img.style.transition = 'transform 1.2s cubic-bezier(0.16,1,0.3,1), opacity 0.8s ease';
     img.style.transform = 'scale(0.6)';
     logo.classList.remove('show');
@@ -1414,7 +1393,6 @@
     return [coarse, touch, noHover].filter(Boolean).length >= 2;
   }
 
-  // ===== ОКНА ЗАГРУЗКИ =====
   let downloadDialogResolve = null;
 
   function showDownloadDialog(type, sizeMB) {
@@ -1427,7 +1405,6 @@
       const yesBtn = $('dd-yes');
       const noBtn = $('dd-no');
 
-      // Названия по типу
       if (type === 'first') {
         titleEl.textContent = BT('dl_title_first');
         textEl.textContent = BT('dl_text_first');
@@ -1448,16 +1425,13 @@
       noBtn.textContent = BT('dl_no');
 
       dialog.classList.add('show');
-      // Анимация: фон блюрится + затемняется 1.5 сек, окно появляется 1 сек
       requestAnimationFrame(() => {
         dialog.classList.add('dimmed');
-        // Музыка затихает на 100% за 0.5 сек
         if (window.Sound) {
           try { Sound.setMusicVolume(0.0001, 0.5); } catch (e) {}
         }
       });
 
-      // Обработчики
       const cleanup = () => {
         yesBtn.removeEventListener('click', onYes);
         noBtn.removeEventListener('click', onNo);
@@ -1472,11 +1446,9 @@
       const onNo = () => {
         cleanup();
         if (window.Sound) { try { Sound.playSFX('sys_button', { volume: 0.8 }); } catch (e) {} }
-        // Всё затемняется, музыка, перезагрузка
         dialog.classList.remove('dimmed');
         setTimeout(() => {
           dialog.classList.remove('show');
-          // Перезагрузка
           location.reload();
         }, 400);
         resolve('no');
@@ -1486,7 +1458,6 @@
     });
   }
 
-  // ★ Определение типа загрузки
   async function determineDownloadType(manifest) {
     let savedVersion = 0;
     try {
@@ -1496,12 +1467,10 @@
 
     const currentVersion = manifest.version || 0;
 
-    // Первый запуск
     if (savedVersion === 0) {
       return { type: 'first', version: currentVersion };
     }
 
-    // Проверка новых ассетов — по списку URL
     let savedAssets = [];
     try {
       const raw = localStorage.getItem(MANIFEST_ASSETS_KEY);
@@ -1518,7 +1487,7 @@
         }
       }
     }
-    const hasNew = currentAssets.some(url => !savedAssets.includes(url));
+    const hasNew = currentAssets.some(url => savedAssets.indexOf(url) < 0);
     const hasUpdate = currentVersion > savedVersion;
 
     if (hasNew && hasUpdate) return { type: 'both', version: currentVersion };
@@ -1544,7 +1513,6 @@
     } catch (e) {}
   }
 
-  // ===== PWA =====
   async function runPWAMode() {
     $('pwa-view').classList.add('show');
     lockLandscape();
@@ -1570,7 +1538,6 @@
 
     try { if (window.Troll) Troll.setBlock('loading'); } catch (e) {}
 
-    // ★ Приоритетная загрузка ключевых файлов для диалогов
     try { await preloadCriticalForDialogs(); } catch (e) {}
 
     try {
@@ -1584,10 +1551,8 @@
       };
     }
 
-    // ★ Определяем тип загрузки
     const dlInfo = await determineDownloadType(manifest);
     if (dlInfo.type !== 'none') {
-      // Считаем общий размер
       let totalSize = 0;
       const allUrls = [];
       if (Array.isArray(manifest.blocks)) {
@@ -1608,13 +1573,11 @@
       }
       const sizeMB = totalSize / (1024 * 1024) || 0;
       const result = await showDownloadDialog(dlInfo.type, sizeMB);
-      if (result === 'no') return; // перезагрузка уже запущена
+      if (result === 'no') return;
     }
 
-    // ★ Сохраняем версию манифеста
     saveManifestInfo(manifest);
 
-    // ★ Показываем disclaimer
     $('disclaimer-img').src = URL_DISCLAIMER;
     $('screen-disclaimer').classList.remove('hide');
     await sleep(700);
@@ -1722,7 +1685,6 @@
     loadingRunning = false;
   }
 
-  // ===== BROWSER =====
   async function runBrowserMode() {
     $('browser-view').classList.add('show');
     const mobileCheck = checkMobileOnly();
@@ -1815,12 +1777,12 @@
     }, { once: true });
   }
 
-  function showModal(title, text, isError = false) {
+  function showModal(title, text, isError) {
     if (modalOpen) return;
     modalOpen = true;
     $('modal-title').textContent = title;
     $('modal-text').textContent = text;
-    $('modal-box').classList.toggle('error', isError);
+    $('modal-box').classList.toggle('error', !!isError);
     $('modal').style.display = 'flex';
     requestAnimationFrame(() => {
       $('modal').classList.add('show');
@@ -1880,4 +1842,4 @@
 })();
 </script>
 </body>
-</html>
+  </html>

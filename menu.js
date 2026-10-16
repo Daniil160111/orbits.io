@@ -1,14 +1,6 @@
 /* =====================================================================
-   ORBITS.IO — MAIN MENU v2
+   ORBITS.IO — MAIN MENU v3
    Путь: menu.js
-
-   Исправлено:
-   - Баг: фон менял цвет/положение при нажатии — теперь ripple НЕ перекрывает фон
-   - Плавные переходы (титульный ↔ подменю) — 0.9 сек
-   - Появление от белого (первый запуск) — 1.5 сек
-   - Интеграция с Troll (setBlock + setLoadTypes)
-   - Блокировка кнопок при звуке
-   - Правильные звуки
    ===================================================================== */
 (function () {
   'use strict';
@@ -33,26 +25,10 @@
   }
 
   const DICT = {
-    ru: {
-      solo: 'Одиночная игра', online: 'Игра онлайн',
-      shop: 'Магазин', score: 'Рекорды', settings: 'Настройки',
-      back: 'На титульный', tap: 'Нажмите на экран'
-    },
-    en: {
-      solo: 'Single player', online: 'Online',
-      shop: 'Shop', score: 'Scores', settings: 'Settings',
-      back: 'To title', tap: 'Tap the screen'
-    },
-    fr: {
-      solo: 'Solo', online: 'En ligne',
-      shop: 'Boutique', score: 'Scores', settings: 'Paramètres',
-      back: 'Au titre', tap: 'Touchez l\'écran'
-    },
-    es: {
-      solo: 'Un jugador', online: 'En línea',
-      shop: 'Tienda', score: 'Récords', settings: 'Ajustes',
-      back: 'Al título', tap: 'Toca la pantalla'
-    }
+    ru: { solo: 'Одиночная игра', online: 'Игра онлайн', shop: 'Магазин', score: 'Рекорды', settings: 'Настройки', back: 'На титульный', tap: 'Нажмите на экран' },
+    en: { solo: 'Single player', online: 'Online', shop: 'Shop', score: 'Scores', settings: 'Settings', back: 'To title', tap: 'Tap the screen' },
+    fr: { solo: 'Solo', online: 'En ligne', shop: 'Boutique', score: 'Scores', settings: 'Paramètres', back: 'Au titre', tap: 'Touchez l\'écran' },
+    es: { solo: 'Un jugador', online: 'En línea', shop: 'Tienda', score: 'Récords', settings: 'Ajustes', back: 'Al título', tap: 'Toca la pantalla' }
   };
   function lang() {
     const l = (window.Settings && Settings.get('language')) || 'ru';
@@ -64,11 +40,7 @@
   }
 
   const BLOCK_MAP = {
-    solo:     'select',
-    online:   'select',
-    shop:     'shop',
-    score:    'score',
-    settings: 'settings'
+    solo: 'select', online: 'select', shop: 'shop', score: 'score', settings: 'settings'
   };
 
   const MUSIC_LOOP_START = 6.8;
@@ -79,8 +51,7 @@
   const RIPPLE_MOVE_MS = 1000;
   const RIPPLE_FADE_MS = 1300;
   const SUB_APPEAR_MS  = 1000;
-
-  const SOUND_LOCK_MS = 350;
+  const SOUND_LOCK_MS  = 350;
 
   let container = null;
   let persistentBg = null;
@@ -94,8 +65,6 @@
 
   let soundLockActive = false;
   let soundLockTimer = null;
-
-  let isFirstAppearance = false;
 
   let rippleCanvas = null, rippleGl = null, rippleProgram = null,
       rippleUniforms = {}, rippleTexture = null, rippleRaf = 0,
@@ -117,16 +86,16 @@
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
   function vibeEnabled() { const v = getS('vibration');   return (typeof v === 'boolean') ? v : true; }
 
-  function sfx(name, baseVolume = 1.0) {
+  function sfx(name, baseVolume) {
     if (!window.Sound) return false;
     try {
       if (!Sound.hasBuffer(name)) return false;
-      Sound.playSFX(name, { volume: baseVolume * sfxVolume() });
+      Sound.playSFX(name, { volume: (baseVolume || 1.0) * sfxVolume() });
       return true;
     } catch (e) { return false; }
   }
 
-  function sfxAndLock(name, baseVolume = 1.0, lockMs = SOUND_LOCK_MS) {
+  function sfxAndLock(name, baseVolume, lockMs) {
     if (soundLockActive) return false;
     const played = sfx(name, baseVolume);
     if (played) {
@@ -135,7 +104,7 @@
       soundLockTimer = setTimeout(() => {
         soundLockActive = false;
         soundLockTimer = null;
-      }, lockMs);
+      }, lockMs || SOUND_LOCK_MS);
     }
     return played;
   }
@@ -195,7 +164,6 @@
     });
   }
 
-  // ===== МУЗЫКА =====
   async function playMenuMusicFirstTime() {
     if (!window.Sound) return;
     try {
@@ -206,7 +174,7 @@
         fadeIn: 0.5,
         tailTrim: MUSIC_TAIL_TRIM
       });
-    } catch (e) { console.warn('menu music error:', e.message); }
+    } catch (e) {}
   }
 
   async function playMenuMusicLoopOnly() {
@@ -222,7 +190,7 @@
         fadeIn: 0.25,
         tailTrim: MUSIC_TAIL_TRIM
       });
-    } catch (e) { console.warn('menu music loop error:', e.message); }
+    } catch (e) {}
   }
 
   function musicQuiet() { if (window.Sound) Sound.setMusicVolume(VOL_SUB_BASE * musicVolume(), 0.7); }
@@ -239,7 +207,6 @@
     });
   }
 
-  // ===== ФОН =====
   async function ensurePersistentBg() {
     if (persistentBg && persistentBg.parentNode === container) return;
     persistentBg = el('div', 'orbits-persistent-bg');
@@ -249,7 +216,6 @@
     persistentBg.classList.add('show');
   }
 
-  // ===== БЕЛЫЙ ПЕРЕХОД =====
   function getWhiteOverlay() {
     if (whiteOverlay && whiteOverlay.parentNode === container) return whiteOverlay;
     whiteOverlay = el('div', 'orbits-white-overlay');
@@ -257,7 +223,7 @@
     return whiteOverlay;
   }
 
-  // ===== РЯБЬ (исправлено — z-index ниже кнопок, но выше фона) =====
+  // ===== РЯБЬ =====
   const RIPPLE_VERT = "attribute vec2 a_pos; varying vec2 v_uv; void main() { v_uv = a_pos * 0.5 + 0.5; gl_Position = vec4(a_pos, 0.0, 1.0); }";
   const RIPPLE_FRAG = `
     precision highp float;
@@ -453,7 +419,7 @@
     return screen;
   }
 
-  async function showTitleScreen(isFirstTime = false) {
+  async function showTitleScreen(isFirstTime) {
     currentScreen = 'title';
     titleLock = true;
     const oldTitle = container.querySelector('.orbits-title-screen');
@@ -598,7 +564,6 @@
           if (blockName === 'select') {
             window.__ORBITS_SELECT_TYPE__ = (btn.dataset.id === 'online') ? 'online' : 'solo';
           }
-          // ★ Плавный переход: затенение 1.5 сек + музыка 1.5 сек → блок
           setTimeout(() => ORBITS.openBlock(blockName), 180);
         } else {
           subLock = false;
@@ -671,7 +636,7 @@
 
   // ===== СТИЛИ =====
   function injectStyles() {
-    if (document.getElementById('orbits-menu-styles-v2')) return;
+    if (document.getElementById('orbits-menu-styles-v3')) return;
     const css = `
       .orbits-persistent-bg {
         position: absolute; inset: 0;
@@ -680,16 +645,12 @@
         transition: opacity 1.2s ease; z-index: 1;
       }
       .orbits-persistent-bg.show { opacity: 1; }
-
-      /* ★ Ripple — z-index 2 (между фоном и кнопками) */
       .orbits-ripple-wrap { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-
       .orbits-white-overlay {
         position: absolute; inset: 0; background: #ffffff;
         z-index: 9999; opacity: 0; pointer-events: none; will-change: opacity;
       }
       .orbits-white-overlay.show { opacity: 1; }
-
       .orbits-title-screen, .orbits-sub-screen {
         position: absolute; inset: 0; overflow: hidden;
         color: #fff; z-index: 5; pointer-events: auto;
@@ -698,7 +659,6 @@
       .orbits-title-screen { cursor: pointer; opacity: 1; }
       .orbits-sub-screen { opacity: 0; }
       .orbits-sub-screen.fade-in { opacity: 1; }
-
       .orbits-title-name {
         position: absolute; left: 6vw; bottom: 12vh;
         width: min(48vw, 600px); z-index: 5;
@@ -710,7 +670,6 @@
         display: block; width: 100%; height: auto;
         filter: brightness(1.5) drop-shadow(0 0 30px rgba(160,100,255,1));
       }
-
       .orbits-tap-hint {
         position: absolute; left: 50%; bottom: 6vh;
         transform: translateX(-50%);
@@ -723,12 +682,10 @@
       }
       .orbits-tap-hint.show { opacity: 0.95; }
       @keyframes orbits-hint-pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
-
       .orbits-ripple-canvas {
         position: absolute; inset: 0; width: 100%; height: 100%;
         pointer-events: none; opacity: 0; transition: opacity 0.3s ease;
       }
-
       .orbits-veil {
         position: absolute; inset: 0;
         background: linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 55%);
@@ -750,7 +707,6 @@
       .orbits-sub-screen.fade-in .orbits-stripe-left  { transform: skewX(-8deg) translateY(0) translateX(-4%); }
       .orbits-sub-screen.fade-in .orbits-stripe-right { transform: skewX(-8deg) translateY(0) translateX(4%); }
       @keyframes orbits-stripe-move { 0% { background-position: 0 0; } 100% { background-position: 360px -360px; } }
-
       .orbits-buttons {
         position: absolute; left: 6vw; top: 16vh;
         width: min(48vw, 600px);
@@ -781,7 +737,6 @@
         box-shadow: 0 0 32px rgba(255,184,0,0.9);
       }
       .orbits-btn-label { pointer-events: none; }
-
       .orbits-back-btn {
         position: absolute; left: 50%; bottom: 4vh;
         transform: translateX(-50%);
@@ -801,7 +756,7 @@
       }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-menu-styles-v2';
+    style.id = 'orbits-menu-styles-v3';
     style.textContent = css;
     document.head.appendChild(style);
   }
@@ -820,13 +775,9 @@
     const returning = !!window.__ORBITS_RETURNING__;
     window.__ORBITS_RETURNING__ = false;
 
-    // ★ Уведомляем Troll
-    try { if (window.Troll) Troll.setBlock('menu'); } catch (e) {}
-    try { if (window.Troll && Troll.setLoadTypes) Troll.setLoadTypes(['webgl', 'flag']); } catch (e) {}
-
     if (!returning && !window.__ORBITS_MENU_SEEN__) {
+      // Первый запуск — белый оверлей, убираем 1.5 сек
       window.__ORBITS_MENU_SEEN__ = true;
-      isFirstAppearance = true;
       const ov = getWhiteOverlay();
       ov.style.transition = 'none';
       ov.style.opacity = '1';

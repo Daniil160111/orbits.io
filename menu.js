@@ -5,6 +5,8 @@
 (function () {
   'use strict';
 
+  try {
+
   const ASSETS = {
     bg:       './Текстуры/Меню/Фон1.jpg',
     flag:     './Текстуры/Меню/Флаг2.jpg',
@@ -72,8 +74,6 @@
   const RIPPLE_FADE_MS = 1300;
   const SUB_APPEAR_MS  = 1000;
 
-  const SOUND_LOCK_MS = 350;
-
   let container = null;
   let persistentBg = null;
   let whiteOverlay = null;
@@ -83,11 +83,6 @@
   let titleLock = false;
   let subLock = false;
   let musicPlayedOnce = false;
-
-  let soundLockActive = false;
-  let soundLockTimer = null;
-
-  let isFirstAppearance = false;
 
   let rippleCanvas = null, rippleGl = null, rippleProgram = null,
       rippleUniforms = {}, rippleTexture = null, rippleRaf = 0,
@@ -109,29 +104,12 @@
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
   function vibeEnabled() { const v = getS('vibration');   return (typeof v === 'boolean') ? v : true; }
 
-  const VIBE_MULT = 1.0;
-
   function sfx(name, baseVolume = 1.0) {
-    if (!window.Sound) return false;
+    if (!window.Sound) return;
     try {
-      if (!Sound.hasBuffer(name)) return false;
+      if (typeof Sound.hasBuffer !== 'function' || !Sound.hasBuffer(name)) return;
       Sound.playSFX(name, { volume: baseVolume * sfxVolume(), fadeIn: 0 });
-      return true;
-    } catch (e) { return false; }
-  }
-
-  function sfxAndLock(name, baseVolume = 1.0, lockMs = SOUND_LOCK_MS) {
-    if (soundLockActive) return false;
-    const played = sfx(name, baseVolume);
-    if (played) {
-      soundLockActive = true;
-      if (soundLockTimer) clearTimeout(soundLockTimer);
-      soundLockTimer = setTimeout(() => {
-        soundLockActive = false;
-        soundLockTimer = null;
-      }, lockMs);
-    }
-    return played;
+    } catch (e) {}
   }
 
   const canVibrate = () => !!navigator.vibrate && vibeEnabled();
@@ -151,7 +129,7 @@
     let t = 0;
     pulses.forEach((p) => {
       const id = setTimeout(() => {
-        if (canVibrate()) { try { navigator.vibrate(Math.round(p.dur * VIBE_MULT)); } catch (e) {} }
+        if (canVibrate()) { try { navigator.vibrate(p.dur); } catch (e) {} }
       }, t);
       vibeTimeouts.push(id);
       t += p.dur + p.pause;
@@ -160,11 +138,11 @@
   function vibrateButton() {
     if (!canVibrate()) return;
     stopVibrate();
-    try { navigator.vibrate([Math.round(13 * VIBE_MULT), 30, Math.round(13 * VIBE_MULT)]); } catch (e) {}
+    try { navigator.vibrate([13, 30, 13]); } catch (e) {}
   }
   function vibrateSensor() {
     if (!canVibrate()) return;
-    try { navigator.vibrate([Math.round(7 * VIBE_MULT), 30, Math.round(7 * VIBE_MULT)]); } catch (e) {}
+    try { navigator.vibrate([7, 30, 7]); } catch (e) {}
   }
 
   async function loadAssets() {
@@ -191,7 +169,7 @@
 
   // ===== МУЗЫКА =====
   async function playMenuMusicFirstTime() {
-    if (!window.Sound) return;
+    if (!window.Sound || typeof Sound.playMusicIntroLoop !== 'function') return;
     try {
       if (!Sound.hasBuffer('menu_music')) await Sound.loadBuffer('menu_music', ASSETS.music);
       await Sound.playMusicIntroLoop('menu_music', {
@@ -200,14 +178,14 @@
         fadeIn: 0.5,
         tailTrim: MUSIC_TAIL_TRIM
       });
-    } catch (e) { console.warn('menu music error:', e.message); }
+    } catch (e) {}
   }
 
   async function playMenuMusicLoopOnly() {
-    if (!window.Sound) return;
+    if (!window.Sound || typeof Sound.playMusic !== 'function') return;
     try {
       if (!Sound.hasBuffer('menu_music')) await Sound.loadBuffer('menu_music', ASSETS.music);
-      Sound.stopMusic(0);
+      if (typeof Sound.stopMusic === 'function') Sound.stopMusic(0);
       await Sound.playMusic('menu_music', {
         loop: true,
         loopStart: MUSIC_LOOP_START,
@@ -216,11 +194,11 @@
         fadeIn: 0.25,
         tailTrim: MUSIC_TAIL_TRIM
       });
-    } catch (e) { console.warn('menu music loop error:', e.message); }
+    } catch (e) {}
   }
 
-  function musicQuiet() { if (window.Sound) Sound.setMusicVolume(VOL_SUB_BASE * musicVolume(), 0.7); }
-  function musicLoud()  { if (window.Sound) Sound.setMusicVolume(VOL_TITLE_BASE * musicVolume(), 0.7); }
+  function musicQuiet() { if (window.Sound && Sound.setMusicVolume) Sound.setMusicVolume(VOL_SUB_BASE * musicVolume(), 0.7); }
+  function musicLoud()  { if (window.Sound && Sound.setMusicVolume) Sound.setMusicVolume(VOL_TITLE_BASE * musicVolume(), 0.7); }
 
   if (window.Settings && Settings.onChange) {
     Settings.onChange((key) => {
@@ -241,14 +219,6 @@
     container.appendChild(persistentBg);
     await sleep(50);
     persistentBg.classList.add('show');
-  }
-
-  // ===== БЕЛЫЙ ПЕРЕХОД =====
-  function getWhiteOverlay() {
-    if (whiteOverlay && whiteOverlay.parentNode === container) return whiteOverlay;
-    whiteOverlay = el('div', 'orbits-white-overlay');
-    container.appendChild(whiteOverlay);
-    return whiteOverlay;
   }
 
   // ===== РЯБЬ =====
@@ -330,71 +300,76 @@
   }
 
   async function initRippleGL() {
-    if (!rippleWrap || rippleWrap.parentNode !== container) {
-      rippleWrap = el('div', 'orbits-ripple-wrap');
-      container.appendChild(rippleWrap);
-    }
-    if (rippleCanvas && rippleCanvas.parentNode === rippleWrap && rippleGl) return true;
-    if (rippleInitialized && !rippleGl) return false;
-    rippleInitialized = true;
+    try {
+      if (!rippleWrap || rippleWrap.parentNode !== container) {
+        rippleWrap = el('div', 'orbits-ripple-wrap');
+        container.appendChild(rippleWrap);
+      }
+      if (rippleCanvas && rippleCanvas.parentNode === rippleWrap && rippleGl) return true;
+      if (rippleInitialized && !rippleGl) return false;
+      rippleInitialized = true;
 
-    rippleCanvas = el('canvas', 'orbits-ripple-canvas');
-    rippleWrap.appendChild(rippleCanvas);
+      rippleCanvas = el('canvas', 'orbits-ripple-canvas');
+      rippleWrap.appendChild(rippleCanvas);
 
-    const gl = rippleCanvas.getContext('webgl', { antialias: false, alpha: true, premultipliedAlpha: false });
-    if (!gl) { rippleCanvas.remove(); rippleCanvas = null; return false; }
-    rippleGl = gl;
+      const gl = rippleCanvas.getContext('webgl', { antialias: false, alpha: true, premultipliedAlpha: false });
+      if (!gl) { rippleCanvas.remove(); rippleCanvas = null; return false; }
+      rippleGl = gl;
 
-    const vs = compileShader(gl, gl.VERTEX_SHADER, RIPPLE_VERT);
-    const fs = compileShader(gl, gl.FRAGMENT_SHADER, RIPPLE_FRAG);
-    if (!vs || !fs) return false;
+      const vs = compileShader(gl, gl.VERTEX_SHADER, RIPPLE_VERT);
+      const fs = compileShader(gl, gl.FRAGMENT_SHADER, RIPPLE_FRAG);
+      if (!vs || !fs) return false;
 
-    rippleProgram = gl.createProgram();
-    gl.attachShader(rippleProgram, vs);
-    gl.attachShader(rippleProgram, fs);
-    gl.linkProgram(rippleProgram);
-    if (!gl.getProgramParameter(rippleProgram, gl.LINK_STATUS)) return false;
-    gl.useProgram(rippleProgram);
+      rippleProgram = gl.createProgram();
+      gl.attachShader(rippleProgram, vs);
+      gl.attachShader(rippleProgram, fs);
+      gl.linkProgram(rippleProgram);
+      if (!gl.getProgramParameter(rippleProgram, gl.LINK_STATUS)) return false;
+      gl.useProgram(rippleProgram);
 
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
 
-    const aPos = gl.getAttribLocation(rippleProgram, 'a_pos');
-    gl.enableVertexAttribArray(aPos);
-    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+      const aPos = gl.getAttribLocation(rippleProgram, 'a_pos');
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
-    rippleUniforms.uTex        = gl.getUniformLocation(rippleProgram, 'u_tex');
-    rippleUniforms.uCenter     = gl.getUniformLocation(rippleProgram, 'u_center');
-    rippleUniforms.uTime       = gl.getUniformLocation(rippleProgram, 'u_time');
-    rippleUniforms.uFade       = gl.getUniformLocation(rippleProgram, 'u_fade');
-    rippleUniforms.uResolution = gl.getUniformLocation(rippleProgram, 'u_resolution');
+      rippleUniforms.uTex        = gl.getUniformLocation(rippleProgram, 'u_tex');
+      rippleUniforms.uCenter     = gl.getUniformLocation(rippleProgram, 'u_center');
+      rippleUniforms.uTime       = gl.getUniformLocation(rippleProgram, 'u_time');
+      rippleUniforms.uFade       = gl.getUniformLocation(rippleProgram, 'u_fade');
+      rippleUniforms.uResolution = gl.getUniformLocation(rippleProgram, 'u_resolution');
 
-    rippleTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, rippleTexture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.uniform1i(rippleUniforms.uTex, 0);
-
-    const img = await loadImage(ASSETS.bg);
-    if (img) {
+      rippleTexture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, rippleTexture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-    }
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.uniform1i(rippleUniforms.uTex, 0);
 
-    function resize() {
-      if (!rippleCanvas) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      rippleCanvas.width = Math.floor(window.innerWidth * dpr);
-      rippleCanvas.height = Math.floor(window.innerHeight * dpr);
-      gl.viewport(0, 0, rippleCanvas.width, rippleCanvas.height);
+      const img = await loadImage(ASSETS.bg);
+      if (img) {
+        gl.bindTexture(gl.TEXTURE_2D, rippleTexture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      }
+
+      function resize() {
+        if (!rippleCanvas) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        rippleCanvas.width = Math.floor(window.innerWidth * dpr);
+        rippleCanvas.height = Math.floor(window.innerHeight * dpr);
+        gl.viewport(0, 0, rippleCanvas.width, rippleCanvas.height);
+      }
+      resize();
+      window.addEventListener('resize', resize);
+      return true;
+    } catch (e) {
+      console.warn('[ripple] error:', e.message);
+      return false;
     }
-    resize();
-    window.addEventListener('resize', resize);
-    return true;
   }
 
   function waterRipple(x, y) {
@@ -419,13 +394,15 @@
         const elapsed = now - rippleStart;
         const tMove = Math.min(1, elapsed / RIPPLE_MOVE_MS);
         const tFade = Math.min(1, elapsed / RIPPLE_FADE_MS);
-        rippleGl.uniform2f(rippleUniforms.uCenter, rippleCenter[0], rippleCenter[1]);
-        rippleGl.uniform1f(rippleUniforms.uTime, tMove);
-        rippleGl.uniform1f(rippleUniforms.uFade, tFade);
-        rippleGl.uniform2f(rippleUniforms.uResolution, rippleCanvas.width, rippleCanvas.height);
-        rippleGl.clearColor(0, 0, 0, 0);
-        rippleGl.clear(rippleGl.COLOR_BUFFER_BIT);
-        rippleGl.drawArrays(rippleGl.TRIANGLES, 0, 6);
+        try {
+          rippleGl.uniform2f(rippleUniforms.uCenter, rippleCenter[0], rippleCenter[1]);
+          rippleGl.uniform1f(rippleUniforms.uTime, tMove);
+          rippleGl.uniform1f(rippleUniforms.uFade, tFade);
+          rippleGl.uniform2f(rippleUniforms.uResolution, rippleCanvas.width, rippleCanvas.height);
+          rippleGl.clearColor(0, 0, 0, 0);
+          rippleGl.clear(rippleGl.COLOR_BUFFER_BIT);
+          rippleGl.drawArrays(rippleGl.TRIANGLES, 0, 6);
+        } catch (e) {}
         if (tFade < 1) rippleRaf = requestAnimationFrame(frame);
         else finish();
       }
@@ -447,9 +424,10 @@
     return screen;
   }
 
-  async function showTitleScreen(isFirstTime = false) {
+  async function showTitleScreen(isFirstTime) {
     currentScreen = 'title';
     titleLock = true;
+
     const oldTitle = container.querySelector('.orbits-title-screen');
     if (oldTitle) oldTitle.remove();
     const oldSub = container.querySelector('.orbits-sub-screen');
@@ -461,11 +439,13 @@
     initRippleGL();
 
     await sleep(50);
+
     if (isFirstTime && !musicPlayedOnce) {
       await sleep(500);
       playMenuMusicFirstTime();
       musicPlayedOnce = true;
     }
+
     await sleep(500);
     const title = screen.querySelector('.orbits-title-name');
     title.classList.add('show');
@@ -479,10 +459,9 @@
     const onTap = async (e) => {
       if (titleLock) return;
       if (currentScreen !== 'title') return;
-      if (soundLockActive) return;
       titleLock = true;
       vibrateWave();
-      sfxAndLock('sys_tap_screen', 1.0, 400);
+      sfx('menu_sfx_tap', 1.0);
       const point = getPointer(e);
       if (point) waterRipple(point.x, point.y);
       setTimeout(() => goToSubScreen(), SUB_APPEAR_MS);
@@ -579,15 +558,12 @@
       const doOpen = (e) => {
         if (e) e.preventDefault();
         if (subLock || anyClicked) return;
-        if (soundLockActive) return;
         lockAll();
         subLock = true;
         vibrateButton();
-
-        const blockName = BLOCK_MAP[btn.dataset.id];
-        sfxAndLock('sys_start_race', 1.0, 500);
+        sfx('menu_sfx_btn', 1.0);
         btn.classList.add('clicked');
-
+        const blockName = BLOCK_MAP[btn.dataset.id];
         if (blockName && window.ORBITS && ORBITS.openBlock) {
           if (blockName === 'select') {
             window.__ORBITS_SELECT_TYPE__ = (btn.dataset.id === 'online') ? 'online' : 'solo';
@@ -619,11 +595,10 @@
     const goBack = (e) => {
       if (e) e.preventDefault();
       if (subLock || anyClicked) return;
-      if (soundLockActive) return;
       lockAll();
       subLock = true;
       vibrateButton();
-      sfxAndLock('sys_back', 0.9, 350);
+      sfx('menu_sfx_btn', 0.9);
       goToTitleScreen();
     };
     back.addEventListener('click', goBack);
@@ -666,19 +641,20 @@
   function injectStyles() {
     if (document.getElementById('orbits-menu-styles')) return;
     const css = `
+      /* ★ ФОН ЗАМОРОЖЕН: без filter brightness, без анимаций яркости */
       .orbits-persistent-bg {
         position: absolute; inset: 0;
         background-size: cover; background-position: center;
-        opacity: 0; filter: brightness(1.5);
-        transition: opacity 1.2s ease; z-index: 1;
+        background-repeat: no-repeat;
+        opacity: 0;
+        transform: scale(1.0);
+        transition: opacity 1.5s ease;
+        z-index: 1;
       }
       .orbits-persistent-bg.show { opacity: 1; }
+
       .orbits-ripple-wrap { position: absolute; inset: 0; z-index: 999; pointer-events: none; }
-      .orbits-white-overlay {
-        position: absolute; inset: 0; background: #ffffff;
-        z-index: 9999; opacity: 0; pointer-events: none; will-change: opacity;
-      }
-      .orbits-white-overlay.show { opacity: 1; }
+
       .orbits-title-screen, .orbits-sub-screen {
         position: absolute; inset: 0; overflow: hidden;
         color: #fff; z-index: 5; pointer-events: auto;
@@ -712,11 +688,13 @@
       @keyframes orbits-hint-pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
       .orbits-ripple-canvas {
         position: absolute; inset: 0; width: 100%; height: 100%;
-        pointer-events: none; opacity: 0; transition: opacity 0.3s ease;
+        pointer-events: none; opacity: 0;
+        transition: opacity 0.5s ease;
       }
+      /* ★ VEIL ЗАМОРОЖЕН: не темнеет */
       .orbits-veil {
         position: absolute; inset: 0;
-        background: linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 55%);
+        background: linear-gradient(135deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0) 55%);
         z-index: 2; pointer-events: none;
       }
       .orbits-stripes { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
@@ -727,7 +705,7 @@
         filter: invert(1) brightness(1.6) contrast(1.1);
         mix-blend-mode: screen;
         animation: orbits-stripe-move 36s linear infinite;
-        transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+        transition: transform 1.6s cubic-bezier(0.22, 1, 0.36, 1);
         will-change: transform;
       }
       .orbits-stripe-left  { left: -10%; transform: skewX(-8deg) translateY(-100%) translateX(-4%); }
@@ -751,9 +729,9 @@
         opacity: 0; transform: translateX(-60px) scale(0.9);
         filter: brightness(0.4);
         transition:
-          transform 0.5s cubic-bezier(0.16,1,0.3,1),
-          opacity 0.5s ease, filter 0.5s ease,
-          background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+          transform 0.6s cubic-bezier(0.16,1,0.3,1),
+          opacity 0.6s ease, filter 0.6s ease,
+          background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
         user-select: none;
         clip-path: polygon(0 0, 96% 0, 100% 50%, 96% 100%, 0 100%);
       }
@@ -774,7 +752,7 @@
         letter-spacing: 2px; text-transform: uppercase;
         border-radius: 10px; cursor: pointer;
         z-index: 6; opacity: 0;
-        transition: opacity 0.7s ease, transform 0.2s ease, background 0.2s ease;
+        transition: opacity 0.9s ease, transform 0.25s ease, background 0.25s ease;
         user-select: none;
       }
       .orbits-sub-screen.fade-in .orbits-back-btn { opacity: 1; }
@@ -790,43 +768,35 @@
   }
 
   async function start() {
-    container = document.getElementById('game-container') || document.body;
-    container.style.position = 'absolute';
-    container.style.inset = '0';
-    container.style.background = 'transparent';
-    container.style.overflow = 'hidden';
+    try {
+      container = document.getElementById('game-container') || document.body;
+      container.style.position = 'absolute';
+      container.style.inset = '0';
+      container.style.background = 'transparent';
+      container.style.overflow = 'hidden';
 
-    injectStyles();
-    await loadAssets();
-    await ensurePersistentBg();
+      injectStyles();
+      await loadAssets();
+      await ensurePersistentBg();
 
-    const returning = !!window.__ORBITS_RETURNING__;
-    window.__ORBITS_RETURNING__ = false;
+      const returning = !!window.__ORBITS_RETURNING__;
+      window.__ORBITS_RETURNING__ = false;
 
-    // ★ Уведомляем Troll
-    try { if (window.Troll) Troll.setBlock('menu'); } catch (e) {}
-    // ★ Патч: сообщаем типы нагрузки
-    try { if (window.Troll && Troll.setLoadTypes) Troll.setLoadTypes(['webgl', 'flag']); } catch (e) {}
-
-    if (!returning && !window.__ORBITS_MENU_SEEN__) {
-      window.__ORBITS_MENU_SEEN__ = true;
-      isFirstAppearance = true;
-      const ov = getWhiteOverlay();
-      ov.style.transition = 'none';
-      ov.style.opacity = '1';
-      ov.classList.add('show');
-      void ov.offsetWidth;
-      ov.style.transition = 'opacity 1500ms ease';
-      ov.style.opacity = '0';
-      await sleep(1500);
-      ov.classList.remove('show');
-      await showTitleScreen(true);
-    } else if (returning) {
-      await showSubScreenDirect();
-    } else {
-      await showTitleScreen(true);
+      // ★ При запуске после перехода из index: белый экран уже убирается,
+      // поэтому меню появляется плавно.
+      if (returning) {
+        await showSubScreenDirect();
+      } else {
+        await showTitleScreen(true);
+      }
+    } catch (e) {
+      console.error('[menu] ошибка:', e.message, e.stack);
     }
   }
 
   start();
+
+  } catch (e) {
+    console.error('[menu] критическая ошибка:', e.message);
+  }
 })();

@@ -39,12 +39,12 @@
     z-index:1; background-color:#0a0a15;
   }
   #bg.show { opacity:1; transform: scale(1.0); }
-  #bg.blurred { filter: brightness(0.5) blur(8px); transform: scale(1.04); }
+  #bg.blurred { filter: brightness(0.6) blur(6px); transform: scale(1.04); }
 
   #bg-overlay {
     position:absolute; inset:0;
     background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.55) 100%);
-    z-index:2; transition: background 1.5s ease;
+    z-index:2; transition: background 0.7s ease;
   }
   #bg-overlay.dimmed { background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.85) 100%); }
 
@@ -52,7 +52,7 @@
     position:absolute; inset:0; z-index:50;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     background:#0a0a15;
-    transition: opacity 1s ease, transform 1s cubic-bezier(0.16,1,0.3,1);
+    transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16,1,0.3,1);
   }
   #screen-start.hide { opacity:0; pointer-events:none; transform: scale(0.94); }
 
@@ -60,9 +60,10 @@
     padding:18px 54px; font-size:20px; font-weight:800; letter-spacing:3px;
     color:#fff; background:transparent; border:2px solid rgba(255,255,255,0.6);
     border-radius:50px; cursor:pointer; text-transform:uppercase;
-    transition: all 0.3s ease, opacity 0.45s ease;
+    transition: all 0.25s ease, opacity 0.45s ease;
     animation: pulse 2.2s ease-in-out infinite;
-    text-align:center; min-width: 280px;
+    text-align:center;
+    min-width: 280px;
   }
   .continue-btn:active { transform:scale(0.96); background:rgba(255,255,255,0.1); }
   .continue-btn:disabled { opacity:0.5; animation:none; }
@@ -72,6 +73,7 @@
   }
 
   #loading-info { margin-top:18px; font-size:13px; color:#8892a8; letter-spacing:1px; min-height:20px; text-align:center; }
+
   #loading-progress {
     margin-top:8px; font-size:12px; color:#6a7590;
     letter-spacing:1px; font-variant-numeric: tabular-nums;
@@ -95,7 +97,8 @@
     border-radius:14px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     font-size:13px; line-height:1.6; color:#c8d4ff; text-align:center;
     opacity:0; transform: translateX(-50%) translateY(24px);
-    transition: opacity 0.9s cubic-bezier(0.16,1,0.3,1), transform 0.9s cubic-bezier(0.16,1,0.3,1);
+    transition: opacity 0.9s cubic-bezier(0.16,1,0.3,1),
+                transform 0.9s cubic-bezier(0.16,1,0.3,1);
   }
   #instructions.show { opacity:1; transform: translateX(-50%) translateY(0); }
   #instructions b { color:#fff; }
@@ -112,50 +115,33 @@
     border:none; border-radius:10px; cursor:pointer;
     box-shadow:0 6px 18px rgba(60,90,255,0.35);
     transition: transform 0.15s ease, opacity 0.45s ease;
-    min-width: 220px; justify-content: center;
+    min-width: 220px;
+    justify-content: center;
   }
   .install-btn:active { transform:scale(0.97); }
 
-  /* Модалка */
   #modal {
     position:absolute; inset:0; z-index:300;
     display:none; align-items:center; justify-content:center;
-    background:rgba(0,0,0,0);
-    backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px);
-    opacity:0;
-    transition: opacity 1.5s ease, background 1.5s ease, backdrop-filter 1.5s ease;
+    background:rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    opacity:0; transition: opacity 0.7s ease;
   }
-  #modal.show {
-    display:flex; opacity:1;
-    background:rgba(0,0,0,0.5);
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  }
+  #modal.show { display:flex; opacity:1; }
   .modal-box {
-    width:min(90vw, 440px); padding:26px 24px;
+    width:min(90vw, 420px); padding:24px 22px;
     background:rgba(20,22,35,0.98); border:1px solid rgba(120,160,255,0.3);
-    border-radius:18px; text-align:center; color:#c8d4ff; font-size:14px; line-height:1.6;
-    transform: scale(0.5); opacity:0;
-    transition: transform 1s cubic-bezier(0.16,1,0.3,1), opacity 1s ease;
+    border-radius:16px; text-align:center; color:#c8d4ff; font-size:14px; line-height:1.6;
+    transform: scale(0.92) translateY(20px);
+    transition: transform 0.7s cubic-bezier(0.16,1,0.3,1);
   }
-  #modal.show .modal-box { transform: scale(1); opacity:1; }
+  #modal.show .modal-box { transform: scale(1) translateY(0); }
   .modal-box h3 { color:#fff; margin-bottom:12px; font-size:18px; }
-  .modal-box p { margin-bottom: 8px; }
   .modal-box.error { border-color: rgba(255,80,80,0.5); }
   .modal-box.error h3 { color:#ff6b6b; }
-  .modal-box .modal-buttons {
-    display: flex; gap: 10px; margin-top: 18px;
-  }
   .modal-box button {
-    flex: 1 1 0; padding:12px 20px;
+    margin-top:16px; padding:10px 24px;
     background: linear-gradient(135deg,#3a6eff,#7a3aff);
-    color:#fff; border:none; border-radius:12px;
-    font-weight:700; font-size: 14px; cursor:pointer;
-    transition: transform 0.15s ease;
-  }
-  .modal-box button:active { transform: scale(0.96); }
-  .modal-box button.secondary {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.3);
+    color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer;
   }
   .modal-box.error button { background: linear-gradient(135deg,#ff3a3a,#a03030); }
 
@@ -228,19 +214,11 @@
   }
   #white-flash.show { opacity:1; }
 
-  /* Оверлей перехода между блоками (тёмное затемнение) */
-  #block-transition {
-    position:fixed; inset:0; z-index:99998; background:#000;
-    opacity:0; pointer-events:none; transition: opacity 1.5s ease;
-  }
-  #block-transition.show { opacity:1; }
-
-  /* Лого при переходе к menu */
   #transition-logo {
     position: fixed; inset: 0; z-index: 100000;
     display: none; align-items: center; justify-content: center;
     pointer-events: none; opacity: 0;
-    transition: opacity 1.5s ease;
+    transition: opacity 0.6s ease;
   }
   #transition-logo img {
     width: min(50vw, 600px);
@@ -249,13 +227,92 @@
     filter: drop-shadow(0 16px 60px rgba(140,80,255,0.85));
   }
   #transition-logo.show { display: flex; opacity: 1; }
-  #transition-logo.show img { transform: scale(1.8); }
+  #transition-logo.show img { transform: scale(2.2); }
 
   #game-container {
     position:absolute; inset:0; z-index:10;
     background: transparent; overflow:hidden; display:none;
   }
   #game-container.show { display:block; }
+
+  body.orbits-error-mode #browser-view,
+  body.orbits-error-mode #pwa-view {
+    filter: brightness(0.35) blur(12px);
+    pointer-events: none;
+    transition: filter 0.7s ease;
+  }
+  body.orbits-error-mode #loader-canvas,
+  body.orbits-error-mode #transition-logo,
+  body.orbits-error-mode #white-flash {
+    opacity: 0 !important;
+    transition: opacity 0.7s ease;
+  }
+
+  /* ★ Окно загрузки материала */
+  #download-dialog {
+    position: fixed; inset: 0; z-index: 200000;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0);
+    backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px);
+    transition: background 1.5s ease, backdrop-filter 1.5s ease;
+  }
+  #download-dialog.show { display: flex; }
+  #download-dialog.dimmed {
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  #download-dialog .dd-box {
+    width: min(88vw, 480px); padding: 28px 26px;
+    background: linear-gradient(155deg, rgba(25,20,45,0.98) 0%, rgba(40,25,70,0.98) 100%);
+    border: 1px solid rgba(160,120,255,0.55);
+    border-radius: 24px;
+    text-align: center; color: #d8d0ff;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.9), 0 0 60px rgba(140,80,255,0.35);
+    transform: scale(0.7);
+    opacity: 0;
+    transition: transform 1s cubic-bezier(0.16,1,0.3,1), opacity 1s ease;
+  }
+  #download-dialog.dimmed .dd-box {
+    transform: scale(1);
+    opacity: 1;
+  }
+  #download-dialog h3 {
+    font-size: 20px; color: #fff; margin-bottom: 14px; letter-spacing: 1px;
+    text-shadow: 0 0 14px rgba(180,120,255,0.9);
+  }
+  #download-dialog p {
+    font-size: 14px; line-height: 1.6; margin-bottom: 8px; white-space: pre-line;
+  }
+  #download-dialog .dd-size {
+    font-size: 18px; font-weight: 800; color: #fff; margin: 12px 0;
+    text-shadow: 0 0 12px rgba(180,120,255,0.9);
+    font-variant-numeric: tabular-nums;
+  }
+  #download-dialog .dd-warn {
+    font-size: 12px; color: #ffb8a8; line-height: 1.5; margin: 10px 0 18px;
+    opacity: 0.9;
+  }
+  #download-dialog .dd-buttons {
+    display: flex; gap: 12px; margin-top: 18px;
+  }
+  #download-dialog button {
+    flex: 1 1 0; padding: 14px 20px;
+    font-family: inherit; font-size: 15px; font-weight: 800;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    border-radius: 16px; cursor: pointer; border: none;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+  }
+  #download-dialog button:active { transform: scale(0.96); }
+  #download-dialog .dd-yes {
+    background: linear-gradient(135deg, rgba(140,70,255,0.98), rgba(190,110,255,0.98));
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(140,80,255,0.7), 0 0 40px rgba(160,100,255,0.4);
+  }
+  #download-dialog .dd-no {
+    background: rgba(255,255,255,0.10);
+    color: #c8c0e0;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
 </style>
 </head>
 <body>
@@ -290,10 +347,6 @@
       <div class="modal-box" id="modal-box">
         <h3 id="modal-title" data-i18n="modal_title">Как установить</h3>
         <p id="modal-text"></p>
-        <div class="modal-buttons" id="modal-buttons" style="display:none">
-          <button id="modal-cancel" class="secondary">Отмена</button>
-          <button id="modal-accept">Загрузить</button>
-        </div>
         <button id="modal-close" data-i18n="ok">Понятно</button>
       </div>
     </div>
@@ -334,8 +387,24 @@
 
   <div id="game-container"></div>
   <div id="white-flash"></div>
-  <div id="block-transition"></div>
   <div id="transition-logo"><img src="icon/name.png" alt=""></div>
+
+  <!-- ★ Окно загрузки материала -->
+  <div id="download-dialog">
+    <div class="dd-box">
+      <h3 id="dd-title">Требуется загрузка материала</h3>
+      <p id="dd-text">Для запуска игры необходимо загрузить файлы.</p>
+      <div class="dd-size" id="dd-size">0.0 МБ</div>
+      <div class="dd-warn" id="dd-warn">
+        Подключитесь к Wi-Fi для экономии трафика.
+        За мобильный интернет может взиматься дополнительная плата в зависимости от тарифа.
+      </div>
+      <div class="dd-buttons">
+        <button class="dd-yes" id="dd-yes">Загрузить</button>
+        <button class="dd-no"  id="dd-no">Отмена</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="./error-manager.js"></script>
@@ -359,7 +428,9 @@
   const $ = id => document.getElementById(id);
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  // ============ ЯЗЫКИ БРАУЗЕРНОГО ОКНА ============
+  // =====================================================================
+  // ЯЗЫКИ БРАУЗЕРНОГО ОКНА
+  // =====================================================================
   const BROWSER_DICT = {
     ru: {
       continue: 'Продолжить', loading: 'Загрузка...',
@@ -377,15 +448,20 @@
       install_desktop: 'Установка доступна только на мобильных.',
       install_done_title: 'Готово!',
       install_done_text: 'Приложение установлено. Запустите его с рабочего стола.',
-      err_load_title: 'Ошибка загрузки', err_bg: 'Не удалось загрузить фон',
-      load_title: 'Требуется загрузка материала',
-      load_text_wifi: 'Подключитесь к Wi-Fi для экономии трафика. За мобильный интернет может взиматься плата в зависимости от тарифа.',
-      size_label: 'Размер составляет',
-      update_title: 'Требуется обновить материал',
-      new_title: 'Требуется загрузить новый материал',
-      new_update_title: 'Требуется загрузить новый материал и обновить старый',
-      btn_load: 'Загрузить',
-      btn_cancel: 'Отмена'
+      err_load_title: 'Ошибка загрузки',
+      err_bg: 'Не удалось загрузить фон',
+      // ★ Окна загрузки
+      dl_title_first: 'Требуется загрузка материала',
+      dl_title_update: 'Требуется обновить материал',
+      dl_title_new: 'Требуется загрузить новый материал',
+      dl_title_both: 'Требуется загрузить новый материал и обновить старый',
+      dl_text_first: 'Для запуска игры необходимо загрузить файлы.',
+      dl_text_update: 'Доступно обновление файлов игры.',
+      dl_text_new: 'Появился новый контент. Требуется загрузка.',
+      dl_text_both: 'Появился новый контент и доступно обновление.',
+      dl_warn: 'Подключитесь к Wi-Fi для экономии трафика.\nЗа мобильный интернет может взиматься дополнительная плата в зависимости от тарифа.',
+      dl_yes: 'Загрузить',
+      dl_no: 'Отмена'
     },
     en: {
       continue: 'Continue', loading: 'Loading...',
@@ -399,71 +475,81 @@
       mobile_only_title: 'Mobile only',
       mobile_only_text: 'ORBITS.IO is a mobile game. Open the site on your phone or scan the QR code.',
       install_ios: 'Tap "Share" in Safari, then "Add to Home Screen".',
-      install_android: 'Open the browser menu and choose "Install app".',
+      install_android: 'Open the browser menu (⋮) and choose "Install app".',
       install_desktop: 'Installation is available on mobile only.',
       install_done_title: 'Done!',
       install_done_text: 'App installed. Launch it from your home screen.',
       err_load_title: 'Loading error', err_bg: 'Failed to load background',
-      load_title: 'Material download required',
-      load_text_wifi: 'Connect to Wi-Fi to save traffic. Mobile data may incur charges depending on your plan.',
-      size_label: 'Total size',
-      update_title: 'Material update required',
-      new_title: 'New material download required',
-      new_update_title: 'New material download and old update required',
-      btn_load: 'Download',
-      btn_cancel: 'Cancel'
+      dl_title_first: 'Download required',
+      dl_title_update: 'Update required',
+      dl_title_new: 'New content available',
+      dl_title_both: 'New content and update required',
+      dl_text_first: 'Files must be downloaded to start the game.',
+      dl_text_update: 'An update is available for game files.',
+      dl_text_new: 'New content has appeared. Download required.',
+      dl_text_both: 'New content and update are available.',
+      dl_warn: 'Connect to Wi-Fi to save data.\nMobile data charges may apply depending on your plan.',
+      dl_yes: 'Download',
+      dl_no: 'Cancel'
     },
     fr: {
       continue: 'Continuer', loading: 'Chargement...',
       tagline: 'jeu 3D mobile.',
       install_hint: 'Installez comme application :',
-      install_step1: 'Touchez le bouton ci-dessous.',
-      install_step2: 'Choisissez « Installer l\'application ».',
+      install_step1: 'Touchez le bouton ci-dessous (ou le menu du navigateur).',
+      install_step2: 'Choisissez « Installer l\'application » / « Sur l\'écran d\'accueil ».',
       install_step3: 'Lancez depuis l\'écran d\'accueil.',
       install_btn: '📲 Installer l\'app', ok: 'Compris',
       modal_title: 'Comment installer',
       mobile_only_title: 'Mobile uniquement',
-      mobile_only_text: 'ORBITS.IO est un jeu mobile.',
-      install_ios: 'Touchez « Partager » dans Safari.',
-      install_android: 'Ouvrez le menu du navigateur.',
-      install_desktop: 'Installation sur mobile uniquement.',
+      mobile_only_text: 'ORBITS.IO est un jeu mobile. Ouvrez le site sur votre téléphone ou scannez le QR code.',
+      install_ios: 'Touchez « Partager » dans Safari, puis « Sur l\'écran d\'accueil ».',
+      install_android: 'Ouvrez le menu du navigateur (⋮) et choisissez « Installer l\'application ».',
+      install_desktop: 'L\'installation est disponible uniquement sur mobile.',
       install_done_title: 'Terminé !',
-      install_done_text: 'Application installée.',
-      err_load_title: 'Erreur de chargement', err_bg: 'Impossible de charger l\'arrière-plan',
-      load_title: 'Téléchargement de matériel requis',
-      load_text_wifi: 'Connectez-vous au Wi-Fi pour économiser les données.',
-      size_label: 'Taille totale',
-      update_title: 'Mise à jour requise',
-      new_title: 'Nouveau matériel requis',
-      new_update_title: 'Nouveau matériel et mise à jour requis',
-      btn_load: 'Télécharger',
-      btn_cancel: 'Annuler'
+      install_done_text: 'Application installée. Lancez-la depuis l\'écran d\'accueil.',
+      err_load_title: 'Erreur de chargement',
+      err_bg: 'Impossible de charger l\'arrière-plan',
+      dl_title_first: 'Téléchargement requis',
+      dl_title_update: 'Mise à jour requise',
+      dl_title_new: 'Nouveau contenu disponible',
+      dl_title_both: 'Nouveau contenu et mise à jour requis',
+      dl_text_first: 'Les fichiers doivent être téléchargés pour lancer le jeu.',
+      dl_text_update: 'Une mise à jour des fichiers est disponible.',
+      dl_text_new: 'Nouveau contenu disponible. Téléchargement requis.',
+      dl_text_both: 'Nouveau contenu et mise à jour disponibles.',
+      dl_warn: 'Connectez-vous au Wi-Fi pour économiser des données.\nDes frais mobiles peuvent s\'appliquer selon votre forfait.',
+      dl_yes: 'Télécharger',
+      dl_no: 'Annuler'
     },
     es: {
       continue: 'Continuar', loading: 'Cargando...',
       tagline: 'juego 3D móvil.',
       install_hint: 'Instala como aplicación:',
-      install_step1: 'Pulsa el botón de abajo.',
-      install_step2: 'Elige «Instalar aplicación».',
+      install_step1: 'Pulsa el botón de abajo (o el menú del navegador).',
+      install_step2: 'Elige «Instalar aplicación» / «Añadir a pantalla de inicio».',
       install_step3: 'Inicia desde la pantalla de inicio.',
       install_btn: '📲 Instalar app', ok: 'Entendido',
       modal_title: 'Cómo instalar',
       mobile_only_title: 'Solo móviles',
-      mobile_only_text: 'ORBITS.IO es un juego móvil.',
-      install_ios: 'Pulsa «Compartir» en Safari.',
-      install_android: 'Abre el menú del navegador.',
-      install_desktop: 'Instalación solo en móviles.',
+      mobile_only_text: 'ORBITS.IO es un juego móvil. Abre el sitio en tu teléfono o escanea el código QR.',
+      install_ios: 'Pulsa «Compartir» en Safari, luego «Añadir a pantalla de inicio».',
+      install_android: 'Abre el menú del navegador (⋮) y elige «Instalar aplicación».',
+      install_desktop: 'La instalación solo está disponible en móviles.',
       install_done_title: '¡Listo!',
-      install_done_text: 'Aplicación instalada.',
+      install_done_text: 'Aplicación instalada. Iníciala desde la pantalla de inicio.',
       err_load_title: 'Error de carga', err_bg: 'No se pudo cargar el fondo',
-      load_title: 'Descarga de material requerida',
-      load_text_wifi: 'Conéctate a Wi-Fi para ahorrar datos.',
-      size_label: 'Tamaño total',
-      update_title: 'Actualización requerida',
-      new_title: 'Nuevo material requerido',
-      new_update_title: 'Nuevo material y actualización requeridos',
-      btn_load: 'Descargar',
-      btn_cancel: 'Cancelar'
+      dl_title_first: 'Descarga requerida',
+      dl_title_update: 'Actualización requerida',
+      dl_title_new: 'Nuevo contenido disponible',
+      dl_title_both: 'Nuevo contenido y actualización requeridos',
+      dl_text_first: 'Se deben descargar archivos para iniciar el juego.',
+      dl_text_update: 'Hay una actualización disponible.',
+      dl_text_new: 'Ha aparecido nuevo contenido. Descarga requerida.',
+      dl_text_both: 'Nuevo contenido y actualización disponibles.',
+      dl_warn: 'Conéctate a Wi-Fi para ahorrar datos.\nPueden aplicarse cargos según tu tarifa.',
+      dl_yes: 'Descargar',
+      dl_no: 'Cancelar'
     }
   };
 
@@ -485,7 +571,9 @@
       n.textContent = BT(n.dataset.i18n);
     });
     const info = $('loading-info');
-    if (info && !info.dataset.locked) info.textContent = BT('loading');
+    if (info && !info.dataset.locked) {
+      info.textContent = BT('loading');
+    }
   }
 
   function startBrowserLangCycle() {
@@ -505,6 +593,7 @@
       fadeTargets.forEach(t => { t.style.opacity = ''; });
     }, 5000);
   }
+
   function stopBrowserLangCycle() {
     browserLangStopped = true;
     if (browserLangTimer) {
@@ -513,15 +602,31 @@
     }
   }
 
-  // ============ URL ============
+  // ===== URL-константы =====
   const URL_LOAD_BG      = './Текстуры/Меню/Load1.jpg';
   const URL_DISCLAIMER   = './Текстуры/Меню/D1.jpg';
   const URL_STARTUP      = './Звуки/Меню/Startup.mp3';
   const URL_ERROR_SND    = './Звуки/Система/Error.wav';
   const URL_CONTINUE_SND = './Звуки/Система/Button.wav';
+  const URL_WINDOW_SND   = './Звуки/Система/Window.wav';
 
   const URL_BG_BROWSER    = './Текстуры/Меню/F1.jpg';
   const URL_MUSIC_BROWSER = './Звуки/Меню/Титульный.mp3';
+
+  const SYS_SOUNDS = [
+    { key: 'sys_back_select_menu', url: './Звуки/Система/Back-select-menu.wav' },
+    { key: 'sys_back',             url: './Звуки/Система/Back.wav' },
+    { key: 'sys_blok_slot',        url: './Звуки/Система/Blok_slot.wav' },
+    { key: 'sys_button',           url: './Звуки/Система/Button.wav' },
+    { key: 'sys_error',            url: './Звуки/Система/Error.wav' },
+    { key: 'sys_message',          url: './Звуки/Система/Message.wav' },
+    { key: 'sys_save',             url: './Звуки/Система/Save.wav' },
+    { key: 'sys_setting',          url: './Звуки/Система/Setting.wav' },
+    { key: 'sys_start_race',       url: './Звуки/Система/Start-race-menu-to-select.wav' },
+    { key: 'sys_tap_screen',       url: './Звуки/Система/Tap-to-screen.wav' },
+    { key: 'sys_unblok_slot',      url: './Звуки/Система/Unblok_slot.wav' },
+    { key: 'sys_window',           url: './Звуки/Система/Window.wav' }
+  ];
 
   const BROWSER_MUSIC_TAIL_TRIM = 0.022;
 
@@ -530,6 +635,9 @@
   const DB_VERSION = 2;
   const STORE_ASSETS = 'assets';
   const STORE_PROGRESS = 'progress';
+
+  const MANIFEST_VERSION_KEY = 'orbits_manifest_version';
+  const MANIFEST_ASSETS_KEY = 'orbits_manifest_assets';
 
   const BUILTIN_ASSETS = [
     { key: 'disclaimer',    url: URL_DISCLAIMER },
@@ -544,7 +652,7 @@
     './Звуки/Меню/Титульный.mp3'
   ];
 
-  const MIN_LOADING_MS = 2000;
+  const MIN_LOADING_MS = 2500;
   const WATCHDOG_MS = 60000;
   const LOADER_FADE_MS = 1500;
   const FETCH_TRIES = 3;
@@ -553,6 +661,8 @@
   let db = null;
   let manifest = null;
   let modalOpen = false;
+
+  let loadingRunning = false;
 
   window.__ORBITS_BLOCK_STACK__ = ['./menu.js'];
   window.__ORBITS_CURRENT_BLOCK__ = null;
@@ -564,7 +674,7 @@
   let glCanvas, gl, glProgram, glUniforms = {}, glBuffer = null,
       glIndexBuffer = null, glIndexCount = 0, bgTexture = null,
       animRaf = 0, animStart = 0, animFrozen = false, animFreezeTime = 0,
-      loadingRunning = false, webglSupported = false;
+      webglSupported = false;
 
   let watchdogTimer = null, watchdogLastPing = 0;
 
@@ -580,10 +690,10 @@
     if (stats.totalBytes === 0) { el.textContent = ''; return; }
     const loaded = stats.loadedBytes / (1024 * 1024);
     const total = stats.totalBytes / (1024 * 1024);
-    el.textContent = loaded.toFixed(1).replace('.', ',') + ' мб / ' + total.toFixed(1).replace('.', ',') + ' мб';
+    el.textContent = loaded.toFixed(1) + ' МБ / ' + total.toFixed(1) + ' МБ';
   }
 
-  // ============ IndexedDB ============
+  // ===== IndexedDB =====
   function openDB() {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -623,14 +733,6 @@
       tx.onerror = () => reject(tx.error);
     });
   }
-  function dbAll(store) {
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(store, 'readonly');
-      const req = tx.objectStore(store).getAll();
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  }
 
   async function sha256(buffer) {
     if (window.crypto && window.crypto.subtle && window.crypto.subtle.digest) {
@@ -648,7 +750,7 @@
     return 'fnv_' + h.toString(16).padStart(8, '0') + '_len_' + bytes.length.toString(16);
   }
 
-  // ============ WebGL ============
+  // ===== WebGL — усиленный флаг =====
   const VERT_SHADER = `
     attribute vec2 a_uv;
     uniform float u_time;
@@ -657,13 +759,17 @@
     varying float v_height;
     varying vec3 v_normal;
     float flagHeight(float u, float v, float t) {
-      float amp = 0.20 + u * 1.10;
-      float w1 = sin(u * 6.0 + t * 2.4) * 0.35;
+      float amp = (0.20 + u * 1.10) * 1.30;
+      float frontBoost = 1.0 + u * 0.6;
+      float backBoost  = 1.0 + (1.0 - u) * 0.4;
+      float w1 = sin(u * 6.0 + t * 2.4) * 0.35 * frontBoost;
       float w2 = sin(u * 9.5 - t * 1.9 + v * 1.5) * 0.20;
-      float w3 = sin(v * 4.0 + t * 1.6) * 0.10;
+      float w3 = sin(v * 4.0 + t * 1.6) * 0.10 * backBoost;
       float w4 = sin(u * 2.5 - t * 0.8) * 0.15;
+      float w5 = sin(u * 12.0 + t * 3.1) * 0.12 * smoothstep(0.5, 1.0, u);
+      float w6 = sin(u * 14.0 - t * 2.7) * 0.10 * smoothstep(0.5, 0.0, u);
       float sag = -cos(v * 3.14159) * 0.08;
-      return (w1 + w2 + w3 + w4) * amp + sag;
+      return (w1 + w2 + w3 + w4 + w5 + w6) * amp + sag;
     }
     void main() {
       vec2 uv = a_uv;
@@ -674,13 +780,13 @@
       float ZOOM = 1.15;
       float x = (uv.x - 0.5) * 2.0 * ZOOM;
       float y = (uv.y - 0.5) * 2.0 * ZOOM;
-      float z = h * 1.05;
+      float z = h * 1.30;
       float xShift = sin(uv.x * 3.0 + t * 1.2) * 0.05 * (0.3 + uv.x);
       float eps = 0.01;
       float hx = flagHeight(uv.x + eps, uv.y, t);
       float hy = flagHeight(uv.x, uv.y + eps, t);
-      vec3 tangentX = vec3(eps * 2.0 * ZOOM, 0.0, (hx - h) * 1.05);
-      vec3 tangentY = vec3(0.0, eps * 2.0 * ZOOM, (hy - h) * 1.05);
+      vec3 tangentX = vec3(eps * 2.0 * ZOOM, 0.0, (hx - h) * 1.30);
+      vec3 tangentY = vec3(0.0, eps * 2.0 * ZOOM, (hy - h) * 1.30);
       vec3 normal = normalize(cross(tangentX, tangentY));
       v_normal = normal;
       gl_Position = vec4(x + xShift, y, z, 1.0);
@@ -720,7 +826,7 @@
       gl_FragColor = vec4(finalColor, 1.0);
     }
   `;
-  const GRID_X = 120, GRID_Y = 40;
+  const GRID_X = 140, GRID_Y = 48;
 
   function buildGrid() {
     const positions = [];
@@ -742,88 +848,98 @@
   }
 
   function initWebGL() {
-    try {
-      glCanvas = $('loader-canvas');
-      if (!glCanvas) return false;
-      gl = glCanvas.getContext('webgl', { antialias: true, alpha: false, premultipliedAlpha: false });
-      if (!gl) { webglSupported = false; return false; }
-      webglSupported = true;
-      function resize() {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        glCanvas.width = Math.floor(window.innerWidth * dpr);
-        glCanvas.height = Math.floor(window.innerHeight * dpr);
-        gl.viewport(0, 0, glCanvas.width, glCanvas.height);
-      }
-      resize();
-      window.addEventListener('resize', resize);
-      const vs = compileShader(gl.VERTEX_SHADER, VERT_SHADER);
-      const fs = compileShader(gl.FRAGMENT_SHADER, FRAG_SHADER);
-      if (!vs || !fs) return false;
-      glProgram = gl.createProgram();
-      gl.attachShader(glProgram, vs); gl.attachShader(glProgram, fs);
-      gl.linkProgram(glProgram);
-      if (!gl.getProgramParameter(glProgram, gl.LINK_STATUS)) return false;
-      gl.useProgram(glProgram);
-      const grid = buildGrid();
-      glIndexCount = grid.indices.length;
-      glBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, grid.positions, gl.STATIC_DRAW);
-      glIndexBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glIndexBuffer);
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, grid.indices, gl.STATIC_DRAW);
-      const aUv = gl.getAttribLocation(glProgram, 'a_uv');
-      gl.enableVertexAttribArray(aUv);
-      gl.vertexAttribPointer(aUv, 2, gl.FLOAT, false, 0, 0);
-      glUniforms.uTime   = gl.getUniformLocation(glProgram, 'u_time');
-      glUniforms.uTex    = gl.getUniformLocation(glProgram, 'u_tex');
-      glUniforms.uAspect = gl.getUniformLocation(glProgram, 'u_aspect');
-      bgTexture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, bgTexture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.uniform1i(glUniforms.uTex, 0);
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        gl.bindTexture(gl.TEXTURE_2D, bgTexture);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      };
-      img.src = URL_LOAD_BG;
-      return true;
-    } catch (e) {
-      console.warn('[WebGL] init error:', e.message);
-      webglSupported = false;
-      return false;
+    glCanvas = $('loader-canvas');
+    gl = glCanvas.getContext('webgl', { antialias: true, alpha: false, premultipliedAlpha: false });
+    if (!gl) { webglSupported = false; return false; }
+    webglSupported = true;
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      glCanvas.width = Math.floor(window.innerWidth * dpr);
+      glCanvas.height = Math.floor(window.innerHeight * dpr);
+      gl.viewport(0, 0, glCanvas.width, glCanvas.height);
     }
+    resize();
+    window.addEventListener('resize', resize);
+    const vs = compileShader(gl.VERTEX_SHADER, VERT_SHADER);
+    const fs = compileShader(gl.FRAGMENT_SHADER, FRAG_SHADER);
+    if (!vs || !fs) return false;
+    glProgram = gl.createProgram();
+    gl.attachShader(glProgram, vs); gl.attachShader(glProgram, fs);
+    gl.linkProgram(glProgram);
+    if (!gl.getProgramParameter(glProgram, gl.LINK_STATUS)) return false;
+    gl.useProgram(glProgram);
+    const grid = buildGrid();
+    glIndexCount = grid.indices.length;
+    glBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, grid.positions, gl.STATIC_DRAW);
+    glIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glIndexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, grid.indices, gl.STATIC_DRAW);
+    const aUv = gl.getAttribLocation(glProgram, 'a_uv');
+    gl.enableVertexAttribArray(aUv);
+    gl.vertexAttribPointer(aUv, 2, gl.FLOAT, false, 0, 0);
+    glUniforms.uTime   = gl.getUniformLocation(glProgram, 'u_time');
+    glUniforms.uTex    = gl.getUniformLocation(glProgram, 'u_tex');
+    glUniforms.uAspect = gl.getUniformLocation(glProgram, 'u_aspect');
+    bgTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, bgTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.uniform1i(glUniforms.uTex, 0);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      gl.bindTexture(gl.TEXTURE_2D, bgTexture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    };
+    img.src = URL_LOAD_BG;
+    return true;
   }
 
+  let paused_by_error = false;
+
   function startWebGL() {
-    if (!webglSupported) return;
     animStart = performance.now();
     animFrozen = false;
     function loop(now) {
       animRaf = requestAnimationFrame(loop);
       if (!webglSupported) return;
-      try {
-        const time = animFrozen ? animFreezeTime : (now - animStart) / 1000;
-        gl.uniform1f(glUniforms.uTime, time);
-        gl.uniform1f(glUniforms.uAspect, glCanvas.width / glCanvas.height);
-        gl.clearColor(0.04, 0.02, 0.09, 1.0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawElements(gl.TRIANGLES, glIndexCount, gl.UNSIGNED_SHORT, 0);
-      } catch (e) {}
+      if (paused_by_error) return;
+      const time = animFrozen ? animFreezeTime : (now - animStart) / 1000;
+      gl.uniform1f(glUniforms.uTime, time);
+      gl.uniform1f(glUniforms.uAspect, glCanvas.width / glCanvas.height);
+      gl.clearColor(0.04, 0.02, 0.09, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.drawElements(gl.TRIANGLES, glIndexCount, gl.UNSIGNED_SHORT, 0);
     }
     animRaf = requestAnimationFrame(loop);
   }
 
+  function freezeForError() {
+    paused_by_error = true;
+    animFrozen = true;
+    animFreezeTime = (performance.now() - animStart) / 1000;
+    document.body.classList.add('orbits-error-mode');
+    const pl = document.getElementById('phase-label');
+    if (pl) pl.classList.add('frozen');
+  }
+  function unfreezeAfterError() {
+    paused_by_error = false;
+    animFrozen = false;
+    animStart = performance.now() - animFreezeTime * 1000;
+    document.body.classList.remove('orbits-error-mode');
+    const pl = document.getElementById('phase-label');
+    if (pl) pl.classList.remove('frozen');
+  }
+
   async function prepareAll() {
     if (!window.Sound) throw new Error('sounds.js не загружен');
-    if (typeof Sound.init === 'function') Sound.init();
-    if (Sound.ctx && Sound.ctx.state === 'suspended') { try { await Sound.ctx.resume(); } catch (e) {} }
+    Sound.init();
+    if (Sound.ctx && Sound.ctx.state === 'suspended') await Sound.ctx.resume();
     await Promise.all([
       new Promise((resolve) => {
         const img = new Image();
@@ -833,9 +949,44 @@
         img.src = URL_LOAD_BG;
       }),
       Sound.loadBuffer('music_startup', URL_STARTUP).catch(() => {}),
-      Sound.loadBuffer('error_snd', URL_ERROR_SND).catch(() => {}),
-      Sound.loadBuffer('continue_snd', URL_CONTINUE_SND).catch(() => {})
+      Sound.loadBuffer('sys_error', URL_ERROR_SND).catch(() => {}),
+      Sound.loadBuffer('sys_button', URL_CONTINUE_SND).catch(() => {}),
+      Sound.loadBuffer('sys_window', URL_WINDOW_SND).catch(() => {})
     ]);
+    try {
+      await Sound.playMusic('music_startup', {
+        loop: false, volume: 0.9 * musicVolume(), fadeIn: 0.3
+      });
+    } catch (e) {}
+  }
+
+  async function preloadSystemSounds() {
+    if (!window.Sound) return;
+    const tasks = SYS_SOUNDS.map(s =>
+      Sound.loadBuffer(s.key, s.url).catch(() => {})
+    );
+    await Promise.all(tasks);
+  }
+
+  // ★ Приоритетная загрузка ключевых файлов
+  async function preloadCriticalForDialogs() {
+    if (!window.Sound) return;
+    // 1. Картинка предупреждения
+    await new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+      img.src = URL_DISCLAIMER;
+    });
+    // 2. Звук ошибки (в самом начале — для возможных ошибок в диалогах)
+    await Sound.loadBuffer('sys_error', URL_ERROR_SND).catch(() => {});
+    // 3. Звук кнопки
+    await Sound.loadBuffer('sys_button', URL_CONTINUE_SND).catch(() => {});
+    // 4. Звук окна
+    await Sound.loadBuffer('sys_window', URL_WINDOW_SND).catch(() => {});
+    // 5. Звук загрузки
+    await Sound.loadBuffer('music_startup', URL_STARTUP).catch(() => {});
   }
 
   function pingWatchdog() { watchdogLastPing = Date.now(); }
@@ -884,18 +1035,40 @@
 
   function showError(code, detail, onContinue) {
     if (window.ErrorManager) {
-      ErrorManager.show({ code, detail: detail || '', onContinue: onContinue || function () {} });
+      ErrorManager.show({
+        code: code,
+        detail: detail || '',
+        onContinue: onContinue || function () { restartLoading(); }
+      });
     } else {
-      console.warn('ErrorManager не загружен:', code, detail);
+      console.warn('ErrorManager не загружен, ошибка:', code, detail);
     }
   }
 
-  // ============ Скачивание ============
+  async function restartLoading() {
+    unfreezeAfterError();
+    loadingRunning = false;
+    stats = { loadedBytes: 0, totalBytes: 0 };
+    updateLoadingProgress();
+    $('screen-loader').classList.add('show');
+    await sleep(300);
+    if (webglSupported) {
+      animStart = performance.now();
+      animFrozen = false;
+    }
+    await runLoaderPipeline();
+  }
+
+  // ===== СКАЧИВАНИЕ =====
   async function downloadOnce(url) {
-    const resp = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-store' });
+    const resp = await fetch(url, {
+      mode: 'cors', credentials: 'omit', cache: 'no-store'
+    });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
     const totalBytes = parseInt(resp.headers.get('Content-Length') || '0', 10);
     let blob;
+
     if (resp.body && resp.body.getReader) {
       const reader = resp.body.getReader();
       const chunks = [];
@@ -910,14 +1083,34 @@
         updateLoadingProgress();
       }
       blob = new Blob(chunks);
-      if (totalBytes && received !== totalBytes) throw new Error('Неполная загрузка');
+      if (totalBytes && received !== totalBytes) {
+        throw new Error('Неполная загрузка (' + received + '/' + totalBytes + ')');
+      }
     } else {
       blob = await resp.blob();
       stats.loadedBytes += blob.size;
       updateLoadingProgress();
     }
+
     if (!blob || blob.size === 0) throw new Error('Пустой файл');
     return blob;
+  }
+
+  async function downloadWithFallback(url) {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= FETCH_TRIES; attempt++) {
+      try {
+        pingWatchdog();
+        const blob = await downloadOnce(url);
+        return { blob, finalUrl: url };
+      } catch (e) {
+        lastErr = e;
+        console.warn('[download] попытка ' + attempt + '/' + FETCH_TRIES +
+                     ' [' + url + ']:', e.message);
+      }
+      if (attempt < FETCH_TRIES) await sleep(FETCH_RETRY_DELAY * attempt);
+    }
+    throw lastErr || new Error('Не удалось скачать: ' + url);
   }
 
   async function fetchAsset(url, expectedHash) {
@@ -927,28 +1120,26 @@
       if (cached.hash === expectedHash) { stats.loadedBytes += cached.size; updateLoadingProgress(); return cached; }
       await dbDelete(STORE_ASSETS, url);
     }
-    let lastErr = null;
-    for (let attempt = 1; attempt <= FETCH_TRIES; attempt++) {
-      try {
-        const blob = await downloadOnce(url);
-        const ab = await blob.arrayBuffer();
-        const hash = await sha256(ab);
-        const entry = { blob, hash, size: blob.size, url };
-        await dbPut(STORE_ASSETS, url, entry);
-        await dbDelete(STORE_PROGRESS, url);
-        return entry;
-      } catch (e) {
-        lastErr = e;
-        await sleep(FETCH_RETRY_DELAY * attempt);
-      }
+    const { blob, finalUrl } = await downloadWithFallback(url);
+    const ab = await blob.arrayBuffer();
+    const hash = await sha256(ab);
+    if (expectedHash && hash !== expectedHash) {
+      console.warn('[hash] не совпал для', url, '— принимаю (мягкий режим)');
     }
-    throw lastErr || new Error('Не удалось скачать: ' + url);
+    const entry = { blob, hash, size: blob.size, url, finalUrl };
+    await dbPut(STORE_ASSETS, url, entry);
+    await dbDelete(STORE_PROGRESS, url);
+    return entry;
   }
 
   async function fetchBlockText(url) {
-    const resp = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-store' });
+    const resp = await fetch(url, {
+      mode: 'cors', credentials: 'omit', cache: 'no-store'
+    });
     if (resp.status === 404) {
-      const err = new Error('BLOCK_NOT_FOUND'); err.code = 404; throw err;
+      const err = new Error('BLOCK_NOT_FOUND');
+      err.code = 404;
+      throw err;
     }
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const code = await resp.text();
@@ -959,13 +1150,39 @@
   async function loadAllBlocks(blockDefs) {
     const collectedAssets = [];
     window.__ORBITS_BLOCK_CACHE__ = {};
+    let missingCount = 0;
+    let loadedCount = 0;
+
+    for (const def of blockDefs) {
+      if (def && Array.isArray(def.assets)) {
+        for (const a of def.assets) {
+          if (!a || !a.url) continue;
+          try {
+            const r = await fetch(a.url, { method: 'HEAD', mode: 'cors' });
+            const size = parseInt(r.headers.get('Content-Length') || '0', 10);
+            stats.totalBytes += size || 0;
+          } catch (e) {}
+        }
+      }
+    }
+    stats.totalBytes += blockDefs.length * 5 * 1024;
+    updateLoadingProgress();
+
     for (const def of blockDefs) {
       pingWatchdog();
       const url = (typeof def === 'string') ? def : def.path;
       try {
         const code = await fetchBlockText(url);
         window.__ORBITS_BLOCK_CACHE__[url] = code;
-      } catch (e) { continue; }
+        loadedCount++;
+      } catch (e) {
+        if (e && e.code === 404) {
+          missingCount++;
+        } else {
+          console.warn('[blocks] ошибка загрузки:', url, e.message);
+        }
+        continue;
+      }
       if (def && Array.isArray(def.assets)) {
         for (const a of def.assets) {
           if (!a || !a.url) continue;
@@ -973,23 +1190,43 @@
         }
       }
     }
+
+    console.log('[blocks] загружено:', loadedCount, '| отсутствует:', missingCount);
     return collectedAssets;
   }
 
-  async function verifyBlocks() {
+  async function loadAllAssets(assets) {
+    const failed = [];
+    for (const a of assets) {
+      try {
+        await fetchAsset(a.url, a.hash);
+      } catch (e) {
+        console.warn('[assets] окончательно пропущен:', a.url, e.message);
+        failed.push({ url: a.url, reason: e.message });
+      }
+    }
+    return failed;
+  }
+
+  async function verifyBlocks(blockDefs) {
     const menuUrl = './menu.js';
-    if (!window.__ORBITS_BLOCK_CACHE__[menuUrl]) throw new Error('menu.js не загружен');
+    if (!window.__ORBITS_BLOCK_CACHE__[menuUrl]) {
+      throw new Error('menu.js не загружен');
+    }
   }
 
   async function runBlock(blockUrl) {
     const code = window.__ORBITS_BLOCK_CACHE__[blockUrl];
     if (!code) throw new Error('Блок не загружен: ' + blockUrl);
+
     document.querySelectorAll('script[data-block]').forEach(s => s.remove());
     const gc = document.getElementById('game-container');
     if (gc) gc.innerHTML = '';
+
     window.__ORBITS_ACTIVE_BLOCK__ = blockUrl;
     window.__ORBITS_CURRENT_BLOCK__ = blockUrl;
     window.__ORBITS_LAST_OK_BLOCK__ = blockUrl;
+
     const blob = new Blob([code], { type: 'application/javascript' });
     const url = URL.createObjectURL(blob);
     const script = document.createElement('script');
@@ -999,7 +1236,7 @@
     await sleep(50);
   }
 
-  // ============ API ============
+  // ===== API =====
   window.ORBITS = window.ORBITS || {
     assets: [],
     registerAssets: function (list) {
@@ -1013,30 +1250,24 @@
       const url = './' + name + '.js';
       await openBlockByUrl(url);
     },
-    back: async function () { await goBackBlock(); },
-    error: function (code, detail) { showError(code || 'unknown', detail || ''); }
+    back: async function () {
+      await goBackBlock();
+    },
+    error: function (code, detail) {
+      showError(code || 'unknown', detail || '');
+    }
   };
 
   async function openBlockByUrl(url) {
     if (window.ErrorManager && ErrorManager.isOpen()) return;
 
     const current = window.__ORBITS_CURRENT_BLOCK__;
-    if (current && current !== url) window.__ORBITS_BLOCK_STACK__.push(url);
+    if (current && current !== url) {
+      window.__ORBITS_BLOCK_STACK__.push(url);
+    }
 
     const gameContainer = $('game-container');
-
-    // Затемняем текущий блок за 1.5 сек
-    const trans = $('block-transition');
-    if (trans) {
-      trans.style.transition = 'opacity 1.5s ease';
-      trans.classList.add('show');
-    }
-    // Музыка затихает за 1.5 сек
-    if (window.Sound && typeof Sound.stopMusic === 'function') {
-      try { Sound.stopMusic(1.5); } catch (e) {}
-    }
-
-    await sleep(1500);
+    if (window.Sound) { try { Sound.stopMusic(0.4); } catch (e) {} }
 
     if (gameContainer) {
       gameContainer.innerHTML = '';
@@ -1047,22 +1278,20 @@
       await runBlock(url);
     } catch (e) {
       const lastOk = window.__ORBITS_LAST_OK_BLOCK__ || './menu.js';
+      console.warn('[openBlock] не удалось открыть', url, '→ откат в', lastOk, e.message);
+
       showError(ErrorManager.classify(e, 'load'), e.message, async () => {
         const stack = window.__ORBITS_BLOCK_STACK__;
         const idx = stack.lastIndexOf(url);
         if (idx >= 0) stack.splice(idx, 1);
+
+        if (lastOk === './menu.js') {
+          window.__ORBITS_RETURNING__ = true;
+        }
         await openBlockByUrl(lastOk);
       });
       return;
     }
-
-    // Показываем блок: убираем затемнение за 0.9 сек
-    await sleep(50);
-    if (trans) {
-      trans.style.transition = 'opacity 0.9s ease';
-      trans.classList.remove('show');
-    }
-    await sleep(900);
   }
 
   async function goBackBlock() {
@@ -1078,246 +1307,77 @@
     await openBlockByUrl(prev);
   }
 
-  // ============ PWA ============
-  async function runPWAMode() {
-    $('pwa-view').classList.add('show');
-    lockLandscape();
-
-    const mobileCheck = checkMobileOnly();
-    if (!mobileCheck.ok) {
-      $('screen-loader').classList.add('show');
-      await sleep(400);
-      showError('mobile_only', 'Открыто на настольном устройстве');
-      return;
-    }
-    const powerCheck = checkDevicePower();
-    if (!powerCheck.ok) {
-      $('screen-loader').classList.add('show');
-      await sleep(400);
-      showError('weak_device', 'Причина: ' + powerCheck.reason);
-      return;
-    }
-
-    for (const a of BUILTIN_ASSETS) {
-      if (!window.ORBITS.assets.find(x => x.url === a.url)) window.ORBITS.assets.push(a);
-    }
-
-    // Шаг 1: грузим картинку дисклеймера
-    await new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve();
-      img.onerror = () => resolve();
-      img.src = URL_DISCLAIMER;
-    });
-
-    // Шаг 2: показываем дисклеймер
-    $('disclaimer-img').src = URL_DISCLAIMER;
-    $('screen-disclaimer').classList.remove('hide');
-    await sleep(700);
-    await new Promise(resolve => {
-      const handler = () => {
-        $('screen-disclaimer').removeEventListener('click', handler);
-        resolve();
-      };
-      $('screen-disclaimer').addEventListener('click', handler);
-    });
-    $('screen-disclaimer').classList.add('hide');
-    await sleep(1500);
-
-    // Шаг 3: манифест
-    try {
-      const resp = await fetch(LOAD_URL, { cache: 'no-store' });
-      manifest = await resp.json();
-    } catch (e) {
-      manifest = { blocks: [{ path: './menu.js', assets: [] }], menuEntry: './menu.js' };
-    }
-
-    // Шаг 4: HEAD-запросы для подсчёта размера
-    const allUrls = [];
-    for (const a of BUILTIN_ASSETS) allUrls.push(a.url);
-    for (const block of (manifest.blocks || [])) {
-      if (block.assets) for (const a of block.assets) allUrls.push(a.url);
-    }
-    let totalSize = 0;
-    let hasNew = false;
-    for (const u of allUrls) {
-      try {
-        const cached = await dbGet(STORE_ASSETS, u);
-        if (!cached) {
-          const r = await fetch(u, { method: 'HEAD', mode: 'cors' });
-          const size = parseInt(r.headers.get('Content-Length') || '0', 10);
-          if (size) { totalSize += size; hasNew = true; }
-        }
-      } catch (e) {}
-    }
-
-    // Шаг 5: если есть новый материал — показываем окно
-    if (hasNew && totalSize > 0) {
-      const sizeMB = (totalSize / (1024 * 1024)).toFixed(1).replace('.', ',');
-      const confirmed = await showDownloadConfirm(sizeMB);
-      if (!confirmed) {
-        location.reload();
-        return;
-      }
-    }
-
-    $('screen-loader').style.transition = 'opacity ' + LOADER_FADE_MS + 'ms ease';
-    $('screen-loader').classList.add('show');
-
-    if (!initWebGL()) console.warn('WebGL не поддерживается');
-    else startWebGL();
-
-    try { await prepareAll(); } catch (e) { console.warn('prepareAll:', e.message); }
-
-    await runLoaderPipeline();
-  }
-
-  function showDownloadConfirm(sizeMB) {
-    return new Promise((resolve) => {
-      const modal = $('modal');
-      const box = $('modal-box');
-      const title = $('modal-title');
-      const text = $('modal-text');
-      const buttonsWrap = $('modal-buttons');
-      const closeBtn = $('modal-close');
-      const cancelBtn = $('modal-cancel');
-      const acceptBtn = $('modal-accept');
-
-      title.textContent = BT('load_title');
-      text.innerHTML = BT('size_label') + ': <b>' + sizeMB + ' мб</b><br><br>' + BT('load_text_wifi');
-      acceptBtn.textContent = BT('btn_load');
-      cancelBtn.textContent = BT('btn_cancel');
-      buttonsWrap.style.display = 'flex';
-      closeBtn.style.display = 'none';
-      modal.style.display = 'flex';
-      requestAnimationFrame(() => modal.classList.add('show'));
-
-      const cleanup = () => {
-        modal.classList.remove('show');
-        setTimeout(() => { modal.style.display = 'none'; buttonsWrap.style.display = 'none'; closeBtn.style.display = 'inline-block'; }, 1500);
-      };
-
-      acceptBtn.onclick = () => { cleanup(); resolve(true); };
-      cancelBtn.onclick = () => { cleanup(); resolve(false); };
-    });
-  }
-
-  async function runLoaderPipeline() {
-    if (loadingRunning) return;
-    loadingRunning = true;
-    startWatchdog();
-    const loadingStart = Date.now();
-
-    const blocks = (manifest && Array.isArray(manifest.blocks)) ? manifest.blocks : [{ path: './menu.js', assets: [] }];
-
-    let collectedAssets = [];
-    try {
-      collectedAssets = await loadAllBlocks(blocks);
-    } catch (e) {
-      loadingRunning = false; stopWatchdog();
-      showError('download', e.message);
-      return;
-    }
-
-    const allAssets = [];
-    for (const a of (window.ORBITS.assets || [])) if (!allAssets.find(x => x.url === a.url)) allAssets.push(a);
-    for (const a of collectedAssets) if (!allAssets.find(x => x.url === a.url)) allAssets.push(a);
-
-    // Считаем оставшийся размер для прогресса
-    let totalRemaining = 0;
-    for (const a of allAssets) {
-      try {
-        const cached = await dbGet(STORE_ASSETS, a.url);
-        if (cached) { stats.loadedBytes += cached.size; }
-        else {
-          const r = await fetch(a.url, { method: 'HEAD', mode: 'cors' });
-          totalRemaining += parseInt(r.headers.get('Content-Length') || '0', 10);
-        }
-      } catch (e) {}
-    }
-    stats.totalBytes = stats.loadedBytes + totalRemaining;
-    updateLoadingProgress();
-
-    for (const a of allAssets) {
-      try { await fetchAsset(a.url); } catch (e) {}
-      pingWatchdog();
-    }
-
-    const elapsed = Date.now() - loadingStart;
-    if (elapsed < MIN_LOADING_MS) await sleep(MIN_LOADING_MS - elapsed);
-
-    try { await verifyBlocks(); } catch (e) {
-      loadingRunning = false; stopWatchdog();
-      showError('corrupted', e.message);
-      return;
-    }
-
-    stopWatchdog();
-    await goToMenuWithTransition();
-    loadingRunning = false;
-  }
-
-  // ===== Переход к menu: 3 параллельных анимации =====
+  // ★ Переход index → menu (1.5 сек все 3 одновременно)
   async function goToMenuWithTransition() {
-    if (window.Sound && typeof Sound.stopMusic === 'function') {
-      try { Sound.stopMusic(1.5); } catch (e) {}
-    }
-
     const flash = $('white-flash');
     const logo = $('transition-logo');
 
-    // Показываем лого
-    if (logo) {
-      logo.style.transition = 'none';
-      logo.style.display = 'flex';
-      logo.style.opacity = '0';
-      void logo.offsetWidth;
-      logo.style.transition = 'opacity 1.5s ease';
-      logo.classList.add('show');
+    // Сброс логотипа
+    logo.style.transition = 'none';
+    logo.style.display = 'flex';
+    logo.style.opacity = '0';
+    void logo.offsetWidth;
+
+    // Логотип появляется за 0.6 сек, растёт за 1.5 сек
+    logo.style.transition = 'opacity 0.6s ease';
+    logo.classList.add('show');
+    const img = logo.querySelector('img');
+    img.style.transition = 'transform 1.5s cubic-bezier(0.16,1,0.3,1)';
+    img.style.transform = 'scale(0.6)';
+    void img.offsetWidth;
+    img.style.transform = 'scale(2.2)';
+
+    // Музыка затихает за 1.5 сек
+    if (window.Sound) {
+      try { Sound.setMusicVolume(0.0001, 1.5); } catch (e) {}
     }
 
-    // Белый флеш
-    if (flash) {
-      flash.style.transition = 'opacity 1.5s ease';
-      flash.classList.add('show');
-    }
+    // Белый оверлей за 1.5 сек
+    flash.style.transition = 'opacity 1.5s ease';
+    flash.classList.add('show');
 
-    // Ждём все три анимации одновременно: 1.5 сек
+    // ★ Все 3 параметра завершены одновременно
     await sleep(1500);
 
-    // Отключаем загрузчик
-    const loader = $('screen-loader');
-    if (loader) loader.style.display = 'none';
-    const gc = $('game-container');
-    if (gc) gc.style.display = 'block';
+    // Под белым — переключаем
+    $('screen-loader').style.display = 'none';
+    $('game-container').style.display = 'block';
 
-    // Запускаем меню ПОД белым оверлеем
-    try { await runBlock('./menu.js'); } catch (e) { console.warn(e); }
+    try { if (window.Troll) Troll.setBlock('menu'); } catch (e) {}
 
-    await sleep(100);
-
-    // Убираем белый — menu.js должен показать затухание от белого
-    if (flash) {
-      flash.style.transition = 'opacity 1.5s ease';
-      flash.classList.remove('show');
+    // Сброс громкости музыки для menu
+    if (window.Sound) {
+      try { Sound.setMusicVolume(0.0001, 0); } catch (e) {}
     }
-    // Лого исчезает через 1.5 сек
-    if (logo) logo.classList.remove('show');
 
-    await sleep(1500);
-    if (logo) logo.style.display = 'none';
+    try {
+      await runBlock('./menu.js');
+    } catch (e) {
+      console.warn('[goToMenu] menu.js ошибка:', e.message);
+    }
+
+    await sleep(200);
+
+    // Убираем белый за 0.9 сек (menu плавно появляется)
+    flash.style.transition = 'opacity 0.9s ease';
+    flash.classList.remove('show');
+
+    // Логотип уменьшается
+    img.style.transition = 'transform 1.2s cubic-bezier(0.16,1,0.3,1), opacity 0.8s ease';
+    img.style.transform = 'scale(0.6)';
+    logo.classList.remove('show');
+
+    await sleep(1200);
+    logo.style.display = 'none';
   }
 
   function lockLandscape() {
-    try {
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').catch(() => {});
-      }
-    } catch (e) {}
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
     const applyRotate = () => {
       const isPortrait = window.innerHeight > window.innerWidth;
       const pwa = $('pwa-view');
-      if (!pwa) return;
       if (isPortrait) {
         pwa.style.transform = 'rotate(90deg)';
         pwa.style.transformOrigin = 'center center';
@@ -1341,13 +1401,11 @@
   }
 
   function isPWA() {
-    try {
-      const standalone = window.matchMedia('(display-mode: standalone)').matches;
-      const fullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
-      const minimalUI  = window.matchMedia('(display-mode: minimal-ui)').matches;
-      const iosStandalone = window.navigator.standalone === true;
-      return standalone || fullscreen || minimalUI || iosStandalone;
-    } catch (e) { return false; }
+    const standalone = window.matchMedia('(display-mode: standalone)').matches;
+    const fullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
+    const minimalUI  = window.matchMedia('(display-mode: minimal-ui)').matches;
+    const iosStandalone = window.navigator.standalone === true;
+    return standalone || fullscreen || minimalUI || iosStandalone;
   }
   function isMobile() {
     const coarse  = window.matchMedia('(pointer: coarse)').matches;
@@ -1356,7 +1414,315 @@
     return [coarse, touch, noHover].filter(Boolean).length >= 2;
   }
 
-  // ============ BROWSER ============
+  // ===== ОКНА ЗАГРУЗКИ =====
+  let downloadDialogResolve = null;
+
+  function showDownloadDialog(type, sizeMB) {
+    return new Promise((resolve) => {
+      const dialog = $('download-dialog');
+      const titleEl = $('dd-title');
+      const textEl = $('dd-text');
+      const sizeEl = $('dd-size');
+      const warnEl = $('dd-warn');
+      const yesBtn = $('dd-yes');
+      const noBtn = $('dd-no');
+
+      // Названия по типу
+      if (type === 'first') {
+        titleEl.textContent = BT('dl_title_first');
+        textEl.textContent = BT('dl_text_first');
+      } else if (type === 'update') {
+        titleEl.textContent = BT('dl_title_update');
+        textEl.textContent = BT('dl_text_update');
+      } else if (type === 'new') {
+        titleEl.textContent = BT('dl_title_new');
+        textEl.textContent = BT('dl_text_new');
+      } else if (type === 'both') {
+        titleEl.textContent = BT('dl_title_both');
+        textEl.textContent = BT('dl_text_both');
+      }
+
+      sizeEl.textContent = sizeMB.toFixed(1) + ' МБ';
+      warnEl.textContent = BT('dl_warn');
+      yesBtn.textContent = BT('dl_yes');
+      noBtn.textContent = BT('dl_no');
+
+      dialog.classList.add('show');
+      // Анимация: фон блюрится + затемняется 1.5 сек, окно появляется 1 сек
+      requestAnimationFrame(() => {
+        dialog.classList.add('dimmed');
+        // Музыка затихает на 100% за 0.5 сек
+        if (window.Sound) {
+          try { Sound.setMusicVolume(0.0001, 0.5); } catch (e) {}
+        }
+      });
+
+      // Обработчики
+      const cleanup = () => {
+        yesBtn.removeEventListener('click', onYes);
+        noBtn.removeEventListener('click', onNo);
+      };
+      const onYes = () => {
+        cleanup();
+        if (window.Sound) { try { Sound.playSFX('sys_button', { volume: 0.8 }); } catch (e) {} }
+        dialog.classList.remove('dimmed');
+        setTimeout(() => dialog.classList.remove('show'), 700);
+        resolve('yes');
+      };
+      const onNo = () => {
+        cleanup();
+        if (window.Sound) { try { Sound.playSFX('sys_button', { volume: 0.8 }); } catch (e) {} }
+        // Всё затемняется, музыка, перезагрузка
+        dialog.classList.remove('dimmed');
+        setTimeout(() => {
+          dialog.classList.remove('show');
+          // Перезагрузка
+          location.reload();
+        }, 400);
+        resolve('no');
+      };
+      yesBtn.addEventListener('click', onYes);
+      noBtn.addEventListener('click', onNo);
+    });
+  }
+
+  // ★ Определение типа загрузки
+  async function determineDownloadType(manifest) {
+    let savedVersion = 0;
+    try {
+      const v = localStorage.getItem(MANIFEST_VERSION_KEY);
+      if (v) savedVersion = parseInt(v, 10) || 0;
+    } catch (e) {}
+
+    const currentVersion = manifest.version || 0;
+
+    // Первый запуск
+    if (savedVersion === 0) {
+      return { type: 'first', version: currentVersion };
+    }
+
+    // Проверка новых ассетов — по списку URL
+    let savedAssets = [];
+    try {
+      const raw = localStorage.getItem(MANIFEST_ASSETS_KEY);
+      if (raw) savedAssets = JSON.parse(raw) || [];
+    } catch (e) {}
+
+    const currentAssets = [];
+    if (Array.isArray(manifest.blocks)) {
+      for (const block of manifest.blocks) {
+        if (block && Array.isArray(block.assets)) {
+          for (const a of block.assets) {
+            if (a && a.url) currentAssets.push(a.url);
+          }
+        }
+      }
+    }
+    const hasNew = currentAssets.some(url => !savedAssets.includes(url));
+    const hasUpdate = currentVersion > savedVersion;
+
+    if (hasNew && hasUpdate) return { type: 'both', version: currentVersion };
+    if (hasNew) return { type: 'new', version: currentVersion };
+    if (hasUpdate) return { type: 'update', version: currentVersion };
+    return { type: 'none', version: currentVersion };
+  }
+
+  function saveManifestInfo(manifest) {
+    try {
+      localStorage.setItem(MANIFEST_VERSION_KEY, String(manifest.version || 0));
+      const urls = [];
+      if (Array.isArray(manifest.blocks)) {
+        for (const block of manifest.blocks) {
+          if (block && Array.isArray(block.assets)) {
+            for (const a of block.assets) {
+              if (a && a.url) urls.push(a.url);
+            }
+          }
+        }
+      }
+      localStorage.setItem(MANIFEST_ASSETS_KEY, JSON.stringify(urls));
+    } catch (e) {}
+  }
+
+  // ===== PWA =====
+  async function runPWAMode() {
+    $('pwa-view').classList.add('show');
+    lockLandscape();
+
+    const mobileCheck = checkMobileOnly();
+    if (!mobileCheck.ok) {
+      $('screen-loader').classList.add('show');
+      await sleep(400);
+      showError('mobile_only', 'Открыто на настольном устройстве');
+      return;
+    }
+    const powerCheck = checkDevicePower();
+    if (!powerCheck.ok) {
+      $('screen-loader').classList.add('show');
+      await sleep(400);
+      showError('weak_device', 'Причина: ' + powerCheck.reason);
+      return;
+    }
+
+    for (const a of BUILTIN_ASSETS) {
+      if (!window.ORBITS.assets.find(x => x.url === a.url)) window.ORBITS.assets.push(a);
+    }
+
+    try { if (window.Troll) Troll.setBlock('loading'); } catch (e) {}
+
+    // ★ Приоритетная загрузка ключевых файлов для диалогов
+    try { await preloadCriticalForDialogs(); } catch (e) {}
+
+    try {
+      const resp = await fetch(LOAD_URL, { cache: 'no-store' });
+      manifest = await resp.json();
+    } catch (e) {
+      manifest = {
+        version: 0,
+        blocks: [{ path: './menu.js', assets: [] }],
+        menuEntry: './menu.js'
+      };
+    }
+
+    // ★ Определяем тип загрузки
+    const dlInfo = await determineDownloadType(manifest);
+    if (dlInfo.type !== 'none') {
+      // Считаем общий размер
+      let totalSize = 0;
+      const allUrls = [];
+      if (Array.isArray(manifest.blocks)) {
+        for (const block of manifest.blocks) {
+          if (block && Array.isArray(block.assets)) {
+            for (const a of block.assets) {
+              if (a && a.url) allUrls.push(a.url);
+            }
+          }
+        }
+      }
+      for (const url of allUrls) {
+        try {
+          const r = await fetch(url, { method: 'HEAD', mode: 'cors' });
+          const size = parseInt(r.headers.get('Content-Length') || '0', 10);
+          totalSize += size || 0;
+        } catch (e) {}
+      }
+      const sizeMB = totalSize / (1024 * 1024) || 0;
+      const result = await showDownloadDialog(dlInfo.type, sizeMB);
+      if (result === 'no') return; // перезагрузка уже запущена
+    }
+
+    // ★ Сохраняем версию манифеста
+    saveManifestInfo(manifest);
+
+    // ★ Показываем disclaimer
+    $('disclaimer-img').src = URL_DISCLAIMER;
+    $('screen-disclaimer').classList.remove('hide');
+    await sleep(700);
+    await new Promise(resolve => {
+      const handler = () => {
+        $('screen-disclaimer').removeEventListener('click', handler);
+        resolve();
+      };
+      $('screen-disclaimer').addEventListener('click', handler);
+    });
+    $('screen-disclaimer').classList.add('hide');
+    await sleep(1500);
+
+    $('screen-loader').style.transition = 'opacity ' + LOADER_FADE_MS + 'ms ease';
+    $('screen-loader').classList.add('show');
+
+    if (!initWebGL()) console.warn('WebGL не поддерживается');
+    else startWebGL();
+
+    try { await prepareAll(); }
+    catch (e) { console.warn('prepareAll ошибка:', e.message); }
+
+    try { await preloadSystemSounds(); }
+    catch (e) { console.warn('preloadSystemSounds ошибка:', e.message); }
+
+    await runLoaderPipeline();
+  }
+
+  async function runLoaderPipeline() {
+    if (loadingRunning) return;
+    loadingRunning = true;
+    startWatchdog();
+    const loadingStart = Date.now();
+    pingWatchdog();
+
+    const blocks = (manifest && Array.isArray(manifest.blocks))
+      ? manifest.blocks
+      : [{ path: './menu.js', assets: [] }];
+
+    try {
+      if (window.Troll && Troll.setTotalBlocks) {
+        Troll.setTotalBlocks(blocks.length);
+      }
+    } catch (e) {}
+
+    let collectedAssets = [];
+    try {
+      collectedAssets = await loadAllBlocks(blocks);
+      pingWatchdog();
+    } catch (e) {
+      loadingRunning = false; stopWatchdog();
+      freezeForError();
+      showError('download', e.message);
+      return;
+    }
+
+    const allAssets = [];
+    for (const a of (window.ORBITS.assets || [])) {
+      if (!allAssets.find(x => x.url === a.url)) allAssets.push(a);
+    }
+    for (const a of collectedAssets) {
+      if (!allAssets.find(x => x.url === a.url)) allAssets.push(a);
+    }
+
+    for (const a of allAssets) {
+      try {
+        const r = await fetch(a.url, { method: 'HEAD', mode: 'cors' });
+        const size = parseInt(r.headers.get('Content-Length') || '0', 10);
+        stats.totalBytes += size || 0;
+      } catch (e) {}
+    }
+    updateLoadingProgress();
+
+    const failedAssets = await loadAllAssets(allAssets);
+    pingWatchdog();
+
+    const elapsed = Date.now() - loadingStart;
+    if (elapsed < MIN_LOADING_MS) await sleep(MIN_LOADING_MS - elapsed);
+    pingWatchdog();
+
+    try {
+      await verifyBlocks(blocks);
+      pingWatchdog();
+    } catch (e) {
+      loadingRunning = false; stopWatchdog();
+      freezeForError();
+      showError('corrupted', e.message);
+      return;
+    }
+
+    const criticalFailed = failedAssets.filter(f => CRITICAL_ASSETS.includes(f.url));
+    if (criticalFailed.length > 0) {
+      stopWatchdog();
+      loadingRunning = false;
+      freezeForError();
+      showError('download',
+        'Критичные файлы не загружены: ' + criticalFailed.map(f => f.url).join(', '));
+      return;
+    }
+
+    stopWatchdog();
+
+    await goToMenuWithTransition();
+
+    loadingRunning = false;
+  }
+
+  // ===== BROWSER =====
   async function runBrowserMode() {
     $('browser-view').classList.add('show');
     const mobileCheck = checkMobileOnly();
@@ -1372,6 +1738,7 @@
     $('modal-close').addEventListener('click', hideModal);
 
     let deferredPrompt = null;
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
@@ -1382,7 +1749,9 @@
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         deferredPrompt = null;
-        if (outcome === 'accepted') showModal(BT('install_done_title'), BT('install_done_text'));
+        if (outcome === 'accepted') {
+          showModal(BT('install_done_title'), BT('install_done_text'));
+        }
       } else {
         const ua = navigator.userAgent;
         let text = '';
@@ -1396,7 +1765,8 @@
     btnContinue.addEventListener('click', async () => {
       btnContinue.disabled = true;
       stopBrowserLangCycle();
-      if (window.Sound && typeof Sound.unlock === 'function') await Sound.unlock();
+
+      if (window.Sound) await Sound.unlock();
       const info = $('loading-info');
       info.dataset.locked = '1';
       info.textContent = BT('loading');
@@ -1410,8 +1780,8 @@
       });
       const musicPromise = (async () => {
         if (!window.Sound) throw new Error('sounds.js не загружен');
-        if (typeof Sound.init === 'function') Sound.init();
-        if (Sound.ctx && Sound.ctx.state === 'suspended') { try { await Sound.ctx.resume(); } catch (e) {} }
+        Sound.init();
+        if (Sound.ctx && Sound.ctx.state === 'suspended') await Sound.ctx.resume();
         await Sound.loadBuffer('menu_title', URL_MUSIC_BROWSER);
       })();
       try { await Promise.all([bgPromise, musicPromise]); }
@@ -1429,7 +1799,10 @@
       await sleep(500);
       try {
         await Sound.playMusicIntroLoop('menu_title', {
-          loopStart: 6.8, volume: 0.9 * musicVolume(), fadeIn: 0.8, tailTrim: BROWSER_MUSIC_TAIL_TRIM
+          loopStart: 6.8,
+          volume: 0.9 * musicVolume(),
+          fadeIn: 0.8,
+          tailTrim: BROWSER_MUSIC_TAIL_TRIM
         });
       } catch (e) {}
       $('bg').classList.add('show');
@@ -1442,15 +1815,13 @@
     }, { once: true });
   }
 
-  function showModal(title, text, isError) {
+  function showModal(title, text, isError = false) {
     if (modalOpen) return;
     modalOpen = true;
     $('modal-title').textContent = title;
     $('modal-text').textContent = text;
-    $('modal-box').classList.toggle('error', !!isError);
+    $('modal-box').classList.toggle('error', isError);
     $('modal').style.display = 'flex';
-    $('modal-buttons').style.display = 'none';
-    $('modal-close').style.display = 'inline-block';
     requestAnimationFrame(() => {
       $('modal').classList.add('show');
       $('bg').classList.add('blurred');
@@ -1465,7 +1836,7 @@
     $('bg').classList.remove('blurred');
     $('bg-overlay').classList.remove('dimmed');
     if (window.Sound) Sound.setMusicVolume(0.9 * musicVolume(), 0.7);
-    setTimeout(() => { if (!modalOpen) $('modal').style.display = 'none'; }, 1500);
+    setTimeout(() => { if (!modalOpen) $('modal').style.display = 'none'; }, 700);
   }
   function showPcError() {
     stopBrowserLangCycle();
@@ -1474,9 +1845,12 @@
   }
 
   async function main() {
-    try { db = await openDB(); } catch (e) { console.warn('IndexedDB недоступен:', e); }
+    try { db = await openDB(); }
+    catch (e) { console.warn('IndexedDB недоступен:', e); }
+
     const browserView = document.getElementById('browser-view');
     const pwaView = document.getElementById('pwa-view');
+
     if (isPWA()) {
       browserView.style.display = 'none';
       pwaView.style.display = 'block';
@@ -1489,7 +1863,7 @@
   }
 
   document.addEventListener('click', () => {
-    if (window.Sound && typeof Sound.unlock === 'function') Sound.unlock();
+    if (window.Sound) Sound.unlock();
   }, { once: true });
 
   if (document.readyState === 'loading') {
@@ -1500,8 +1874,8 @@
 
   document.addEventListener('visibilitychange', () => {
     if (!window.Sound) return;
-    if (document.hidden) { if (Sound.pauseAll) Sound.pauseAll(); }
-    else { if (Sound.resumeAll) Sound.resumeAll(); }
+    if (document.hidden) Sound.pauseAll();
+    else Sound.resumeAll();
   });
 })();
 </script>

@@ -160,17 +160,18 @@
   #pwa-view { position:absolute; inset:0; display:none; overflow:hidden; background:#000; }
   #pwa-view.show { display:block; }
 
+  /* ★ Переход предупреждение → загрузка — 1 сек плавной смены */
   #screen-disclaimer {
     position:absolute; inset:0; z-index:100; background:#000;
     display:flex; align-items:center; justify-content:center;
-    opacity:1; transition: opacity 0.7s ease;
+    opacity:1; transition: opacity 1s ease;
   }
   #screen-disclaimer.hide { opacity:0; pointer-events:none; }
   #screen-disclaimer img { width:100%; height:100%; object-fit: contain; object-position: center; display:block; }
 
   #screen-loader {
     position:absolute; inset:0; z-index:90; background:#000;
-    opacity:0; transition: opacity 1.5s ease; overflow:hidden;
+    opacity:0; transition: opacity 1s ease; overflow:hidden;
   }
   #screen-loader.show { opacity:1; }
 
@@ -182,7 +183,7 @@
     filter: drop-shadow(0 16px 60px rgba(140,80,255,0.85)); pointer-events:none;
   }
 
-  /* ★ Прогресс над «Загрузка...» */
+  /* ★ Прогресс над «Загрузка...» — показывается сразу */
   #loading-progress {
     position: absolute;
     bottom: 8.5vh;
@@ -196,10 +197,7 @@
     text-shadow: 0 0 14px rgba(180,120,255,1), 0 0 28px rgba(140,80,255,0.6);
     text-align: right;
     pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
   }
-  #loading-progress.show { opacity: 1; }
 
   #phase-label {
     position:absolute; bottom:4vh; right:5vw; z-index:5; color:#fff;
@@ -234,7 +232,7 @@
   #transition-logo img {
     width: min(50vw, 600px);
     transform: scale(1);
-    transition: transform 1s cubic-bezier(0.16,1,0.3,1);
+    transition: transform 1.5s cubic-bezier(0.16,1,0.3,1);
     filter: drop-shadow(0 16px 60px rgba(140,80,255,0.85));
   }
   #transition-logo.show { display: flex; opacity: 1; }
@@ -386,7 +384,7 @@
       <canvas id="loader-canvas"></canvas>
       <img id="loader-logo-center" src="icon/name.png" alt="ORBITS.IO">
 
-      <div id="loading-progress"></div>
+      <div id="loading-progress">0.0 МБ / 0.0 МБ</div>
 
       <div id="phase-label">
         <span class="letter" style="animation-delay:0.00s">З</span>
@@ -447,7 +445,7 @@
   const $ = id => document.getElementById(id);
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  // ===== ЯЗЫКИ БРАУЗЕРНОГО ОКНА =====
+  // ===== ЯЗЫКИ =====
   const BROWSER_DICT = {
     ru: {
       continue: 'Продолжить', loading: 'Загрузка...',
@@ -664,7 +662,7 @@
 
   const MIN_LOADING_MS = 1000;
   const WATCHDOG_MS = 60000;
-  const LOADER_FADE_MS = 1500;
+  const LOADER_FADE_MS = 1000;
   const FETCH_TRIES = 3;
   const FETCH_RETRY_DELAY = 500;
 
@@ -693,17 +691,12 @@
   }
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
 
-  // ★ Реальный прогресс
+  // ★ Реальный прогресс — показывается сразу
   let stats = { loadedBytes: 0, totalBytes: 0 };
   let progressTimer = 0;
   function updateLoadingProgress() {
     const el = document.getElementById('loading-progress');
     if (!el) return;
-    if (stats.totalBytes === 0) {
-      el.classList.remove('show');
-      return;
-    }
-    el.classList.add('show');
     const loaded = stats.loadedBytes / (1024 * 1024);
     const total = stats.totalBytes / (1024 * 1024);
     el.textContent = loaded.toFixed(1) + ' МБ / ' + total.toFixed(1) + ' МБ';
@@ -1193,7 +1186,6 @@
     return collectedAssets;
   }
 
-  // ★ Сначала считаем размеры, потом качаем
   async function loadAllAssets(assets) {
     const failed = [];
 
@@ -1206,7 +1198,6 @@
         stats.totalBytes += size || 0;
       } catch (e) {}
     }));
-    updateLoadingProgress();
 
     // 2) Качаем по одному, прогресс реальный
     for (const a of assets) {
@@ -1335,25 +1326,33 @@
   }
 
   // ★ Переход index → menu
-  // 1 сек — лого растёт + музыка затихает
-  // 1.5 сек — беление
-  // 0.7 сек — появление титульного
+  // Фаза 1: 1 сек — лого растёт до 250% + музыка затихает
+  // Фаза 2: 1.5 сек — беление
+  // Фаза 3: 0.7 сек — появление титульного
   async function goToMenuWithTransition() {
     const flash = $('white-flash');
     const logo = $('transition-logo');
     const img = logo.querySelector('img');
 
-    // Логотип в центре
+    // 1. Сброс — без transition
     logo.style.transition = 'none';
     logo.style.display = 'flex';
     logo.style.opacity = '0';
     img.style.transition = 'none';
     img.style.transform = 'scale(1)';
+
+    // 2. Форсируем reflow (это критично!)
+    void logo.offsetWidth;
     void img.offsetWidth;
 
-    // ★ Фаза 1: 1 сек — лого появляется + растёт до 250%, музыка затихает
+    // 3. Ставим transition
     logo.style.transition = 'opacity 0.6s ease';
     img.style.transition = 'transform 1s cubic-bezier(0.16,1,0.3,1)';
+
+    // 4. Форсируем reflow ЕЩЁ РАЗ
+    void img.offsetWidth;
+
+    // 5. Запускаем анимацию — рост до 250%
     logo.classList.add('show');
     img.style.transform = 'scale(2.5)';
 
@@ -1361,6 +1360,7 @@
       try { Sound.setMusicVolume(0.0001, 1.0); } catch (e) {}
     }
 
+    // ★ Фаза 1: 1 сек — лого растёт до 250% + музыка затихает 1 сек
     await sleep(1000);
 
     // ★ Фаза 2: 1.5 сек — беление
@@ -1369,7 +1369,7 @@
 
     await sleep(1500);
 
-    // Под белым — переключаем на menu
+    // Под белым — переключаем
     $('screen-loader').style.display = 'none';
     $('game-container').style.display = 'block';
 
@@ -1490,7 +1490,6 @@
         if (window.Sound) { try { Sound.playSFX('sys_button', { volume: 0.8 }); } catch (e) {} }
         dialog.classList.remove('dimmed');
         setTimeout(() => dialog.classList.remove('show'), 700);
-        // Размораживаем
         unfreezeWebGL();
         if (window.Sound) {
           try { Sound.resumeAll(); } catch (e) {}
@@ -1591,14 +1590,14 @@
       if (!window.ORBITS.assets.find(x => x.url === a.url)) window.ORBITS.assets.push(a);
     }
 
-    // ★ 1. СНАЧАЛА предупреждение (картинка + звуки грузятся в фоне)
+    // ★ 1. СНАЧАЛА предупреждение
     $('disclaimer-img').src = URL_DISCLAIMER;
     $('screen-disclaimer').classList.remove('hide');
 
-    // ★ 2. Параллельно — приоритетная загрузка (картинка + звуки)
+    // ★ 2. Параллельно — приоритетная загрузка
     try { await preloadCritical(); } catch (e) {}
 
-    // ★ 3. Ждём тап по предупреждению
+    // ★ 3. Ждём тап
     await sleep(700);
     await new Promise(resolve => {
       const handler = () => {
@@ -1608,19 +1607,22 @@
       $('screen-disclaimer').addEventListener('click', handler);
     });
 
-    // ★ 4. Скрываем предупреждение и СРАЗУ показываем загрузку
+    // ★ 4. Скрываем предупреждение (1 сек плавно) + сразу показываем loader
     $('screen-disclaimer').classList.add('hide');
     $('screen-loader').style.transition = 'opacity ' + LOADER_FADE_MS + 'ms ease';
     $('screen-loader').classList.add('show');
 
-    // ★ 5. Инициализируем WebGL (флаг) и стартуем анимацию
+    // ★ Сразу показываем 0.0 / 0.0
+    updateLoadingProgress();
+
+    // ★ 5. WebGL
     if (!initWebGL()) console.warn('WebGL не поддерживается');
     else startWebGL();
 
-    // ★ 6. Ждём 0.7 сек — анимация загрузки видна, флаг крутится
+    // ★ 6. Ждём 0.7 сек — анимация загрузки видна
     await sleep(700);
 
-    // ★ 7. Загружаем манифест
+    // ★ 7. Манифест
     try {
       const resp = await fetch(LOAD_URL, { cache: 'no-store' });
       manifest = await resp.json();
@@ -1632,7 +1634,7 @@
       };
     }
 
-    // ★ 8. Определяем тип → показываем окно (замораживает всё под собой)
+    // ★ 8. Окно загрузки (замораживает всё под собой)
     const dlInfo = await determineDownloadType(manifest);
     if (dlInfo.type !== 'none') {
       let totalSize = 0;
@@ -1660,7 +1662,7 @@
 
     saveManifestInfo(manifest);
 
-    // ★ 9. Запускаем пайплайн загрузки
+    // ★ 9. Пайплайн загрузки
     await runLoaderPipeline();
   }
 

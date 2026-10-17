@@ -1,6 +1,11 @@
 /* =====================================================================
-   ORBITS.IO — MAIN MENU v13
+   ORBITS.IO — MAIN MENU v14
    Путь: menu.js
+
+   Исправления:
+   - Кнопка «На титульный экран» теперь появляется (fade-in класс)
+   - Фон не дёргается (shader использует cover-fit как CSS)
+   - Убран will-change и translateZ (не дёргает GPU-слой)
    ===================================================================== */
 (function () {
   'use strict';
@@ -255,7 +260,6 @@
     });
   }
 
-  // ★ Фон добавляется в #app с z-index: 1 (выше body, ниже #game-container)
   async function ensurePersistentBg() {
     if (persistentBg && persistentBg.parentNode) return;
     persistentBg = el('div', 'orbits-persistent-bg');
@@ -264,13 +268,6 @@
     appRoot.appendChild(persistentBg);
     await sleep(50);
     persistentBg.classList.add('show');
-  }
-
-  function removePersistentBg() {
-    if (persistentBg && persistentBg.parentNode) {
-      persistentBg.remove();
-      persistentBg = null;
-    }
   }
 
   function getWhiteOverlay() {
@@ -289,7 +286,7 @@
     }
   }
 
-  // ============ RIPPLE ============
+  // ============ RIPPLE (COVER FIT) ============
   const RIPPLE_VERT = "attribute vec2 a_pos; varying vec2 v_uv; void main() { v_uv = a_pos * 0.5 + 0.5; gl_Position = vec4(a_pos, 0.0, 1.0); }";
   const RIPPLE_FRAG = `
     precision highp float;
@@ -298,6 +295,7 @@
     uniform float u_time;
     uniform float u_fade;
     uniform vec2 u_resolution;
+    uniform vec2 u_uvScale;   /* ★ cover-fit UV scale */
     varying vec2 v_uv;
 
     float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -312,9 +310,11 @@
     }
 
     void main() {
-      vec2 uv = v_uv;
+      // Screen UV для дисторсии (всегда 0..1)
+      vec2 screenUV = v_uv;
+
       vec2 aspectVec = vec2(u_resolution.x / u_resolution.y, 1.0);
-      vec2 toCenter = (uv - u_center) * aspectVec;
+      vec2 toCenter = (screenUV - u_center) * aspectVec;
       float dist = length(toCenter);
       float t = u_time;
 
@@ -339,18 +339,25 @@
       radialAmount += distortZone * 0.025;
       float tangentAmount = (ring2 * 0.7 - ringMain * 0.4 + ring5 * 0.3) * 0.050;
 
-      float nz = noise(uv * 55.0 + t * 2.8) * 0.018 * distortMask;
-      float nz2 = noise(uv * 120.0 - t * 4.5) * 0.008 * distortMask;
+      float nz = noise(screenUV * 55.0 + t * 2.8) * 0.018 * distortMask;
+      float nz2 = noise(screenUV * 120.0 - t * 4.5) * 0.008 * distortMask;
 
-      vec2 distortedUV = uv
+      // Дисторсия в screen space
+      vec2 screenDisplaced = screenUV
         - dir * radialAmount * distortMask / aspectVec
         + tangent * tangentAmount * distortMask / aspectVec
         + vec2(nz + nz2);
 
+      // ★ Cover-fit: мапим screen UV в texture UV
+      vec2 texUV = screenDisplaced * u_uvScale + (1.0 - u_uvScale) * 0.5;
+
       float ca = ringMain * 0.016 * distortMask + ring2 * 0.008 * distortMask;
-      vec4 bgColor = texture2D(u_tex, distortedUV);
-      vec4 bgR = texture2D(u_tex, distortedUV + dir * ca / aspectVec);
-      vec4 bgB = texture2D(u_tex, distortedUV - dir * ca / aspectVec);
+      vec2 texCAr = (screenDisplaced + dir * ca / aspectVec) * u_uvScale + (1.0 - u_uvScale) * 0.5;
+      vec2 texCAb = (screenDisplaced - dir * ca / aspectVec) * u_uvScale + (1.0 - u_uvScale) * 0.5;
+
+      vec4 bgColor = texture2D(u_tex, texUV);
+      vec4 bgR = texture2D(u_tex, texCAr);
+      vec4 bgB = texture2D(u_tex, texCAb);
       bgColor = vec4(bgR.r, bgColor.g, bgB.b, 1.0);
 
       vec3 h1 = vec3(1.0, 0.99, 1.0) * ringMain * 1.1;
@@ -436,6 +443,7 @@
     rippleUniforms.uTime       = gl.getUniformLocation(rippleProgram, 'u_time');
     rippleUniforms.uFade       = gl.getUniformLocation(rippleProgram, 'u_fade');
     rippleUniforms.uResolution = gl.getUniformLocation(rippleProgram, 'u_resolution');
+    rippleUniforms.uUvScale    = gl.getUniformLocation(rippleProgram, 'u_uvScale');
 
     rippleTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, rippleTexture);
@@ -446,10 +454,24 @@
     gl.uniform1i(rippleUniforms.uTex, 0);
 
     const img = await loadImage(ASSETS.bg);
+    let imgAspect = 1;
     if (img) {
+      imgAspect = img.naturalWidth / img.naturalHeight;
       gl.bindTexture(gl.TEXTURE_2D, rippleTexture);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    }
+
+    function updateUvScale() {
+      const screenAspect = rippleCanvas.width / rippleCanvas.height;
+      let sx = 1, sy = 1;
+      if (screenAspect > imgAspect) {
+        sy = imgAspect / screenAspect;
+      } else {
+        sx = screenAspect / imgAspect;
+      }
+      gl.useProgram(rippleProgram);
+      gl.uniform2f(rippleUniforms.uUvScale, sx, sy);
     }
 
     function resize() {
@@ -463,6 +485,7 @@
       rippleCanvas.style.width = w + 'px';
       rippleCanvas.style.height = h + 'px';
       gl.viewport(0, 0, rippleCanvas.width, rippleCanvas.height);
+      updateUvScale();
     }
     resize();
     window.addEventListener('resize', resize);
@@ -597,7 +620,10 @@
     attachButtonHandlers(sub);
 
     await sleep(50);
+    // ★ Добавляем fade-in класс для появления кнопки «Назад» и полос
     sub.classList.add('fade-in');
+    sub.style.transition = 'opacity ' + TRANSITION_IN_MS + 'ms ease';
+    sub.style.opacity = '1';
 
     await playMenuMusicLoopOnly();
   }
@@ -622,7 +648,6 @@
     screen.appendChild(stripes);
 
     const wrap = el('div', 'orbits-buttons');
-    // ★ My Avatar под Онлайн
     const items = [
       { label: T('solo'),     id: 'solo' },
       { label: T('online'),   id: 'online' },
@@ -679,7 +704,6 @@
           if (blockName === 'select') {
             window.__ORBITS_SELECT_TYPE__ = (btn.dataset.id === 'online') ? 'online' : 'solo';
           }
-          removePersistentBg(); // Убираем фон при переходе в другой блок
           setTimeout(() => ORBITS.openBlock(blockName), 180);
         } else {
           subLock = false;
@@ -736,11 +760,13 @@
     if (title) title.remove();
 
     const sub = buildSubScreen();
-    sub.style.opacity = '0';
     container.appendChild(sub);
     attachButtonHandlers(sub);
+    sub.style.opacity = '0';
 
     await sleep(30);
+    // ★ fade-in класс — запускает появление кнопки «Назад» и полос
+    sub.classList.add('fade-in');
     sub.style.transition = 'opacity ' + TRANSITION_IN_MS + 'ms ease';
     sub.style.opacity = '1';
 
@@ -810,9 +836,9 @@
   }
 
   function injectStyles() {
-    if (document.getElementById('orbits-menu-styles-v13')) return;
+    if (document.getElementById('orbits-menu-styles-v14')) return;
     const css = `
-      /* ★ ФОН (внутри #app, z-index: 1 — выше body, но ниже #game-container) */
+      /* ★ ФОН. Без GPU-хаков — просто статичный слой */
       .orbits-persistent-bg {
         position: absolute;
         inset: 0;
@@ -820,17 +846,12 @@
         background-position: center;
         background-repeat: no-repeat;
         opacity: 0;
-        filter: none !important;
-        transform: translateZ(0) !important;
-        will-change: opacity, transform;
         transition: opacity 1.2s ease;
-        z-index: 1;   
+        z-index: 1;
         pointer-events: none;
-        backface-visibility: hidden;
       }
       .orbits-persistent-bg.show { opacity: 1; }
 
-      /* ★ СЛОЙ ВОДА */
       .orbits-ripple-wrap {
         position: absolute; inset: 0;
         z-index: 2;
@@ -845,7 +866,6 @@
         transition: opacity 0.5s ease;
       }
 
-      /* ★ UI-ЭКРАНЫ */
       .orbits-title-screen, .orbits-sub-screen {
         position: absolute; inset: 0;
         overflow: hidden;
@@ -854,16 +874,13 @@
         pointer-events: auto;
         opacity: 0;
         transition: opacity 1s ease;
-        will-change: opacity;
       }
       .orbits-title-screen { cursor: pointer; opacity: 1; }
       .orbits-sub-screen { opacity: 0; }
-      .orbits-sub-screen.fade-in { opacity: 1; }
 
       .orbits-white-overlay {
         position: absolute; inset: 0; background: #ffffff;
         z-index: 9999; opacity: 0; pointer-events: none;
-        will-change: opacity;
       }
       .orbits-white-overlay.show { opacity: 1; }
 
@@ -969,7 +986,7 @@
       }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-menu-styles-v13';
+    style.id = 'orbits-menu-styles-v14';
     style.textContent = css;
     document.head.appendChild(style);
   }
@@ -978,7 +995,8 @@
     ['orbits-menu-styles', 'orbits-menu-styles-v2', 'orbits-menu-styles-v3',
      'orbits-menu-styles-v4', 'orbits-menu-styles-v5', 'orbits-menu-styles-v6',
      'orbits-menu-styles-v7', 'orbits-menu-styles-v8', 'orbits-menu-styles-v9',
-     'orbits-menu-styles-v10', 'orbits-menu-styles-v11', 'orbits-menu-styles-v12'].forEach(id => {
+     'orbits-menu-styles-v10', 'orbits-menu-styles-v11', 'orbits-menu-styles-v12',
+     'orbits-menu-styles-v13'].forEach(id => {
       const old = document.getElementById(id);
       if (old) old.remove();
     });

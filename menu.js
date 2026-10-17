@@ -1,13 +1,13 @@
 /* =====================================================================
-   ORBITS.IO — MAIN MENU v8
+   ORBITS.IO — MAIN MENU v10
    Путь: menu.js
 
    Исправления:
-   - My Avatar перенесён ПОД «Игра онлайн»
-   - Вода на 20% быстрее (RIPPLE_MOVE_MS = 800)
-   - Фон АБСОЛЮТНО статичен (z-index, will-change, contain)
-   - Флаги (стрипы) на 70% быстрее (анимация 10.8s вместо 36s)
-   - Появление кнопок на 20% быстрее (150мс вместо 180мс)
+   - Кнопка My Avatar строго под «Игра онлайн»
+   - Фон закреплен на аппаратном уровне (без дерганья и сдвигов)
+   - Слои: Фон (1) -> Вода (2) -> Меню (5)
+   - Вода на 40% быстрее (успевает исчезнуть до конца перехода)
+   - Возвращены старые тайминги анимации флагов и кнопок
    ===================================================================== */
 (function () {
   'use strict';
@@ -46,6 +46,7 @@
     return d[key] || DICT.ru[key] || key;
   }
 
+  // ★ Порядок кнопок и их блоков
   const BLOCK_MAP = {
     solo:     'select',
     online:   'select',
@@ -60,11 +61,11 @@
   const VOL_SUB_BASE     = 0.5;
   const VOL_TITLE_BASE   = 0.9;
 
-  // ★ Вода на 20% быстрее (было 1000)
-  const RIPPLE_MOVE_MS = 800;
-  const RIPPLE_FADE_MS = 2000;
-  const RIPPLE_OUTRO_MS = 500;
-  
+  // ★ Вода на 40% быстрее (600мс движение, 1000мс затухание)
+  const RIPPLE_MOVE_MS = 600;
+  const RIPPLE_FADE_MS = 1000;
+  const RIPPLE_OUTRO_MS = 200;
+
   const SUB_APPEAR_MS  = 1000;
   const SOUND_LOCK_MS  = 350;
 
@@ -621,11 +622,11 @@
     screen.appendChild(stripes);
 
     const wrap = el('div', 'orbits-buttons');
-    // ★ My Avatar перенесён под Игра онлайн
+    // ★ ИСПРАВЛЕННЫЙ ПОРЯДОК: My Avatar строго под Онлайн
     const items = [
       { label: T('solo'),     id: 'solo' },
       { label: T('online'),   id: 'online' },
-      { label: T('avatar'),   id: 'avatar' },
+      { label: T('avatar'),   id: 'avatar' }, 
       { label: T('shop'),     id: 'shop' },
       { label: T('score'),    id: 'score' },
       { label: T('settings'), id: 'settings' }
@@ -660,8 +661,8 @@
         if (on && !active) { active = true; btn.classList.add('hover'); }
         else if (!on && active) { active = false; btn.classList.remove('hover'); }
       };
-      // ★ Появление кнопок на 20% быстрее (было 180, стало 144)
-      setTimeout(() => btn.classList.add('appear'), 100 + index * 144);
+      // ★ Возвращены старые тайминги (180мс)
+      setTimeout(() => btn.classList.add('appear'), 100 + index * 180);
 
       const doOpen = (e) => {
         if (e) e.preventDefault();
@@ -721,7 +722,6 @@
     if (currentScreen === 'sub') return;
 
     stopRipple();
-
     vibrateTransition();
 
     const title = container.querySelector('.orbits-title-screen');
@@ -749,7 +749,6 @@
 
   async function goToTitleScreen() {
     stopRipple();
-
     vibrateTransition();
 
     const sub = container.querySelector('.orbits-sub-screen');
@@ -795,15 +794,15 @@
   }
 
   function injectStyles() {
-    if (document.getElementById('orbits-menu-styles-v8')) return;
+    if (document.getElementById('orbits-menu-styles-v10')) return;
     const css = `
-      /* ★ Контейнер — изоляция композиции */
+      /* ★ Контейнер — изоляция слоев */
       #game-container {
         contain: layout style paint;
         isolation: isolate;
       }
 
-      /* ★ СЛОЙ 1: ФОН — статичный, не двигается, не меняет яркость */
+      /* ★ СЛОЙ 1: ФОН — статичный, без сдвигов */
       .orbits-persistent-bg {
         position: absolute; inset: 0;
         background-size: cover; background-position: center;
@@ -819,7 +818,7 @@
       }
       .orbits-persistent-bg.show { opacity: 1; }
 
-      /* ★ СЛОЙ 2: RIPPLE */
+      /* ★ СЛОЙ 2: ВОДА */
       .orbits-ripple-wrap {
         position: absolute; inset: 0;
         z-index: 2;
@@ -835,12 +834,12 @@
         transition: opacity 0.5s ease;
       }
 
-      /* ★ СЛОЙ 3: UI-экраны */
+      /* ★ СЛОЙ 3: МЕНЮ (выше воды) */
       .orbits-title-screen, .orbits-sub-screen {
         position: absolute; inset: 0;
         overflow: hidden;
         color: #fff;
-        z-index: 5;
+        z-index: 5;   /* Выше фона и воды */
         pointer-events: auto;
         opacity: 0;
         transition: opacity 1s ease;
@@ -859,7 +858,6 @@
       }
       .orbits-white-overlay.show { opacity: 1; }
 
-      /* Логотип титульного */
       .orbits-title-name {
         position: absolute; left: 6vw; bottom: 12vh;
         width: min(48vw, 600px); z-index: 5;
@@ -885,7 +883,6 @@
       .orbits-tap-hint.show { opacity: 0.95; }
       @keyframes orbits-hint-pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
 
-      /* Вуаль и стрипы */
       .orbits-veil {
         position: absolute; inset: 0;
         background: linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 55%);
@@ -902,8 +899,7 @@
         opacity: 0.15;
         filter: invert(1) brightness(1.6) contrast(1.1);
         mix-blend-mode: screen;
-        /* ★ Флаги на 70% быстрее (36s -> 10.8s) */
-        animation: orbits-stripe-move 10.8s linear infinite;
+        animation: orbits-stripe-move 36s linear infinite;
         transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
         will-change: transform;
       }
@@ -913,7 +909,6 @@
       .orbits-sub-screen.fade-in .orbits-stripe-right { transform: skewX(-8deg) translateY(0) translateX(4%); }
       @keyframes orbits-stripe-move { 0% { background-position: 0 0; } 100% { background-position: 360px -360px; } }
 
-      /* Кнопки */
       .orbits-buttons {
         position: absolute; left: 6vw; top: 14vh;
         width: min(48vw, 600px);
@@ -965,7 +960,7 @@
       }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-menu-styles-v8';
+    style.id = 'orbits-menu-styles-v10';
     style.textContent = css;
     document.head.appendChild(style);
   }
@@ -973,7 +968,7 @@
   async function start() {
     ['orbits-menu-styles', 'orbits-menu-styles-v2', 'orbits-menu-styles-v3',
      'orbits-menu-styles-v4', 'orbits-menu-styles-v5', 'orbits-menu-styles-v6',
-     'orbits-menu-styles-v7'].forEach(id => {
+     'orbits-menu-styles-v7', 'orbits-menu-styles-v8', 'orbits-menu-styles-v9'].forEach(id => {
       const old = document.getElementById(id);
       if (old) old.remove();
     });

@@ -1,13 +1,14 @@
 /* =====================================================================
-   ORBITS.IO — MAIN MENU v10
+   ORBITS.IO — MAIN MENU v11
    Путь: menu.js
 
    Исправления:
-   - Кнопка My Avatar строго под «Игра онлайн»
-   - Фон закреплен на аппаратном уровне (без дерганья и сдвигов)
-   - Слои: Фон (1) -> Вода (2) -> Меню (5)
-   - Вода на 40% быстрее (успевает исчезнуть до конца перехода)
-   - Возвращены старые тайминги анимации флагов и кнопок
+   - Тайминги возвращены: флаги 36s, кнопки 180мс
+   - Плавный переход: старый экран затухает (1с), потом новый появляется (0.7с)
+   - Название и hint больше не исчезают резко
+   - Фон вынесен в body на слой z-index: 1 (никогда не перерисовывается)
+   - Вода на 40% быстрее и успевает исчезнуть до конца перехода
+   - My Avatar строго под «Игра онлайн»
    ===================================================================== */
 (function () {
   'use strict';
@@ -46,7 +47,6 @@
     return d[key] || DICT.ru[key] || key;
   }
 
-  // ★ Порядок кнопок и их блоков
   const BLOCK_MAP = {
     solo:     'select',
     online:   'select',
@@ -61,7 +61,7 @@
   const VOL_SUB_BASE     = 0.5;
   const VOL_TITLE_BASE   = 0.9;
 
-  // ★ Вода на 40% быстрее (600мс движение, 1000мс затухание)
+  // Вода на 40% быстрее
   const RIPPLE_MOVE_MS = 600;
   const RIPPLE_FADE_MS = 1000;
   const RIPPLE_OUTRO_MS = 200;
@@ -264,13 +264,21 @@
     });
   }
 
+  // ★ Фон вынесен в body — он НИКОГДА не перерисовывается при смене экранов
   async function ensurePersistentBg() {
-    if (persistentBg && persistentBg.parentNode === container) return;
+    if (persistentBg && persistentBg.parentNode) return;
     persistentBg = el('div', 'orbits-persistent-bg');
     persistentBg.style.backgroundImage = "url('" + ASSETS.bg + "')";
-    container.appendChild(persistentBg);
+    document.body.appendChild(persistentBg);
     await sleep(50);
     persistentBg.classList.add('show');
+  }
+
+  function removePersistentBg() {
+    if (persistentBg && persistentBg.parentNode) {
+      persistentBg.remove();
+      persistentBg = null;
+    }
   }
 
   function getWhiteOverlay() {
@@ -622,7 +630,7 @@
     screen.appendChild(stripes);
 
     const wrap = el('div', 'orbits-buttons');
-    // ★ ИСПРАВЛЕННЫЙ ПОРЯДОК: My Avatar строго под Онлайн
+    // ★ My Avatar строго под «Игра онлайн» (третий пункт)
     const items = [
       { label: T('solo'),     id: 'solo' },
       { label: T('online'),   id: 'online' },
@@ -661,7 +669,6 @@
         if (on && !active) { active = true; btn.classList.add('hover'); }
         else if (!on && active) { active = false; btn.classList.remove('hover'); }
       };
-      // ★ Возвращены старые тайминги (180мс)
       setTimeout(() => btn.classList.add('appear'), 100 + index * 180);
 
       const doOpen = (e) => {
@@ -680,6 +687,8 @@
           if (blockName === 'select') {
             window.__ORBITS_SELECT_TYPE__ = (btn.dataset.id === 'online') ? 'online' : 'solo';
           }
+          // ★ Убираем фон из body перед переходом в другой блок
+          removePersistentBg();
           setTimeout(() => ORBITS.openBlock(blockName), 180);
         } else {
           subLock = false;
@@ -723,24 +732,30 @@
 
     stopRipple();
     vibrateTransition();
-
-    const title = container.querySelector('.orbits-title-screen');
-    const hint  = container.querySelector('.orbits-tap-hint');
-    const name  = container.querySelector('.orbits-title-name');
     musicQuiet();
 
-    if (hint) { hint.style.transition = 'opacity 0.5s ease'; hint.classList.remove('show'); hint.style.opacity = '0'; }
-    if (name) { name.style.transition = 'opacity 0.5s ease, transform 0.5s ease'; name.classList.remove('show'); name.style.opacity = '0'; }
+    const title = container.querySelector('.orbits-title-screen');
 
+    // ★ 1. Плавно скрываем титульный за 1 сек (и название, и hint пропадут вместе с ним)
+    if (title) {
+      title.style.transition = 'opacity ' + TRANSITION_OUT_MS + 'ms ease';
+      title.style.opacity = '0';
+    }
+    await sleep(TRANSITION_OUT_MS);
+
+    // ★ 2. Удаляем титульный
+    if (title) title.remove();
+
+    // ★ 3. Создаём sub-screen невидимым
     const sub = buildSubScreen();
+    sub.style.opacity = '0';
     container.appendChild(sub);
     attachButtonHandlers(sub);
 
-    if (title) title.remove();
-
+    // ★ 4. Плавно показываем sub-screen за 0.7 сек
     await sleep(30);
     sub.style.transition = 'opacity ' + TRANSITION_IN_MS + 'ms ease';
-    sub.classList.add('fade-in');
+    sub.style.opacity = '1';
 
     currentScreen = 'sub';
     titleLock = false;
@@ -750,29 +765,48 @@
   async function goToTitleScreen() {
     stopRipple();
     vibrateTransition();
-
-    const sub = container.querySelector('.orbits-sub-screen');
-    if (!sub) { await showTitleScreen(false); return; }
     musicLoud();
 
-    const titleScreen = buildTitleScreen();
-    container.appendChild(titleScreen);
+    const sub = container.querySelector('.orbits-sub-screen');
 
-    sub.remove();
+    // ★ 1. Плавно скрываем sub за 1 сек
+    if (sub) {
+      sub.style.transition = 'opacity ' + TRANSITION_OUT_MS + 'ms ease';
+      sub.style.opacity = '0';
+    }
+    await sleep(TRANSITION_OUT_MS);
 
-    await sleep(50);
-    const title = titleScreen.querySelector('.orbits-title-name');
-    const hint = titleScreen.querySelector('.orbits-tap-hint');
+    // ★ 2. Удаляем sub
+    if (sub) sub.remove();
 
-    title.classList.add('show');
-    await sleep(900);
-    hint.classList.add('show');
-
+    // ★ 3. Создаём и плавно показываем титульный
     currentScreen = 'title';
-    titleLock = false;
-    subLock = false;
+    titleLock = true;
 
+    await ensurePersistentBg();
+    const screen = buildTitleScreen();
+    screen.style.opacity = '0';
+    container.appendChild(screen);
+    initRippleGL();
+
+    const title = screen.querySelector('.orbits-title-name');
+    const hint = screen.querySelector('.orbits-tap-hint');
+
+    // ★ 4. Плавно показываем экран за 0.7 сек
+    await sleep(30);
+    screen.style.transition = 'opacity ' + TRANSITION_IN_MS + 'ms ease';
+    screen.style.opacity = '1';
+
+    await sleep(TRANSITION_IN_MS);
+
+    // ★ 5. Появление названия и hint с анимацией
+    title.classList.add('show');
+    await sleep(1000);
+
+    hint.classList.add('show');
+    vibrateSensor();
     await sleep(700);
+
     titleLock = false;
 
     const onTap = async (e) => {
@@ -786,45 +820,45 @@
       if (point) waterRipple(point.x, point.y);
       setTimeout(() => goToSubScreen(), SUB_APPEAR_MS);
     };
-    titleScreen.addEventListener('click', onTap, { once: true });
-    titleScreen.addEventListener('touchend', (e) => {
+    screen.addEventListener('click', onTap, { once: true });
+    screen.addEventListener('touchend', (e) => {
       e.preventDefault();
       onTap(e);
     }, { once: true, passive: false });
   }
 
   function injectStyles() {
-    if (document.getElementById('orbits-menu-styles-v10')) return;
+    if (document.getElementById('orbits-menu-styles-v11')) return;
     const css = `
-      /* ★ Контейнер — изоляция слоев */
+      /* ★ Контейнер — БЕЗ contain, чтобы не ломать fixed фон и композицию */
       #game-container {
-        contain: layout style paint;
-        isolation: isolate;
+        /* убрано contain */
       }
 
-      /* ★ СЛОЙ 1: ФОН — статичный, без сдвигов */
+      /* ★ ФОН — в body, position: fixed. Никогда не перерисовывается */
       .orbits-persistent-bg {
-        position: absolute; inset: 0;
-        background-size: cover; background-position: center;
+        position: fixed;
+        inset: 0;
+        background-size: cover;
+        background-position: center;
         background-repeat: no-repeat;
         opacity: 0;
         filter: none !important;
-        transform: none !important;
+        transform: translateZ(0) !important;   /* Отдельный GPU-слой */
+        will-change: opacity, transform;
         transition: opacity 1.2s ease;
-        z-index: 1;
-        will-change: opacity;
-        contain: strict;
+        z-index: 1;   /* под game-container (z-index: 10 в index.html) */
         pointer-events: none;
+        backface-visibility: hidden;
       }
       .orbits-persistent-bg.show { opacity: 1; }
 
-      /* ★ СЛОЙ 2: ВОДА */
+      /* ★ СЛОЙ ВОДА */
       .orbits-ripple-wrap {
         position: absolute; inset: 0;
         z-index: 2;
         pointer-events: none;
         overflow: hidden;
-        contain: strict;
       }
       .orbits-ripple-canvas {
         position: absolute; inset: 0;
@@ -834,16 +868,15 @@
         transition: opacity 0.5s ease;
       }
 
-      /* ★ СЛОЙ 3: МЕНЮ (выше воды) */
+      /* ★ UI-ЭКРАНЫ */
       .orbits-title-screen, .orbits-sub-screen {
         position: absolute; inset: 0;
         overflow: hidden;
         color: #fff;
-        z-index: 5;   /* Выше фона и воды */
+        z-index: 5;
         pointer-events: auto;
         opacity: 0;
         transition: opacity 1s ease;
-        contain: layout style;
         will-change: opacity;
       }
       .orbits-title-screen { cursor: pointer; opacity: 1; }
@@ -854,7 +887,6 @@
         position: absolute; inset: 0; background: #ffffff;
         z-index: 9999; opacity: 0; pointer-events: none;
         will-change: opacity;
-        contain: strict;
       }
       .orbits-white-overlay.show { opacity: 1; }
 
@@ -960,7 +992,7 @@
       }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-menu-styles-v10';
+    style.id = 'orbits-menu-styles-v11';
     style.textContent = css;
     document.head.appendChild(style);
   }
@@ -968,7 +1000,8 @@
   async function start() {
     ['orbits-menu-styles', 'orbits-menu-styles-v2', 'orbits-menu-styles-v3',
      'orbits-menu-styles-v4', 'orbits-menu-styles-v5', 'orbits-menu-styles-v6',
-     'orbits-menu-styles-v7', 'orbits-menu-styles-v8', 'orbits-menu-styles-v9'].forEach(id => {
+     'orbits-menu-styles-v7', 'orbits-menu-styles-v8', 'orbits-menu-styles-v9',
+     'orbits-menu-styles-v10'].forEach(id => {
       const old = document.getElementById(id);
       if (old) old.remove();
     });

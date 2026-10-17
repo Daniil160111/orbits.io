@@ -1,14 +1,6 @@
 /* =====================================================================
-   ORBITS.IO — SETTINGS BLOCK v12
+   ORBITS.IO — SETTINGS BLOCK v16
    Путь: settings.js
-
-   Исправлено:
-   - Фон под кнопками (z-index)
-   - Кнопки видны, не чёрные
-   - Без мигания при открытии
-   - Блок «Звук» с сегментами
-   - Калибровка
-   - Без Troll
    ===================================================================== */
 (function () {
   'use strict';
@@ -40,168 +32,97 @@
     ru: {
       title: 'Настройки', back: 'Назад', save: 'Сохранить',
       nickname: 'Ник', music: 'Музыка', sfx: 'Эффекты',
-      vibration: 'Вибрация', brightness: 'Яркость',
-      audio_mode: 'Режим звука',
-      audio_mono: 'Моно', audio_stereo: 'Стерео', audio_spatial: 'Пространство',
-      spatial_3d: 'Стереоскопический 3D звук',
-      calibrate: 'Калибровать', calibrate_again: 'Калибровать заново',
-      hint_music: 'Громкость фоновой музыки',
-      hint_sfx: 'Громкость звуковых эффектов',
-      hint_vibration: 'Тактильная отдача при действиях',
-      hint_brightness: 'Яркость всего интерфейса',
-      hint_nickname: 'Ваше имя в игре (до 16 символов)',
-      hint_audio_mode: 'Моно — 1 канал, Стерео — 2 канала, Пространство — объёмный звук',
-      hint_spatial_3d: 'Нужна фронтальная камера. Звук подстраивается под положение головы.',
-      unsaved_title: 'Несохранённые изменения',
-      unsaved_text: 'Вы изменили настройки, но не сохранили их.\nЧто сделать?',
-      unsaved_save: 'Сохранить и выйти',
-      unsaved_discard: 'Не сохранять и выйти',
-      unsaved_cancel: 'Отмена',
-      reset_btn: 'Стереть все данные',
-      reset_title: 'Внимание!',
-      reset_text: 'Все данные будут удалены безвозвратно.',
-      reset_yes: 'Да, стереть', reset_no: 'Отмена',
-      reset_confirm2_title: 'Вы уверены?',
-      reset_confirm2_text: 'Это действие нельзя отменить.',
-      reset_confirm2_yes: 'Стереть навсегда',
-      reset_doing: 'Очистка...',
-      cal_hint: 'Смотрите прямо в камеру',
-      cal_step: 'Шаг', cal_of: 'из',
-      cal_left: 'Поверните голову ВЛЕВО',
-      cal_right: 'Поверните голову ВПРАВО',
-      cal_up: 'Поверните голову ВВЕРХ',
-      cal_down: 'Поверните голову ВНИЗ',
-      cal_done: 'Готово!',
-      cal_saved: 'Калибровка сохранена',
-      cal_loading: 'Загрузка...',
-      cal_error: 'Ошибка калибровки',
-      cal_camera_unavailable: 'Камера недоступна',
-      cal_cancel: 'Отмена'
+      vibration: 'Вибрация', brightness: 'Яркость', language: 'Язык',
+      audio_mode: 'Режим звука', audio_mono: 'Моно', audio_stereo: 'Стерео', audio_spatial: 'Пространство',
+      spatial_3d: '3D звук через камеру', calibrate: 'Калибровать', calibrate_again: 'Перекалибровка',
+      hint_music: 'Громкость музыки', hint_sfx: 'Громкость эффектов', hint_vibration: 'Вибрация', hint_brightness: 'Яркость', hint_nickname: 'Ваш ник (до 16 символов)',
+      hint_audio_mode: 'Моно, стерео или пространственный звук', hint_spatial_3d: 'Звук подстраивается под поворот головы',
+      unsaved_title: 'Изменения не сохранены', unsaved_text: 'Что сделать?', unsaved_save: 'Сохранить и выйти', unsaved_discard: 'Не сохранять', unsaved_cancel: 'Отмена',
+      reset_btn: 'Стереть все данные', reset_title: 'Внимание!', reset_text: 'Все данные будут удалены.', reset_yes: 'Да, стереть', reset_no: 'Отмена',
+      reset_confirm2_title: 'Вы уверены?', reset_confirm2_text: 'Отменить нельзя.', reset_confirm2_yes: 'Стереть навсегда', reset_doing: 'Очистка...',
+      cal_hint: 'Смотрите прямо в камеру', cal_step: 'Шаг', cal_of: 'из',
+      cal_left: 'Поверните голову ВЛЕВО', cal_right: 'Поверните голову ВПРАВО',
+      cal_up: 'Поверните голову ВВЕРХ', cal_down: 'Поверните голову ВНИЗ',
+      cal_done: 'Готово!', cal_saved: 'Калибровка сохранена',
+      cal_loading: 'Загрузка...', cal_error: 'Ошибка калибровки',
+      cal_camera_unavailable: 'Камера недоступна', cal_cancel: 'Отмена',
+      cal_wrong_left: 'Вы повернули голову вправо, но нужно налево!',
+      cal_wrong_right: 'Вы повернули голову влево, но нужно направо!',
+      cal_wrong_up: 'Вы наклонили голову вниз, но нужно вверх!',
+      cal_wrong_down: 'Вы наклонили голову вверх, но нужно вниз!',
+      cal_too_small: 'Поверните сильнее', cal_correct: 'Отлично!'
     },
     en: {
       title: 'Settings', back: 'Back', save: 'Save',
       nickname: 'Nickname', music: 'Music', sfx: 'Effects',
-      vibration: 'Vibration', brightness: 'Brightness',
-      audio_mode: 'Audio mode',
-      audio_mono: 'Mono', audio_stereo: 'Stereo', audio_spatial: 'Spatial',
-      spatial_3d: 'Stereoscopic 3D sound',
-      calibrate: 'Calibrate', calibrate_again: 'Recalibrate',
-      hint_music: 'Background music volume',
-      hint_sfx: 'Sound effects volume',
-      hint_vibration: 'Haptic feedback on actions',
-      hint_brightness: 'Interface brightness',
-      hint_nickname: 'Your in-game name (up to 16 characters)',
-      hint_audio_mode: 'Mono — 1 channel, Stereo — 2 channels, Spatial — 3D audio',
-      hint_spatial_3d: 'Requires front camera. Sound adapts to your head position.',
-      unsaved_title: 'Unsaved changes',
-      unsaved_text: 'You changed settings but didn\'t save them.\nWhat to do?',
-      unsaved_save: 'Save and exit',
-      unsaved_discard: 'Discard and exit',
-      unsaved_cancel: 'Cancel',
-      reset_btn: 'Erase all data',
-      reset_title: 'Warning!',
-      reset_text: 'All data will be permanently deleted.',
-      reset_yes: 'Yes, erase', reset_no: 'Cancel',
-      reset_confirm2_title: 'Are you sure?',
-      reset_confirm2_text: 'This action cannot be undone.',
-      reset_confirm2_yes: 'Erase forever',
-      reset_doing: 'Erasing...',
-      cal_hint: 'Look straight at the camera',
-      cal_step: 'Step', cal_of: 'of',
-      cal_left: 'Turn your head LEFT',
-      cal_right: 'Turn your head RIGHT',
-      cal_up: 'Turn your head UP',
-      cal_down: 'Turn your head DOWN',
-      cal_done: 'Done!',
-      cal_saved: 'Calibration saved',
-      cal_loading: 'Loading...',
-      cal_error: 'Calibration error',
-      cal_camera_unavailable: 'Camera unavailable',
-      cal_cancel: 'Cancel'
+      vibration: 'Vibration', brightness: 'Brightness', language: 'Language',
+      audio_mode: 'Audio mode', audio_mono: 'Mono', audio_stereo: 'Stereo', audio_spatial: 'Spatial',
+      spatial_3d: '3D sound via camera', calibrate: 'Calibrate', calibrate_again: 'Recalibrate',
+      hint_music: 'Music volume', hint_sfx: 'Effects volume', hint_vibration: 'Vibration', hint_brightness: 'Brightness', hint_nickname: 'Your nickname (up to 16 chars)',
+      hint_audio_mode: 'Mono, Stereo or Spatial audio', hint_spatial_3d: 'Adapts to head rotation',
+      unsaved_title: 'Unsaved changes', unsaved_text: 'What to do?', unsaved_save: 'Save and exit', unsaved_discard: 'Discard', unsaved_cancel: 'Cancel',
+      reset_btn: 'Erase all data', reset_title: 'Warning!', reset_text: 'All data will be deleted.', reset_yes: 'Yes, erase', reset_no: 'Cancel',
+      reset_confirm2_title: 'Are you sure?', reset_confirm2_text: 'Cannot be undone.', reset_confirm2_yes: 'Erase forever', reset_doing: 'Erasing...',
+      cal_hint: 'Look straight at the camera', cal_step: 'Step', cal_of: 'of',
+      cal_left: 'Turn your head LEFT', cal_right: 'Turn your head RIGHT',
+      cal_up: 'Turn your head UP', cal_down: 'Turn your head DOWN',
+      cal_done: 'Done!', cal_saved: 'Calibration saved',
+      cal_loading: 'Loading...', cal_error: 'Calibration error',
+      cal_camera_unavailable: 'Camera unavailable', cal_cancel: 'Cancel',
+      cal_wrong_left: 'You turned right, but need to go left!',
+      cal_wrong_right: 'You turned left, but need to go right!',
+      cal_wrong_up: 'You tilted down, but need to go up!',
+      cal_wrong_down: 'You tilted up, but need to go down!',
+      cal_too_small: 'Turn stronger', cal_correct: 'Great!'
     },
     fr: {
       title: 'Paramètres', back: 'Retour', save: 'Enregistrer',
       nickname: 'Pseudo', music: 'Musique', sfx: 'Effets',
-      vibration: 'Vibration', brightness: 'Luminosité',
-      audio_mode: 'Mode audio',
-      audio_mono: 'Mono', audio_stereo: 'Stéréo', audio_spatial: 'Spatial',
-      spatial_3d: 'Son 3D stéréoscopique',
-      calibrate: 'Calibrer', calibrate_again: 'Recalibrer',
-      hint_music: 'Volume de la musique',
-      hint_sfx: 'Volume des effets',
-      hint_vibration: 'Retour haptique',
-      hint_brightness: 'Luminosité de l\'interface',
-      hint_nickname: 'Votre nom en jeu (16 max)',
-      hint_audio_mode: 'Mono, Stéréo ou Spatial',
-      hint_spatial_3d: 'Nécessite la caméra frontale.',
-      unsaved_title: 'Modifications non enregistrées',
-      unsaved_text: 'Que faire ?',
-      unsaved_save: 'Enregistrer et quitter',
-      unsaved_discard: 'Ne pas enregistrer',
-      unsaved_cancel: 'Annuler',
-      reset_btn: 'Effacer toutes les données',
-      reset_title: 'Attention !',
-      reset_text: 'Toutes les données seront supprimées.',
-      reset_yes: 'Oui, effacer', reset_no: 'Annuler',
-      reset_confirm2_title: 'Êtes-vous sûr ?',
-      reset_confirm2_text: 'Cette action est irréversible.',
-      reset_confirm2_yes: 'Effacer définitivement',
-      reset_doing: 'Suppression...',
-      cal_hint: 'Regardez droit dans la caméra',
-      cal_step: 'Étape', cal_of: 'sur',
-      cal_left: 'Tournez la tête à GAUCHE',
-      cal_right: 'Tournez la tête à DROITE',
-      cal_up: 'Tournez la tête en HAUT',
-      cal_down: 'Tournez la tête en BAS',
-      cal_done: 'Terminé !',
-      cal_saved: 'Calibration enregistrée',
-      cal_loading: 'Chargement...',
-      cal_error: 'Erreur de calibration',
-      cal_camera_unavailable: 'Caméra indisponible',
-      cal_cancel: 'Annuler'
+      vibration: 'Vibration', brightness: 'Luminosité', language: 'Langue',
+      audio_mode: 'Mode audio', audio_mono: 'Mono', audio_stereo: 'Stéréo', audio_spatial: 'Spatial',
+      spatial_3d: 'Son 3D via caméra', calibrate: 'Calibrer', calibrate_again: 'Recalibrer',
+      hint_music: 'Volume musique', hint_sfx: 'Volume effets', hint_vibration: 'Vibration', hint_brightness: 'Luminosité', hint_nickname: 'Votre pseudo (16 max)',
+      hint_audio_mode: 'Mono, Stéréo ou Spatial', hint_spatial_3d: 'S\'adapte à la tête',
+      unsaved_title: 'Modifications non enregistrées', unsaved_text: 'Que faire ?', unsaved_save: 'Enregistrer et quitter', unsaved_discard: 'Ne pas enregistrer', unsaved_cancel: 'Annuler',
+      reset_btn: 'Effacer tout', reset_title: 'Attention !', reset_text: 'Toutes les données seront supprimées.', reset_yes: 'Oui, effacer', reset_no: 'Annuler',
+      reset_confirm2_title: 'Sûr ?', reset_confirm2_text: 'Action irréversible.', reset_confirm2_yes: 'Effacer définitivement', reset_doing: 'Suppression...',
+      cal_hint: 'Regardez droit', cal_step: 'Étape', cal_of: 'sur',
+      cal_left: 'Tournez à GAUCHE', cal_right: 'Tournez à DROITE',
+      cal_up: 'Tournez en HAUT', cal_down: 'Tournez en BAS',
+      cal_done: 'Terminé !', cal_saved: 'Calibration enregistrée',
+      cal_loading: 'Chargement...', cal_error: 'Erreur',
+      cal_camera_unavailable: 'Caméra indisponible', cal_cancel: 'Annuler',
+      cal_wrong_left: 'Vous avez tourné à droite, il faut à gauche!',
+      cal_wrong_right: 'Vous avez tourné à gauche, il faut à droite!',
+      cal_wrong_up: 'Vous avez penché en bas, il faut en haut!',
+      cal_wrong_down: 'Vous avez penché en haut, il faut en bas!',
+      cal_too_small: 'Tournez plus fort', cal_correct: 'Excellent!'
     },
     es: {
       title: 'Ajustes', back: 'Atrás', save: 'Guardar',
       nickname: 'Apodo', music: 'Música', sfx: 'Efectos',
-      vibration: 'Vibración', brightness: 'Brillo',
-      audio_mode: 'Modo de audio',
-      audio_mono: 'Mono', audio_stereo: 'Estéreo', audio_spatial: 'Espacial',
-      spatial_3d: 'Sonido 3D estereoscópico',
-      calibrate: 'Calibrar', calibrate_again: 'Recalibrar',
-      hint_music: 'Volumen de la música',
-      hint_sfx: 'Volumen de los efectos',
-      hint_vibration: 'Respuesta háptica',
-      hint_brightness: 'Brillo de la interfaz',
-      hint_nickname: 'Tu nombre en el juego (máx. 16)',
-      hint_audio_mode: 'Mono, Estéreo o Espacial',
-      hint_spatial_3d: 'Requiere cámara frontal.',
-      unsaved_title: 'Cambios sin guardar',
-      unsaved_text: '¿Qué hacer?',
-      unsaved_save: 'Guardar y salir',
-      unsaved_discard: 'No guardar y salir',
-      unsaved_cancel: 'Cancelar',
-      reset_btn: 'Borrar todos los datos',
-      reset_title: '¡Atención!',
-      reset_text: 'Todos los datos se eliminarán.',
-      reset_yes: 'Sí, borrar', reset_no: 'Cancelar',
-      reset_confirm2_title: '¿Estás seguro?',
-      reset_confirm2_text: 'Esta acción no se puede deshacer.',
-      reset_confirm2_yes: 'Borrar para siempre',
-      reset_doing: 'Borrando...',
-      cal_hint: 'Mira directamente a la cámara',
-      cal_step: 'Paso', cal_of: 'de',
-      cal_left: 'Gira la cabeza a la IZQUIERDA',
-      cal_right: 'Gira la cabeza a la DERECHA',
-      cal_up: 'Gira la cabeza ARRIBA',
-      cal_down: 'Gira la cabeza ABAJO',
-      cal_done: '¡Listo!',
-      cal_saved: 'Calibración guardada',
-      cal_loading: 'Cargando...',
-      cal_error: 'Error de calibración',
-      cal_camera_unavailable: 'Cámara no disponible',
-      cal_cancel: 'Cancelar'
+      vibration: 'Vibración', brightness: 'Brillo', language: 'Idioma',
+      audio_mode: 'Modo de audio', audio_mono: 'Mono', audio_stereo: 'Estéreo', audio_spatial: 'Espacial',
+      spatial_3d: 'Sonido 3D vía cámara', calibrate: 'Calibrar', calibrate_again: 'Recalibrar',
+      hint_music: 'Volumen música', hint_sfx: 'Volumen efectos', hint_vibration: 'Vibración', hint_brightness: 'Brillo', hint_nickname: 'Tu apodo (máx. 16)',
+      hint_audio_mode: 'Mono, Estéreo o Espacial', hint_spatial_3d: 'Se adapta a la cabeza',
+      unsaved_title: 'Cambios sin guardar', unsaved_text: '¿Qué hacer?', unsaved_save: 'Guardar y salir', unsaved_discard: 'No guardar', unsaved_cancel: 'Cancelar',
+      reset_btn: 'Borrar todo', reset_title: '¡Atención!', reset_text: 'Todos los datos se eliminarán.', reset_yes: 'Sí, borrar', reset_no: 'Cancelar',
+      reset_confirm2_title: '¿Seguro?', reset_confirm2_text: 'No se puede deshacer.', reset_confirm2_yes: 'Borrar para siempre', reset_doing: 'Borrando...',
+      cal_hint: 'Mira al frente', cal_step: 'Paso', cal_of: 'de',
+      cal_left: 'Gira a la IZQUIERDA', cal_right: 'Gira a la DERECHA',
+      cal_up: 'Gira ARRIBA', cal_down: 'Gira ABAJO',
+      cal_done: '¡Listo!', cal_saved: 'Calibración guardada',
+      cal_loading: 'Cargando...', cal_error: 'Error',
+      cal_camera_unavailable: 'Cámara no disponible', cal_cancel: 'Cancelar',
+      cal_wrong_left: 'Giraste a la derecha, ¡necesitas izquierda!',
+      cal_wrong_right: 'Giraste a la izquierda, ¡necesitas derecha!',
+      cal_wrong_up: 'Inclinaste abajo, ¡necesitas arriba!',
+      cal_wrong_down: 'Inclinaste arriba, ¡necesitas abajo!',
+      cal_too_small: 'Gira más', cal_correct: '¡Excelente!'
     }
   };
+
   function lang() {
     const l = (window.Settings && Settings.get('language')) || 'ru';
     return DICT[l] ? l : 'ru';
@@ -212,7 +133,6 @@
   }
 
   const SOUND_LOCK_MS = 350;
-
   let container = null;
   let root = null;
   let savedSnapshot = null;
@@ -221,10 +141,8 @@
   let modalOpen = false;
   let vibeTimeouts = [];
   let currentPage = 'main';
-
   let soundLockActive = false;
   let soundLockTimer = null;
-
   let tooltipEl = null;
   let tooltipTimer = null;
   let dependentContainer = null;
@@ -387,6 +305,7 @@
       headTracking:        (typeof all.headTracking === 'boolean') ? all.headTracking : false
     };
   }
+
   function recomputeDirty() {
     dirty =
       working.musicVolume !== Math.round(savedSnapshot.musicVolume01 * 100) ||
@@ -400,6 +319,7 @@
       working.spatialHeadphones   !== savedSnapshot.spatialHeadphones ||
       working.headTracking        !== savedSnapshot.headTracking;
   }
+
   function applyPreview(key, uiValue) {
     if (key === 'musicVolume') setBlockMusicVolume(uiValue / 100);
     if (key === 'brightness')  applyBrightness(uiValue);
@@ -413,7 +333,6 @@
     document.documentElement.style.filter = 'brightness(' + b + ')';
   }
 
-  // ============ SLIDER ============
   function buildSlider(key, label, min, max, uiValue, formatter, hint) {
     const row = el('div', 'st-row st-slider-row');
     const labelWrap = el('div', 'st-label-wrap');
@@ -500,7 +419,6 @@
     return row;
   }
 
-  // ============ MINI TOGGLE ============
   function buildMiniToggle(key, label, value, hint) {
     const row = el('div', 'st-row st-mini-row');
     const labelWrap = el('div', 'st-label-wrap');
@@ -593,29 +511,10 @@
     });
     trackWrap.addEventListener('touchcancel', onEnd);
 
-    trackWrap.addEventListener('mousedown', (e) => {
-      if (isLocked()) return;
-      tapStart = performance.now(); onStart(e);
-    });
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', (e) => {
-      const dt = performance.now() - tapStart;
-      const moved = Math.abs(currentPos - (value ? 1 : 0)) > 0.1;
-      if (dt < 200 && !moved) {
-        dragging = false;
-        const nv = !working[key];
-        setPos(nv ? 1 : 0, true);
-        commitValue(nv);
-        return;
-      }
-      onEnd(e);
-    });
-
     setPos(value ? 1 : 0, false);
     return row;
   }
 
-  // ============ SEGMENTED ============
   function buildSegmented(key, label, options, value, hint) {
     const row = el('div', 'st-row st-seg-row');
     const labelWrap = el('div', 'st-label-wrap');
@@ -649,7 +548,6 @@
     return row;
   }
 
-  // ============ MULTI TOGGLE (язык) ============
   function buildMultiToggle(key, labels, value) {
     const row = el('div', 'st-row st-multi-row');
     const wrap = el('div', 'st-multi-wrap');
@@ -748,7 +646,6 @@
     return row;
   }
 
-  // ============ NICK ============
   function buildNickInput(value) {
     const row = el('div', 'st-row st-nick-row');
     const labelWrap = el('div', 'st-label-wrap');
@@ -817,7 +714,6 @@
     setTimeout(() => rebuildPagesContent(), 80);
   }
 
-  // ============ МОДАЛКИ ============
   function showUnsavedModal() {
     if (modalOpen) return;
     modalOpen = true;
@@ -963,13 +859,14 @@
   async function exitToMenu() {
     if (window.Sound) { try { Sound.stopMusic(0.4); } catch (e) {} }
     if (root) {
+      root.classList.remove('show');
+      await sleep(400);
       root.remove();
       root = null;
     }
     if (window.ORBITS && ORBITS.back) await ORBITS.back();
   }
 
-  // ============ ЗАВИСИМЫЕ ============
   function updateDependentRows() {
     if (!dependentContainer) return;
     dependentContainer.innerHTML = '';
@@ -991,6 +888,7 @@
     } else {
       const calBtn = el('div', 'st-calibrate-btn');
       const isCal = window.HeadTracking && HeadTracking.isCalibrated();
+      // ★ Кнопка "Перекалибровка" если уже откалибровано
       calBtn.textContent = isCal ? T('calibrate_again') : T('calibrate');
       calBtn.addEventListener('click', () => {
         if (isLocked()) return;
@@ -1003,12 +901,13 @@
     setTimeout(() => row3D.classList.add('show'), 80);
   }
 
-  // ============ КАЛИБРОВКА ============
   async function startCalibrationFlow() {
     if (!window.HeadTracking) return;
     if (!HeadTracking.isAvailable()) return;
 
     const overlay = el('div', 'st-cal-overlay');
+
+    // Видео (зеркальное)
     const video = document.createElement('video');
     video.setAttribute('playsinline', '');
     video.setAttribute('muted', '');
@@ -1016,13 +915,24 @@
     video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);z-index:1;';
     overlay.appendChild(video);
 
+    // Canvas поверх видео для контура
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;';
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    overlay.appendChild(canvas);
+
+    // Инфо-панель
     const info = el('div', 'st-cal-info');
     const label = el('div', 'st-cal-label', T('cal_loading'));
     const step = el('div', 'st-cal-step', '');
+    const hint = el('div', 'st-cal-hint', '');
     info.appendChild(label);
     info.appendChild(step);
+    info.appendChild(hint);
     overlay.appendChild(info);
 
+    // Кнопка отмены
     const cancelBtn = el('button', 'st-cal-cancel', T('cal_cancel'));
     cancelBtn.addEventListener('click', () => {
       if (window.HeadTracking) HeadTracking.cancelCalibration();
@@ -1064,10 +974,51 @@
       down:   { label: T('cal_down'),  icon: '⬇' }
     };
 
-    const ok = await HeadTracking.startCalibration((stepId, index, total) => {
-      const meta = STEP_META[stepId] || { label: stepId, icon: '·' };
-      label.textContent = meta.icon + ' ' + meta.label;
-      step.textContent = T('cal_step') + ' ' + (index + 1) + ' ' + T('cal_of') + ' ' + total;
+    const HINTS = {
+      left: {
+        correct: T('cal_correct'),
+        wrongSide: T('cal_wrong_left'),
+        tooSmall: T('cal_too_small')
+      },
+      right: {
+        correct: T('cal_correct'),
+        wrongSide: T('cal_wrong_right'),
+        tooSmall: T('cal_too_small')
+      },
+      up: {
+        correct: T('cal_correct'),
+        wrongSide: T('cal_wrong_up'),
+        tooSmall: T('cal_too_small')
+      },
+      down: {
+        correct: T('cal_correct'),
+        wrongSide: T('cal_wrong_down'),
+        tooSmall: T('cal_too_small')
+      }
+    };
+
+    const ok = await HeadTracking.startCalibration({
+      canvas: canvas,
+      onStep: (stepId, index, total) => {
+        const meta = STEP_META[stepId] || { label: stepId, icon: '·' };
+        label.textContent = meta.icon + ' ' + meta.label;
+        step.textContent = T('cal_step') + ' ' + (index + 1) + ' ' + T('cal_of') + ' ' + total;
+        hint.textContent = '';
+        hint.style.color = '';
+      },
+      onFrame: ({ step: stepId, check }) => {
+        if (!check || !HINTS[stepId]) return;
+        if (check.correct) {
+          hint.textContent = HINTS[stepId].correct;
+          hint.style.color = '#4ade80';
+        } else if (check.actual && check.actual !== 'center') {
+          hint.textContent = HINTS[stepId].wrongSide;
+          hint.style.color = '#ef4444';
+        } else {
+          hint.textContent = HINTS[stepId].tooSmall;
+          hint.style.color = '#fbbf24';
+        }
+      }
     });
 
     if (!ok) {
@@ -1081,12 +1032,15 @@
         clearInterval(checkDone);
         label.textContent = T('cal_done');
         step.textContent = T('cal_saved');
+        hint.textContent = '';
+        // ★ Применяем калибровку к звуку
+        const cal = HeadTracking.getCalibration();
+        if (cal && window.Sound) Sound.applyCalibration(cal);
         setTimeout(cleanup, 1500);
       }
     }, 300);
   }
 
-  // ============ ПОСТРОЕНИЕ ============
   function buildBg() {
     const bg = el('div', 'st-bg');
     bg.style.backgroundImage = "url('" + ASSETS.bg + "')";
@@ -1145,18 +1099,14 @@
     const rowNick   = buildNickInput(working.nickname);
     const rowMusic  = buildSlider('musicVolume', T('music'), 0, 100, working.musicVolume, v => v + '%', T('hint_music'));
     const rowSfx    = buildSlider('sfxVolume',   T('sfx'),   0, 100, working.sfxVolume,   v => v + '%', T('hint_sfx'));
-    const rowVibe   = buildMiniToggle('vibration', T('vibration'), working.vibration, T('hint_vibration'));
-    const rowBright = buildSlider('brightness',  T('brightness'), 0, 150, working.brightness, v => String(v), T('hint_brightness'));
 
     list.appendChild(rowNick);
     list.appendChild(rowMusic);
     list.appendChild(rowSfx);
-    list.appendChild(rowVibe);
-    list.appendChild(rowBright);
 
     updateDependentRows();
 
-    const rows = [rowAudio, rowNick, rowMusic, rowSfx, rowVibe, rowBright];
+    const rows = [rowAudio, rowNick, rowMusic, rowSfx];
     rows.forEach((r, i) => setTimeout(() => r.classList.add('show'), 100 + i * 130));
   }
 
@@ -1164,9 +1114,27 @@
     const list = el('div', 'st-list');
     pageEl.appendChild(list);
 
+    // Язык + значок (?)
     const rowLang = buildMultiToggle('language', ['RU', 'EN', 'FR', 'ES'], working.language);
+    rowLang.style.position = 'relative';
+    const tipBtn = el('div', 'st-help', '?');
+    tipBtn.style.position = 'absolute';
+    tipBtn.style.top = '50%';
+    tipBtn.style.transform = 'translateY(-50%)';
+    tipBtn.style.right = '2vw';
+    bindTooltip(tipBtn, 'Язык интерфейса');
+    rowLang.appendChild(tipBtn);
     list.appendChild(rowLang);
 
+    // Вибрация
+    const rowVibe = buildMiniToggle('vibration', T('vibration'), working.vibration, T('hint_vibration'));
+    list.appendChild(rowVibe);
+
+    // Яркость
+    const rowBright = buildSlider('brightness', T('brightness'), 0, 150, working.brightness, v => String(v), T('hint_brightness'));
+    list.appendChild(rowBright);
+
+    // Сброс
     const rowReset = el('div', 'st-row st-reset-row');
     const resetBtn = el('button', 'st-reset-btn');
     resetBtn.type = 'button';
@@ -1182,7 +1150,9 @@
 
     setTimeout(() => {
       rowLang.classList.add('show');
-      setTimeout(() => rowReset.classList.add('show'), 140);
+      setTimeout(() => rowVibe.classList.add('show'), 140);
+      setTimeout(() => rowBright.classList.add('show'), 280);
+      setTimeout(() => rowReset.classList.add('show'), 420);
     }, 100);
   }
 
@@ -1254,15 +1224,13 @@
   }
 
   function injectStyles() {
-    if (document.getElementById('orbits-settings-styles-v12')) return;
+    if (document.getElementById('orbits-settings-styles-v16')) return;
     const css = `
       .st-root { position: absolute; inset: 0; z-index: 50; overflow: hidden; pointer-events: auto; color: #fff; }
-
       .st-bg { position: absolute; inset: 0; background-size: cover; background-position: center;
-        filter: brightness(1.28) saturate(1.08) contrast(1.02); z-index: 1; }
-
+        filter: brightness(0.75) saturate(1.2); z-index: 1; }
       .st-bg-overlay { position: absolute; inset: 0;
-        background: linear-gradient(135deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.42) 100%);
+        background: linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 100%);
         z-index: 2; pointer-events: none; }
 
       .st-page { position: absolute; inset: 0; z-index: 5;
@@ -1272,168 +1240,155 @@
 
       .st-header { position: absolute; top: 1.2vh; left: 0; right: 0;
         display: flex; align-items: center; justify-content: center; z-index: 8; gap: 18px; pointer-events: none; }
-
       .st-title { font-size: 30px; font-weight: 900; letter-spacing: 7px; text-transform: uppercase; color: #fff;
-        text-shadow: 0 0 14px rgba(180,120,255,0.95);
-        opacity: 0; transition: opacity 0.9s ease; }
+        text-shadow: 0 0 20px rgba(140,80,255,0.8); opacity: 0; transition: opacity 0.9s ease; }
       .st-title.show { opacity: 1; }
 
       .st-arrow { pointer-events: auto; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
-        background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.42);
-        border-radius: 50%; color: #fff; font-size: 26px; font-weight: 900; cursor: pointer; }
+        background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 50%; color: #fff; font-size: 26px; font-weight: 900; cursor: pointer;
+        backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
       .st-arrow:active { transform: scale(0.9); }
       .st-arrow.inactive { opacity: 0.28; pointer-events: none; }
-      .st-arrow-left { padding-right: 3px; }
-      .st-arrow-right { padding-left: 3px; }
 
       .st-list { position: absolute; top: 12vh; left: 50%; transform: translateX(-50%);
-        width: min(80vw, 820px); display: flex; flex-direction: column; gap: 1.5vh; z-index: 5; }
+        width: min(85vw, 820px); display: flex; flex-direction: column; gap: 1.5vh; z-index: 5; }
 
-      .st-row { position: relative; display: flex; align-items: center; gap: 2vw; padding: 1.25vh 2.4vh; border-radius: 26px;
-        background: linear-gradient(155deg, rgba(255,255,255,0.20) 0%, rgba(120,80,220,0.13) 100%);
-        border: 1px solid rgba(255,255,255,0.30);
-        overflow: hidden; opacity: 0; transform: translateX(-40px) scale(0.96);
-        transition: opacity 0.75s ease, transform 0.75s ease; }
-      .st-row.show { opacity: 1; transform: translateX(0) scale(1); }
+      .st-row { position: relative; display: flex; align-items: center; gap: 2vw; padding: 1.25vh 2.4vh; border-radius: 24px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(25px) saturate(200%); -webkit-backdrop-filter: blur(25px) saturate(200%);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255,255,255,0.3);
+        overflow: hidden; opacity: 0; transform: translateY(20px) scale(0.95);
+        transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+      .st-row::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 50%;
+        background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none; border-radius: 24px 24px 0 0; }
+      .st-row.show { opacity: 1; transform: translateY(0) scale(1); }
 
       .st-label-wrap { flex: 0 0 32%; display: flex; align-items: center; gap: 8px; position: relative; z-index: 2; }
-      .st-label { font-size: 14px; letter-spacing: 2.4px; text-transform: uppercase; color: #f0eaff; font-weight: 800; }
+      .st-label { font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: #fff; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 
-      .st-help { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.25);
-        border: 1px solid rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center;
+      .st-help { width: 22px; height: 22px; border-radius: 50%;
+        background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
+        display: flex; align-items: center; justify-content: center;
         font-size: 12px; font-weight: 900; color: #fff; cursor: pointer; flex: 0 0 auto; }
+      .st-help:active { background: rgba(255,255,255,0.5); }
 
       .st-tooltip { position: absolute; z-index: 100; max-width: 300px; padding: 10px 14px;
-        background: rgba(20,15,40,0.96); border: 1px solid rgba(180,140,255,0.5);
+        background: rgba(20,15,40,0.95); border: 1px solid rgba(180,140,255,0.5);
         border-radius: 12px; color: #e0d8ff; font-size: 12px; line-height: 1.5;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.8);
         opacity: 0; transform: translateY(-6px); pointer-events: none;
         transition: opacity 0.25s ease, transform 0.25s ease; }
       .st-tooltip.show { opacity: 1; transform: translateY(0); }
 
       .st-slider-track { position: relative; flex: 1 1 auto; height: 46px; display: flex; align-items: center; padding: 0 22px; touch-action: none; }
-      .st-slider-track-inner { position: relative; width: 100%; height: 15px;
-        background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.18);
-        border-radius: 20px; }
+      .st-slider-track-inner { position: relative; width: 100%; height: 12px;
+        background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
       .st-slider-fill { position: absolute; left: 0; top: 0; bottom: 0;
-        background: linear-gradient(90deg, rgba(106,58,255,1) 0%, rgba(176,107,255,1) 100%);
-        border-radius: 20px; }
-      .st-slider-knob { position: absolute; top: 50%; left: 0; width: 32px; height: 32px; border-radius: 50%;
-        background: radial-gradient(circle at 32% 26%, #fff 0%, #d0b8ff 50%, #8a64dc 100%);
-        border: 1.5px solid rgba(255,255,255,0.85);
-        transform: translate(-50%, -50%); pointer-events: none; }
-      .st-slider-knob.st-knob-active { transform: translate(-50%, -50%) scale(1.7); }
-
-      .st-value { flex: 0 0 10%; text-align: right; font-size: 13px; color: #fff; font-weight: 700; }
+        background: linear-gradient(90deg, rgba(140,70,255,1) 0%, rgba(200,120,255,1) 100%);
+        border-radius: 20px; box-shadow: 0 0 15px rgba(160,80,255,0.8); }
+      .st-slider-knob { position: absolute; top: 50%; left: 0; width: 30px; height: 30px; border-radius: 50%;
+        background: #fff; border: 2px solid rgba(255,255,255,0.9);
+        box-shadow: 0 0 15px rgba(180,120,255,1), 0 4px 10px rgba(0,0,0,0.5);
+        transform: translate(-50%, -50%); pointer-events: none; transition: transform 0.2s ease; }
+      .st-slider-knob.st-knob-active { transform: translate(-50%, -50%) scale(1.3); }
+      .st-value { flex: 0 0 10%; text-align: right; font-size: 14px; color: #fff; font-weight: 800; }
 
       .st-mini-track { position: relative; flex: 0 0 66px; height: 32px;
-        background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.26);
+        background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2);
         border-radius: 40px; cursor: pointer; touch-action: none; }
-      .st-mini-track.on { background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95)); }
+      .st-mini-track.on { background: linear-gradient(135deg, rgba(140,70,255,1), rgba(200,120,255,1)); }
       .st-mini-knob { position: absolute; top: 50%; left: 3px; width: 26px; height: 26px; border-radius: 50%;
-        background: radial-gradient(circle at 32% 26%, #fff 0%, #d0b8ff 52%, #8a64dc 100%);
-        border: 1.5px solid rgba(255,255,255,0.85);
-        transform: translateY(-50%); pointer-events: none; }
+        background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.5); transform: translateY(-50%); pointer-events: none; }
 
       .st-seg { flex: 1 1 auto; display: flex; gap: 8px; position: relative; z-index: 2; }
       .st-seg-btn { flex: 1 1 0; padding: 10px 8px; text-align: center;
-        font-size: 13px; letter-spacing: 1.4px; font-weight: 800; text-transform: uppercase;
-        color: rgba(255,255,255,0.7); cursor: pointer;
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.20); border-radius: 14px;
-        transition: all 0.3s ease; user-select: none; }
-      .st-seg-btn.active { color: #fff;
-        background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
-        border-color: rgba(220,180,255,0.8); }
-      .st-seg-btn:active { transform: scale(0.96); }
+        font-size: 13px; letter-spacing: 1px; font-weight: 800; text-transform: uppercase;
+        color: rgba(255,255,255,0.6); cursor: pointer;
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+        transition: all 0.3s ease; }
+      .st-seg-btn.active { color: #fff; background: linear-gradient(135deg, rgba(140,70,255,0.8), rgba(200,120,255,0.8));
+        border-color: rgba(255,255,255,0.4); }
 
       .st-multi-wrap { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-      .st-multi-labels { display: flex; font-size: 14px; letter-spacing: 2.4px;
-        color: rgba(255,255,255,0.55); font-weight: 800; }
+      .st-multi-labels { display: flex; font-size: 14px; letter-spacing: 2px; color: rgba(255,255,255,0.5); font-weight: 800; }
       .st-multi-label { flex: 1 1 0; text-align: center; cursor: pointer; }
-      .st-multi-label.active { color: #fff; text-shadow: 0 0 14px rgba(220,170,255,1); }
-      .st-multi-track { position: relative; height: 32px;
-        background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.26);
+      .st-multi-label.active { color: #fff; text-shadow: 0 0 10px rgba(200,120,255,1); }
+      .st-multi-track { position: relative; height: 32px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2);
         border-radius: 40px; cursor: pointer; touch-action: none; width: 100%; }
       .st-multi-knob { position: absolute; top: 50%; left: 3px; width: 26px; height: 26px; border-radius: 50%;
-        background: radial-gradient(circle at 32% 26%, #fff 0%, #d0b8ff 52%, #8a64dc 100%);
-        border: 1.5px solid rgba(255,255,255,0.85);
-        transform: translateY(-50%); pointer-events: none; }
+        background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.5); transform: translateY(-50%); pointer-events: none; }
 
-      .st-nick-wrap { flex: 1 1 auto; }
+      .st-nick-wrap { flex: 1 1 auto; position: relative; z-index: 2; }
       .st-nick-input { width: 100%; padding: 10px 18px;
-        background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.28);
-        border-radius: 18px; color: #fff; font-size: 15px; outline: none; }
+        background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 14px;
+        color: #fff; font-size: 16px; outline: none; }
+      .st-nick-input:focus { border-color: rgba(200,120,255,0.8); }
 
-      .st-btn-back, .st-btn-save { position: absolute; bottom: 4vh; padding: 1.3vh 3.6vh;
-        color: #fff; font-family: inherit; font-size: 18px; letter-spacing: 2.5px;
-        text-transform: uppercase; font-weight: 900; border-radius: 22px; cursor: pointer; z-index: 8; }
-      .st-btn-back { left: 4vw; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.42); }
-      .st-btn-save { right: 4vw; background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
-        border: 1px solid rgba(220,180,255,0.75); }
-      .st-btn-back:active, .st-btn-save:active { transform: scale(0.94); }
+      .st-btn-back, .st-btn-save { position: absolute; bottom: 4vh; padding: 1.5vh 4vh;
+        color: #fff; font-family: inherit; font-size: 18px; letter-spacing: 2px;
+        text-transform: uppercase; font-weight: 900; border-radius: 20px; cursor: pointer; z-index: 8;
+        transition: transform 0.2s ease; }
+      .st-btn-back { left: 4vw; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); }
+      .st-btn-save { right: 4vw; background: linear-gradient(135deg, rgba(140,70,255,0.9), rgba(200,120,255,0.9));
+        border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 8px 24px rgba(140,70,255,0.5); }
+      .st-btn-back:active, .st-btn-save:active { transform: scale(0.95); }
 
-      .st-reset-row { justify-content: center; padding: 1.2vh 2.4vh;
-        background: rgba(255,80,80,0.14); border: 1px solid rgba(255,120,120,0.4); }
-      .st-reset-btn { width: 100%; padding: 13px 26px; font-family: inherit; font-size: 15px;
-        letter-spacing: 2.4px; text-transform: uppercase; font-weight: 900; color: #ffb8b8;
-        background: rgba(255,80,80,0.20); border: 1px solid rgba(255,140,140,0.55);
-        border-radius: 16px; cursor: pointer; }
+      .st-reset-row { justify-content: center; padding: 1.5vh 2.4vh;
+        background: rgba(255,80,80,0.15); border: 1px solid rgba(255,80,80,0.3); }
+      .st-reset-btn { width: 100%; padding: 12px; font-family: inherit; font-size: 15px;
+        letter-spacing: 1.5px; text-transform: uppercase; font-weight: 900; color: #ffb8b8;
+        background: transparent; border: none; cursor: pointer; }
 
-      .st-row-error { position: absolute; bottom: -16px; left: 0; right: 0;
-        font-size: 10px; color: #ff8080; text-align: center; }
+      .st-calibrate-btn { margin-left: auto; padding: 8px 16px;
+        background: rgba(255,255,255,0.15); border-radius: 12px; font-size: 12px; font-weight: 800;
+        letter-spacing: 1px; text-transform: uppercase; color: #fff; cursor: pointer; }
+      .st-calibrate-btn:active { background: rgba(255,255,255,0.3); }
+      .st-row-error { position: absolute; bottom: -18px; left: 0; right: 0; font-size: 10px; color: #ff8080; text-align: center; }
 
-      .st-calibrate-btn { margin-left: 12px; padding: 8px 16px;
-        background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95));
-        border-radius: 12px; font-size: 12px; font-weight: 800;
-        letter-spacing: 1px; text-transform: uppercase;
-        color: #fff; cursor: pointer; flex: 0 0 auto; }
-
-      .st-cal-overlay { position: absolute; inset: 0; z-index: 100;
-        background: #000; opacity: 0; transition: opacity 0.6s ease; pointer-events: auto; }
+      .st-cal-overlay { position: absolute; inset: 0; z-index: 100; background: #000;
+        opacity: 0; transition: opacity 0.6s ease; pointer-events: auto; }
       .st-cal-overlay.show { opacity: 1; }
       .st-cal-info { position: absolute; bottom: 8vh; left: 50%; transform: translateX(-50%);
-        z-index: 3; text-align: center; color: #fff; width: min(80vw, 500px); }
-      .st-cal-label { font-size: 24px; font-weight: 900; letter-spacing: 2px; margin-bottom: 12px;
-        text-shadow: 0 0 20px rgba(180,120,255,1); }
-      .st-cal-step { font-size: 14px; color: rgba(255,255,255,0.7); }
-      .st-cal-cancel { position: absolute; top: 3vh; right: 4vw; z-index: 4;
-        padding: 10px 24px; font-family: inherit; font-size: 14px;
-        font-weight: 800; color: #fff; background: rgba(255,80,80,0.25);
-        border: 1px solid rgba(255,120,120,0.5); border-radius: 12px; cursor: pointer; }
+        z-index: 3; text-align: center; color: #fff; width: min(85vw, 600px); }
+      .st-cal-label { font-size: 26px; font-weight: 900; margin-bottom: 8px; text-shadow: 0 0 20px rgba(180,120,255,1); }
+      .st-cal-step { font-size: 16px; color: rgba(255,255,255,0.8); margin-bottom: 10px; }
+      .st-cal-hint { font-size: 18px; font-weight: 800; min-height: 24px; transition: color 0.3s ease; }
+      .st-cal-cancel { position: absolute; top: 4vh; right: 4vw; z-index: 4; padding: 10px 24px;
+        font-family: inherit; font-size: 14px; font-weight: 800; color: #fff;
+        background: rgba(255,255,255,0.2); border: none; border-radius: 12px; cursor: pointer; }
 
       .st-modal { position: absolute; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
-        background: rgba(0,0,0,0); opacity: 0; transition: opacity 0.55s ease, background 0.55s ease; }
-      .st-modal.show { opacity: 1; background: rgba(0,0,0,0.62); }
+        background: rgba(0,0,0,0); opacity: 0; transition: opacity 0.5s ease; }
+      .st-modal.show { opacity: 1; background: rgba(0,0,0,0.7); }
       .st-modal-box { width: min(88vw, 480px); padding: 30px 26px;
-        background: linear-gradient(155deg, rgba(45,30,75,0.96), rgba(65,40,110,0.96));
-        border: 1px solid rgba(220,180,255,0.65); border-radius: 30px; text-align: center;
-        color: #e0d8ff; transform: scale(0.55) rotate(-3deg); opacity: 0;
-        transition: transform 0.6s ease, opacity 0.6s ease; }
-      .st-modal.show .st-modal-box { transform: scale(1) rotate(0); opacity: 1; }
-      .st-modal-box h3 { font-size: 21px; margin-bottom: 14px; color: #fff; }
-      .st-modal-box p { font-size: 14px; line-height: 1.65; margin-bottom: 22px; }
-      .st-modal-danger { border-color: rgba(255,100,100,0.75) !important; }
-      .st-modal-danger h3 { color: #ff7070 !important; }
-      .st-btn { padding: 15px 34px; font-family: inherit; font-size: 17px; letter-spacing: 2.4px;
-        text-transform: uppercase; font-weight: 900; color: #fff; background: rgba(255,255,255,0.10);
-        border: 1px solid rgba(255,255,255,0.32); border-radius: 22px; cursor: pointer;
-        display: block; width: 100%; margin-top: 10px; }
-      .st-btn-primary { background: linear-gradient(135deg, rgba(140,70,255,0.95), rgba(190,110,255,0.95)); }
-      .st-btn-danger { background: linear-gradient(135deg, rgba(255,80,80,0.92), rgba(210,50,50,0.92)); }
-      .st-btn-secondary { background: rgba(255,255,255,0.10); }
+        background: linear-gradient(135deg, rgba(40,30,60,0.95), rgba(20,15,30,0.95));
+        border: 1px solid rgba(255,255,255,0.2); border-radius: 24px; text-align: center;
+        transform: scale(0.8); opacity: 0; transition: transform 0.5s ease, opacity 0.5s ease; }
+      .st-modal.show .st-modal-box { transform: scale(1); opacity: 1; }
+      .st-modal-box h3 { font-size: 20px; color: #fff; margin-bottom: 10px; }
+      .st-modal-box p { font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 20px; }
+      .st-btn { padding: 14px; font-family: inherit; font-size: 16px; font-weight: 800;
+        border-radius: 16px; cursor: pointer; display: block; width: 100%; margin-top: 10px; border: none; color: #fff; }
+      .st-btn-primary { background: linear-gradient(135deg, rgba(140,70,255,1), rgba(200,120,255,1)); }
+      .st-btn-danger { background: rgba(255,80,80,0.8); }
+      .st-btn-secondary { background: rgba(255,255,255,0.1); }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-settings-styles-v12';
+    style.id = 'orbits-settings-styles-v16';
     style.textContent = css;
     document.head.appendChild(style);
   }
 
   async function start() {
-    // Убираем старые стили
     ['orbits-settings-styles', 'orbits-settings-styles-v2', 'orbits-settings-styles-v3',
      'orbits-settings-styles-v4', 'orbits-settings-styles-v5', 'orbits-settings-styles-v6',
      'orbits-settings-styles-v7', 'orbits-settings-styles-v8', 'orbits-settings-styles-v9',
-     'orbits-settings-styles-v10', 'orbits-settings-styles-v11'].forEach(id => {
+     'orbits-settings-styles-v10', 'orbits-settings-styles-v11', 'orbits-settings-styles-v12',
+     'orbits-settings-styles-v13', 'orbits-settings-styles-v14', 'orbits-settings-styles-v15'].forEach(id => {
       const old = document.getElementById(id);
       if (old) old.remove();
     });
@@ -1463,6 +1418,11 @@
     await buildAll();
     await sleep(200);
     await startBlockMusic();
+
+    // ★ Применяем калибровку к звуку если уже есть
+    if (window.HeadTracking && HeadTracking.getCalibration() && window.Sound) {
+      Sound.applyCalibration(HeadTracking.getCalibration());
+    }
   }
   start();
 })();

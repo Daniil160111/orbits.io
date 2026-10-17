@@ -1,6 +1,13 @@
 /* =====================================================================
-   ORBITS.IO — MAIN MENU v6
+   ORBITS.IO — MAIN MENU v8
    Путь: menu.js
+
+   Исправления:
+   - My Avatar перенесён ПОД «Игра онлайн»
+   - Вода на 20% быстрее (RIPPLE_MOVE_MS = 800)
+   - Фон АБСОЛЮТНО статичен (z-index, will-change, contain)
+   - Флаги (стрипы) на 70% быстрее (анимация 10.8s вместо 36s)
+   - Появление кнопок на 20% быстрее (150мс вместо 180мс)
    ===================================================================== */
 (function () {
   'use strict';
@@ -40,9 +47,9 @@
   }
 
   const BLOCK_MAP = {
-    avatar:   'my-avatar',
     solo:     'select',
     online:   'select',
+    avatar:   'my-avatar',
     shop:     'shop',
     score:    'score',
     settings: 'settings'
@@ -53,9 +60,11 @@
   const VOL_SUB_BASE     = 0.5;
   const VOL_TITLE_BASE   = 0.9;
 
-  const RIPPLE_MOVE_MS = 1000;
-  const RIPPLE_FADE_MS = 2000;   // ★ 2 сек — плавное затухание
-  const RIPPLE_OUTRO_MS = 500;   // ★ 0.5 сек — canvas fade после шейдера
+  // ★ Вода на 20% быстрее (было 1000)
+  const RIPPLE_MOVE_MS = 800;
+  const RIPPLE_FADE_MS = 2000;
+  const RIPPLE_OUTRO_MS = 500;
+  
   const SUB_APPEAR_MS  = 1000;
   const SOUND_LOCK_MS  = 350;
 
@@ -95,7 +104,6 @@
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
   function vibeEnabled() { const v = getS('vibration');   return (typeof v === 'boolean') ? v : true; }
 
-  // ★ Вибрация +30%
   const VIBE_MULT = 1.3;
 
   function sfx(name, baseVolume) {
@@ -129,7 +137,6 @@
     if (canVibrate()) { try { navigator.vibrate(0); } catch (e) {} }
   }
 
-  // ★ Плавная 3D-вибрация (wave) — усиленная на 30%
   function vibrateWave() {
     if (!canVibrate()) return;
     stopVibrate();
@@ -150,7 +157,6 @@
     });
   }
 
-  // ★ 3D-вибрация для кнопок — усиленная
   function vibrateButton() {
     if (!canVibrate()) return;
     stopVibrate();
@@ -162,7 +168,6 @@
     } catch (e) {}
   }
 
-  // ★ Датчик (титульный тап)
   function vibrateSensor() {
     if (!canVibrate()) return;
     try {
@@ -173,7 +178,6 @@
     } catch (e) {}
   }
 
-  // ★ Новая — 3D-вибрация при переходах и перелистываниях
   function vibrateTransition() {
     if (!canVibrate()) return;
     stopVibrate();
@@ -275,6 +279,15 @@
     return whiteOverlay;
   }
 
+  function stopRipple() {
+    if (rippleRaf) { cancelAnimationFrame(rippleRaf); rippleRaf = 0; }
+    rippleActive = false;
+    if (rippleCanvas) {
+      rippleCanvas.style.transition = 'none';
+      rippleCanvas.style.opacity = '0';
+    }
+  }
+
   // ============ RIPPLE ============
   const RIPPLE_VERT = "attribute vec2 a_pos; varying vec2 v_uv; void main() { v_uv = a_pos * 0.5 + 0.5; gl_Position = vec4(a_pos, 0.0, 1.0); }";
   const RIPPLE_FRAG = `
@@ -365,13 +378,8 @@
 
       vec3 finalColor = bgTinted + effect * distortMask;
 
-      // ★ Плавное затухание — ripple уходит в 0 в конце
-      // u_fade: 0 → 1. К концу u_fade = 1, ripple полностью исчез.
-      // Кривая: 0..0.5 — ripple виден (fade=1), 0.5..1.0 — плавно уходит к 0
       float fadeCurve = 1.0 - smoothstep(0.40, 1.0, u_fade);
-      // Дополнительное общее затухание всего эффекта в самом конце
       float outroFade = 1.0 - smoothstep(0.85, 1.0, u_fade);
-
       float totalFade = fadeCurve * outroFade;
 
       vec3 result = mix(bgTinted, finalColor, totalFade);
@@ -471,21 +479,16 @@
       rippleActive = true;
       if (rippleRaf) cancelAnimationFrame(rippleRaf);
 
-      // ★ Сначала показываем canvas БЕЗ transition
       rippleCanvas.style.transition = 'none';
       rippleCanvas.style.opacity = '1';
 
       function finish() {
         if (!rippleActive) return;
         rippleActive = false;
-        // ★ Плавно убираем canvas — ripple уже визуально исчез в шейдере
         rippleCanvas.style.transition = 'opacity ' + RIPPLE_OUTRO_MS + 'ms ease';
         rippleCanvas.style.opacity = '0';
         setTimeout(() => {
-          // Сброс transition на будущее
-          if (rippleCanvas) {
-            rippleCanvas.style.transition = 'none';
-          }
+          if (rippleCanvas) rippleCanvas.style.transition = 'none';
           resolve();
         }, RIPPLE_OUTRO_MS);
       }
@@ -494,7 +497,6 @@
         if (!rippleActive || !rippleGl || !rippleCanvas) { finish(); return; }
         const elapsed = now - rippleStart;
         const tMove = Math.min(1, elapsed / RIPPLE_MOVE_MS);
-        // ★ tFade идёт до 1.5 (2 сек / 1.33 — плавнее)
         const tFade = Math.min(1, elapsed / RIPPLE_FADE_MS);
 
         rippleGl.uniform2f(rippleUniforms.uCenter, rippleCenter[0], rippleCenter[1]);
@@ -509,8 +511,6 @@
         if (tFade < 1) {
           rippleRaf = requestAnimationFrame(frame);
         } else {
-          // ★ Ждём ещё чуть-чуть чтобы ripple полностью стал невидимым
-          // (шейдер уже дал fadeCurve = 0)
           finish();
         }
       }
@@ -621,10 +621,11 @@
     screen.appendChild(stripes);
 
     const wrap = el('div', 'orbits-buttons');
+    // ★ My Avatar перенесён под Игра онлайн
     const items = [
       { label: T('solo'),     id: 'solo' },
-      { label: T('avatar'),   id: 'avatar' },
       { label: T('online'),   id: 'online' },
+      { label: T('avatar'),   id: 'avatar' },
       { label: T('shop'),     id: 'shop' },
       { label: T('score'),    id: 'score' },
       { label: T('settings'), id: 'settings' }
@@ -659,7 +660,8 @@
         if (on && !active) { active = true; btn.classList.add('hover'); }
         else if (!on && active) { active = false; btn.classList.remove('hover'); }
       };
-      setTimeout(() => btn.classList.add('appear'), 100 + index * 180);
+      // ★ Появление кнопок на 20% быстрее (было 180, стало 144)
+      setTimeout(() => btn.classList.add('appear'), 100 + index * 144);
 
       const doOpen = (e) => {
         if (e) e.preventDefault();
@@ -717,91 +719,147 @@
 
   async function goToSubScreen() {
     if (currentScreen === 'sub') return;
-    // ★ 3D-вибрация при переходе
+
+    stopRipple();
+
     vibrateTransition();
 
     const title = container.querySelector('.orbits-title-screen');
     const hint  = container.querySelector('.orbits-tap-hint');
     const name  = container.querySelector('.orbits-title-name');
     musicQuiet();
+
     if (hint) { hint.style.transition = 'opacity 0.5s ease'; hint.classList.remove('show'); hint.style.opacity = '0'; }
     if (name) { name.style.transition = 'opacity 0.5s ease, transform 0.5s ease'; name.classList.remove('show'); name.style.opacity = '0'; }
-
-    const oldTitle = container.querySelector('.orbits-title-screen');
-    if (oldTitle) {
-      oldTitle.style.transition = 'opacity ' + TRANSITION_OUT_MS + 'ms ease';
-      oldTitle.style.opacity = '0';
-    }
-    await sleep(TRANSITION_OUT_MS);
 
     const sub = buildSubScreen();
     container.appendChild(sub);
     attachButtonHandlers(sub);
 
+    if (title) title.remove();
+
     await sleep(30);
     sub.style.transition = 'opacity ' + TRANSITION_IN_MS + 'ms ease';
     sub.classList.add('fade-in');
 
-    setTimeout(() => { if (title) title.remove(); }, TRANSITION_IN_MS);
     currentScreen = 'sub';
     titleLock = false;
     subLock = false;
   }
 
   async function goToTitleScreen() {
-    // ★ 3D-вибрация при переходе
+    stopRipple();
+
     vibrateTransition();
 
     const sub = container.querySelector('.orbits-sub-screen');
     if (!sub) { await showTitleScreen(false); return; }
     musicLoud();
 
-    sub.style.transition = 'opacity ' + TRANSITION_OUT_MS + 'ms ease';
-    sub.classList.remove('fade-in');
-    sub.style.opacity = '0';
-    await sleep(TRANSITION_OUT_MS);
+    const titleScreen = buildTitleScreen();
+    container.appendChild(titleScreen);
 
     sub.remove();
+
+    await sleep(50);
+    const title = titleScreen.querySelector('.orbits-title-name');
+    const hint = titleScreen.querySelector('.orbits-tap-hint');
+
+    title.classList.add('show');
+    await sleep(900);
+    hint.classList.add('show');
+
     currentScreen = 'title';
     titleLock = false;
     subLock = false;
-    await showTitleScreen(false);
+
+    await sleep(700);
+    titleLock = false;
+
+    const onTap = async (e) => {
+      if (titleLock) return;
+      if (currentScreen !== 'title') return;
+      if (soundLockActive) return;
+      titleLock = true;
+      vibrateWave();
+      sfxAndLock('sys_tap_screen', 1.0, 400);
+      const point = getPointer(e);
+      if (point) waterRipple(point.x, point.y);
+      setTimeout(() => goToSubScreen(), SUB_APPEAR_MS);
+    };
+    titleScreen.addEventListener('click', onTap, { once: true });
+    titleScreen.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      onTap(e);
+    }, { once: true, passive: false });
   }
 
   function injectStyles() {
-    if (document.getElementById('orbits-menu-styles-v6')) return;
+    if (document.getElementById('orbits-menu-styles-v8')) return;
     const css = `
+      /* ★ Контейнер — изоляция композиции */
+      #game-container {
+        contain: layout style paint;
+        isolation: isolate;
+      }
+
+      /* ★ СЛОЙ 1: ФОН — статичный, не двигается, не меняет яркость */
       .orbits-persistent-bg {
         position: absolute; inset: 0;
         background-size: cover; background-position: center;
+        background-repeat: no-repeat;
         opacity: 0;
-        filter: brightness(1.0);   /* ★ фон 100% */
+        filter: none !important;
         transform: none !important;
-        transition: opacity 1.2s ease; z-index: 1;
+        transition: opacity 1.2s ease;
+        z-index: 1;
         will-change: opacity;
+        contain: strict;
+        pointer-events: none;
       }
       .orbits-persistent-bg.show { opacity: 1; }
 
+      /* ★ СЛОЙ 2: RIPPLE */
       .orbits-ripple-wrap {
         position: absolute; inset: 0;
-        z-index: 2; pointer-events: none;
+        z-index: 2;
+        pointer-events: none;
         overflow: hidden;
+        contain: strict;
+      }
+      .orbits-ripple-canvas {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.5s ease;
       }
 
-      .orbits-white-overlay {
-        position: absolute; inset: 0; background: #ffffff;
-        z-index: 9999; opacity: 0; pointer-events: none; will-change: opacity;
-      }
-      .orbits-white-overlay.show { opacity: 1; }
-
+      /* ★ СЛОЙ 3: UI-экраны */
       .orbits-title-screen, .orbits-sub-screen {
-        position: absolute; inset: 0; overflow: hidden;
-        color: #fff; z-index: 5; pointer-events: auto;
+        position: absolute; inset: 0;
+        overflow: hidden;
+        color: #fff;
+        z-index: 5;
+        pointer-events: auto;
+        opacity: 0;
+        transition: opacity 1s ease;
+        contain: layout style;
+        will-change: opacity;
       }
       .orbits-title-screen { cursor: pointer; opacity: 1; }
       .orbits-sub-screen { opacity: 0; }
       .orbits-sub-screen.fade-in { opacity: 1; }
 
+      .orbits-white-overlay {
+        position: absolute; inset: 0; background: #ffffff;
+        z-index: 9999; opacity: 0; pointer-events: none;
+        will-change: opacity;
+        contain: strict;
+      }
+      .orbits-white-overlay.show { opacity: 1; }
+
+      /* Логотип титульного */
       .orbits-title-name {
         position: absolute; left: 6vw; bottom: 12vh;
         width: min(48vw, 600px); z-index: 5;
@@ -813,6 +871,7 @@
         display: block; width: 100%; height: auto;
         filter: brightness(1.3) drop-shadow(0 0 30px rgba(160,100,255,1));
       }
+
       .orbits-tap-hint {
         position: absolute; left: 50%; bottom: 6vh;
         transform: translateX(-50%);
@@ -826,26 +885,25 @@
       .orbits-tap-hint.show { opacity: 0.95; }
       @keyframes orbits-hint-pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
 
-      .orbits-ripple-canvas {
-        position: absolute; inset: 0;
-        width: 100%; height: 100%;
-        pointer-events: none; opacity: 0;
-        transition: opacity 0.5s ease;
-      }
-
+      /* Вуаль и стрипы */
       .orbits-veil {
         position: absolute; inset: 0;
         background: linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 55%);
         z-index: 2; pointer-events: none;
       }
-      .orbits-stripes { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+      .orbits-stripes {
+        position: absolute; inset: 0;
+        z-index: 3; pointer-events: none;
+        overflow: hidden;
+      }
       .orbits-stripe {
         position: absolute; top: 0; bottom: 0; width: 30%;
         background-size: 180px 180px; background-repeat: repeat;
         opacity: 0.15;
         filter: invert(1) brightness(1.6) contrast(1.1);
         mix-blend-mode: screen;
-        animation: orbits-stripe-move 36s linear infinite;
+        /* ★ Флаги на 70% быстрее (36s -> 10.8s) */
+        animation: orbits-stripe-move 10.8s linear infinite;
         transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
         will-change: transform;
       }
@@ -855,6 +913,7 @@
       .orbits-sub-screen.fade-in .orbits-stripe-right { transform: skewX(-8deg) translateY(0) translateX(4%); }
       @keyframes orbits-stripe-move { 0% { background-position: 0 0; } 100% { background-position: 360px -360px; } }
 
+      /* Кнопки */
       .orbits-buttons {
         position: absolute; left: 6vw; top: 14vh;
         width: min(48vw, 600px);
@@ -868,7 +927,8 @@
         color: #2a2a3a; font-size: 16px; letter-spacing: 1px;
         border-radius: 6px; cursor: pointer;
         transform-origin: left center;
-        opacity: 0; transform: translateX(-60px) scale(0.9);
+        opacity: 0;
+        transform: translateX(-60px) scale(0.9);
         filter: brightness(0.4);
         transition:
           transform 0.5s cubic-bezier(0.16,1,0.3,1),
@@ -905,12 +965,19 @@
       }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-menu-styles-v6';
+    style.id = 'orbits-menu-styles-v8';
     style.textContent = css;
     document.head.appendChild(style);
   }
 
   async function start() {
+    ['orbits-menu-styles', 'orbits-menu-styles-v2', 'orbits-menu-styles-v3',
+     'orbits-menu-styles-v4', 'orbits-menu-styles-v5', 'orbits-menu-styles-v6',
+     'orbits-menu-styles-v7'].forEach(id => {
+      const old = document.getElementById(id);
+      if (old) old.remove();
+    });
+
     container = document.getElementById('game-container') || document.body;
     container.style.position = 'absolute';
     container.style.inset = '0';
@@ -925,7 +992,6 @@
     window.__ORBITS_RETURNING__ = false;
 
     if (!returning && !window.__ORBITS_MENU_SEEN__) {
-      // ★ Белый оверлей УЖЕ показан в index.html — просто показываем титульный
       window.__ORBITS_MENU_SEEN__ = true;
       await showTitleScreen(true);
     } else if (returning) {

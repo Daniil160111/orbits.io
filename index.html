@@ -160,11 +160,10 @@
   #pwa-view { position:absolute; inset:0; display:none; overflow:hidden; background:#000; }
   #pwa-view.show { display:block; }
 
-  /* ★ Переход предупреждение → загрузка — 1.5 сек */
   #screen-disclaimer {
     position:absolute; inset:0; z-index:100; background:#000;
     display:flex; align-items:center; justify-content:center;
-    opacity:1; transition: opacity 1.5s ease;
+    opacity:1; transition: opacity 1s ease;
   }
   #screen-disclaimer.hide { opacity:0; pointer-events:none; }
   #screen-disclaimer img { width:100%; height:100%; object-fit: contain; object-position: center; display:block; }
@@ -172,6 +171,7 @@
   #screen-loader {
     position:absolute; inset:0; z-index:90; background:#000;
     opacity:0; transition: opacity 1.5s ease; overflow:hidden;
+    display: flex; align-items: center; justify-content: center;
   }
   #screen-loader.show { opacity:1; }
 
@@ -181,9 +181,9 @@
     position:absolute; top:50%; left:50%; transform: translate(-50%, -50%);
     z-index:3; width: min(120vw, 1040px); height:auto; max-height:80vh; object-fit: contain;
     filter: drop-shadow(0 16px 60px rgba(140,80,255,0.85)); pointer-events:none;
+    transition: opacity 0.5s ease;
   }
 
-  /* ★ Прогресс над «Загрузка...» */
   #loading-progress {
     position: absolute;
     bottom: 8.5vh;
@@ -197,6 +197,7 @@
     text-shadow: 0 0 14px rgba(180,120,255,1), 0 0 28px rgba(140,80,255,0.6);
     text-align: right;
     pointer-events: none;
+    transition: opacity 0.5s ease;
   }
 
   #phase-label {
@@ -279,7 +280,7 @@
     box-shadow: 0 24px 80px rgba(0,0,0,0.9), 0 0 60px rgba(140,80,255,0.35);
     transform: scale(0.7);
     opacity: 0;
-    transition: transform 1s cubic-bezier(0.16,1,0.3,1), opacity 1s ease;
+    transition: transform 0.7s cubic-bezier(0.16,1,0.3,1), opacity 0.7s ease;
   }
   #download-dialog.dimmed .dd-box {
     transform: scale(1);
@@ -383,9 +384,7 @@
     <div id="screen-loader">
       <canvas id="loader-canvas"></canvas>
       <img id="loader-logo-center" src="icon/name.png" alt="ORBITS.IO">
-
       <div id="loading-progress">Поиск ассетов</div>
-
       <div id="phase-label">
         <span class="letter" style="animation-delay:0.00s">З</span>
         <span class="letter" style="animation-delay:0.08s">а</span>
@@ -646,7 +645,6 @@
   ];
 
   const BROWSER_MUSIC_TAIL_TRIM = 0.022;
-
   const LOAD_URL = 'load.json';
   const DB_NAME = 'orbits_io';
   const DB_VERSION = 2;
@@ -666,7 +664,7 @@
 
   const MIN_LOADING_MS = 1000;
   const WATCHDOG_MS = 60000;
-  const LOADER_FADE_MS = 1500;   // ★ 1.5 сек — переход картинка → загрузка
+  const LOADER_FADE_MS = 1500;
   const FETCH_TRIES = 3;
   const FETCH_RETRY_DELAY = 500;
 
@@ -695,7 +693,6 @@
   }
   function musicVolume() { const v = getS('musicVolume'); return (typeof v === 'number') ? v : 0.8; }
 
-  // ★ Прогресс
   let stats = { loadedBytes: 0, totalBytes: 0 };
   let assetsCounted = false;
   let progressTimer = 0;
@@ -719,7 +716,6 @@
     if (progressTimer) { clearInterval(progressTimer); progressTimer = 0; }
   }
 
-  // ===== IndexedDB =====
   function openDB() {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -776,7 +772,6 @@
     return 'fnv_' + h.toString(16).padStart(8, '0') + '_len_' + bytes.length.toString(16);
   }
 
-  // ★ Шейдер флага — амплитуда в 2 раза меньше
   const VERT_SHADER = `
     attribute vec2 a_uv;
     uniform float u_time;
@@ -1137,14 +1132,12 @@
   }
 
   async function fetchAsset(url) {
-    // Кэш — добавляем к прогрессу
     const cached = await dbGet(STORE_ASSETS, url);
     if (cached && cached.blob && cached.blob.size > 0) {
       stats.loadedBytes += cached.size;
       updateLoadingProgress();
       return cached;
     }
-    // Загрузка — downloadOnce уже добавляет по чанкам
     const blob = await downloadWithFallback(url);
     const ab = await blob.arrayBuffer();
     const hash = await sha256(ab);
@@ -1202,7 +1195,6 @@
     return collectedAssets;
   }
 
-  // ★ Считаем ТОЛЬКО total — loadedBytes заполнится в fetchAsset
   async function countAssetsSize(assets) {
     stats.totalBytes = 0;
     stats.loadedBytes = 0;
@@ -1347,47 +1339,41 @@
     await transitionToBlock(prev);
   }
 
-  // ★ Переход index → menu
-  // Фаза 1: 1.5 сек — лого растёт на 250% + музыка затихает
-  // Фаза 2: 0.7 сек — белый убирается, титульный появляется
+  // ★ Переход index → menu (Всё одновременно за 1.5с)
   async function goToMenuWithTransition() {
     const flash = $('white-flash');
     const logo = $('transition-logo');
     const img = logo.querySelector('img');
 
-    // 1. Сброс — без transition
+    // 1. Сброс
     logo.style.transition = 'none';
     logo.style.display = 'flex';
     logo.style.opacity = '0';
     img.style.transition = 'none';
     img.style.transform = 'scale(1)';
 
-    // 2. Форсируем reflow — КРИТИЧНО
     void logo.offsetWidth;
     void img.offsetWidth;
 
-    // 3. Ставим transition
+    // 2. Ставим transition
     logo.style.transition = 'opacity 0.6s ease';
     img.style.transition = 'transform 1.5s cubic-bezier(0.16,1,0.3,1)';
-
-    // 4. Форсируем reflow — ОБЯЗАТЕЛЬНО после установки transition
     void img.offsetWidth;
 
-    // 5. Запускаем — рост до 250%
+    // 3. Запускаем анимацию — логотип растет до 250%
     logo.classList.add('show');
     img.style.transform = 'scale(2.5)';
 
+    // 4. Одновременно показываем белый оверлей
+    flash.style.transition = 'opacity 1.5s ease';
+    flash.classList.add('show');
+
+    // 5. Музыка затихает
     if (window.Sound) {
       try { Sound.setMusicVolume(0.0001, 1.5); } catch (e) {}
     }
 
-    // ★ Фаза 1: 1.5 сек — лого растёт до 250% + музыка затихает
-    await sleep(1500);
-
-    // ★ Фаза 2: белый оверлей 1.5 сек
-    flash.style.transition = 'opacity 1.5s ease';
-    flash.classList.add('show');
-
+    // ★ Фаза 1: 1.5 сек — белый фон, рост логотипа, затухание музыки
     await sleep(1500);
 
     // Под белым — переключаем на menu
@@ -1406,7 +1392,7 @@
 
     await sleep(200);
 
-    // ★ Фаза 3: 0.7 сек — убираем белый
+    // ★ Фаза 2: 0.7 сек — убираем белый
     flash.style.transition = 'opacity 0.7s ease';
     flash.classList.remove('show');
 
@@ -1461,7 +1447,7 @@
     return [coarse, touch, noHover].filter(Boolean).length >= 2;
   }
 
-  // ★ Окно — замораживает, музыка затихает 0.5 сек (не пауза)
+  // ★ Окно загрузки (с заморозкой, блюром и звуком окна)
   function showDownloadDialog(type, sizeMB) {
     return new Promise((resolve) => {
       const dialog = $('download-dialog');
@@ -1491,9 +1477,16 @@
       yesBtn.textContent = BT('dl_yes');
       noBtn.textContent = BT('dl_no');
 
+      // Заморозка фона, музыки и блюр
       freezeWebGL();
       if (window.Sound) {
-        try { Sound.setMusicVolume(0.0001, 0.5); } catch (e) {}
+        try { Sound.pauseAll(); } catch (e) {}
+      }
+      $('screen-loader').style.filter = 'blur(10px)';
+
+      // Звук окна
+      if (window.Sound) {
+        try { Sound.playSys('window', 0.9); } catch (e) {}
       }
 
       dialog.classList.add('show');
@@ -1505,27 +1498,40 @@
         yesBtn.removeEventListener('click', onYes);
         noBtn.removeEventListener('click', onNo);
       };
+      
       const onYes = () => {
         cleanup();
         if (window.Sound) { try { Sound.playSFX('sys_button', { volume: 0.8 }); } catch (e) {} }
+        
+        // Плавное исчезновение окна (0.7с)
         dialog.classList.remove('dimmed');
-        setTimeout(() => dialog.classList.remove('show'), 700);
-        unfreezeWebGL();
-        if (window.Sound) {
-          try { Sound.setMusicVolume(0.9 * musicVolume(), 0.5); } catch (e) {}
-        }
-        resolve('yes');
+        $('screen-loader').style.filter = 'none';
+        
+        setTimeout(() => {
+            dialog.classList.remove('show');
+            unfreezeWebGL();
+            // Музыка продолжается
+            if (window.Sound) {
+                try { Sound.resumeAll(); } catch (e) {}
+            }
+            resolve('yes');
+        }, 700);
       };
+      
       const onNo = () => {
         cleanup();
         if (window.Sound) { try { Sound.playSFX('sys_button', { volume: 0.8 }); } catch (e) {} }
+        
         dialog.classList.remove('dimmed');
+        $('screen-loader').style.filter = 'none';
+        
         setTimeout(() => {
           dialog.classList.remove('show');
           location.reload();
         }, 400);
         resolve('no');
       };
+      
       yesBtn.addEventListener('click', onYes);
       noBtn.addEventListener('click', onNo);
     });
@@ -1539,10 +1545,7 @@
     } catch (e) {}
 
     const currentVersion = manifest.version || 0;
-
-    if (savedVersion === 0) {
-      return { type: 'first', version: currentVersion };
-    }
+    if (savedVersion === 0) return { type: 'first', version: currentVersion };
 
     let savedAssets = [];
     try {
@@ -1610,14 +1613,25 @@
       if (!window.ORBITS.assets.find(x => x.url === a.url)) window.ORBITS.assets.push(a);
     }
 
-    // 1. Сначала предупреждение
+    // ★ 1. Сначала показываем загрузку "Загрузка..."
+    $('screen-loader').style.transition = 'opacity 0.5s ease';
+    $('screen-loader').classList.add('show');
+    // Скрываем логотип и прогресс, чтобы был только текст
+    $('loader-logo-center').style.opacity = '0';
+    $('loading-progress').style.opacity = '0';
+
+    // ★ 2. Загружаем критичные файлы (картинка, звуки)
+    try { await preloadCritical(); } catch (e) {}
+
+    // ★ 3. Скрываем загрузчик
+    $('screen-loader').classList.remove('show');
+    await sleep(500);
+
+    // ★ 4. Показываем дисклеймер
     $('disclaimer-img').src = URL_DISCLAIMER;
     $('screen-disclaimer').classList.remove('hide');
 
-    // 2. Параллельно — приоритетная загрузка
-    try { await preloadCritical(); } catch (e) {}
-
-    // 3. Ждём тап
+    // ★ 5. Ждем тап
     await sleep(700);
     await new Promise(resolve => {
       const handler = () => {
@@ -1627,43 +1641,42 @@
       $('screen-disclaimer').addEventListener('click', handler);
     });
 
-    // 4. Скрываем disclaimer (1.5 сек плавно) + показываем loader
+    // ★ 6. Скрываем дисклеймер
     $('screen-disclaimer').classList.add('hide');
-    $('screen-loader').style.transition = 'opacity ' + LOADER_FADE_MS + 'ms ease';
+    await sleep(500);
+
+    // ★ 7. Восстанавливаем видимость элементов загрузчика
+    $('loader-logo-center').style.opacity = '1';
+    $('loading-progress').style.opacity = '1';
+
+    // ★ 8. Инициализация WebGL и показ загрузчика с флагом
+    if (!initWebGL()) console.warn('WebGL не поддерживается');
+    else startWebGL();
+
+    $('screen-loader').style.transition = 'opacity 1.5s ease';
     $('screen-loader').classList.add('show');
 
-    // ★ Сразу показываем «Поиск ассетов»
+    // ★ 9. Запуск музыки загрузки
+    await prepareAll();
+
+    // ★ 10. «Обнаружение ассетов»
     assetsCounted = false;
     stats.loadedBytes = 0;
     stats.totalBytes = 0;
     updateLoadingProgress();
-
-    // ★ Запускаем тикер сразу — обновляет каждые 100мс
     startProgressTicker();
 
-    // 5. WebGL
-    if (!initWebGL()) console.warn('WebGL не поддерживается');
-    else startWebGL();
+    await sleep(1500); // Время для HEAD-запросов
 
-    // ★ 6. Ждём 1.5 сек — плавная смена картинки на загрузочный экран
-    await sleep(1500);
-
-    // 7. Манифест
+    // Манифест
     try {
       const resp = await fetch(LOAD_URL, { cache: 'no-store' });
       manifest = await resp.json();
     } catch (e) {
-      manifest = {
-        version: 0,
-        blocks: [{ path: './menu.js', assets: [] }],
-        menuEntry: './menu.js'
-      };
+      manifest = { version: 0, blocks: [{ path: './menu.js', assets: [] }], menuEntry: './menu.js' };
     }
 
-    // 8. Загружаем блоки
-    const blocks = (manifest && Array.isArray(manifest.blocks))
-      ? manifest.blocks
-      : [{ path: './menu.js', assets: [] }];
+    const blocks = (manifest && Array.isArray(manifest.blocks)) ? manifest.blocks : [{ path: './menu.js', assets: [] }];
 
     let collectedAssets = [];
     try {
@@ -1677,17 +1690,12 @@
     }
 
     const allAssets = [];
-    for (const a of (window.ORBITS.assets || [])) {
-      if (!allAssets.find(x => x.url === a.url)) allAssets.push(a);
-    }
-    for (const a of collectedAssets) {
-      if (!allAssets.find(x => x.url === a.url)) allAssets.push(a);
-    }
+    for (const a of (window.ORBITS.assets || [])) { if (!allAssets.find(x => x.url === a.url)) allAssets.push(a); }
+    for (const a of collectedAssets) { if (!allAssets.find(x => x.url === a.url)) allAssets.push(a); }
 
-    // ★ 9. Считаем точный размер (только totalBytes)
     await countAssetsSize(allAssets);
 
-    // ★ 10. Окно — с точным размером
+    // ★ 11. Окно загрузки
     const dlInfo = await determineDownloadType(manifest);
     if (dlInfo.type !== 'none') {
       const sizeMB = stats.totalBytes / (1024 * 1024) || 0;
@@ -1697,7 +1705,7 @@
 
     saveManifestInfo(manifest);
 
-    // ★ 11. Загрузка — тикер уже запущен
+    // ★ 12. Загрузка
     await runLoaderPipeline(blocks, allAssets);
   }
 

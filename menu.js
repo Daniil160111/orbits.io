@@ -1,5 +1,5 @@
 /* =====================================================================
-   ORBITS.IO — MAIN MENU v12
+   ORBITS.IO — MAIN MENU v13
    Путь: menu.js
    ===================================================================== */
 (function () {
@@ -255,12 +255,13 @@
     });
   }
 
-  // ★ Фон вынесен в body. z-index: -1, чтобы был ПОД интерфейсом
+  // ★ Фон добавляется в #app с z-index: 1 (выше body, ниже #game-container)
   async function ensurePersistentBg() {
     if (persistentBg && persistentBg.parentNode) return;
     persistentBg = el('div', 'orbits-persistent-bg');
     persistentBg.style.backgroundImage = "url('" + ASSETS.bg + "')";
-    document.body.appendChild(persistentBg);
+    const appRoot = document.getElementById('app') || document.body;
+    appRoot.appendChild(persistentBg);
     await sleep(50);
     persistentBg.classList.add('show');
   }
@@ -809,11 +810,11 @@
   }
 
   function injectStyles() {
-    if (document.getElementById('orbits-menu-styles-v12')) return;
+    if (document.getElementById('orbits-menu-styles-v13')) return;
     const css = `
-      /* ★ ФОН. position: fixed, z-index: -1 */
+      /* ★ ФОН (внутри #app, z-index: 1 — выше body, но ниже #game-container) */
       .orbits-persistent-bg {
-        position: fixed;
+        position: absolute;
         inset: 0;
         background-size: cover;
         background-position: center;
@@ -823,13 +824,13 @@
         transform: translateZ(0) !important;
         will-change: opacity, transform;
         transition: opacity 1.2s ease;
-        z-index: -1;   /* ★ ГАРАНТИРОВАННО ПОД ВСЕМ */
+        z-index: 1;   
         pointer-events: none;
         backface-visibility: hidden;
       }
       .orbits-persistent-bg.show { opacity: 1; }
 
-      /* ★ СЛОЙ ВОДА (внутри game-container) */
+      /* ★ СЛОЙ ВОДА */
       .orbits-ripple-wrap {
         position: absolute; inset: 0;
         z-index: 2;
@@ -968,7 +969,7 @@
       }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-menu-styles-v12';
+    style.id = 'orbits-menu-styles-v13';
     style.textContent = css;
     document.head.appendChild(style);
   }
@@ -977,7 +978,7 @@
     ['orbits-menu-styles', 'orbits-menu-styles-v2', 'orbits-menu-styles-v3',
      'orbits-menu-styles-v4', 'orbits-menu-styles-v5', 'orbits-menu-styles-v6',
      'orbits-menu-styles-v7', 'orbits-menu-styles-v8', 'orbits-menu-styles-v9',
-     'orbits-menu-styles-v10', 'orbits-menu-styles-v11'].forEach(id => {
+     'orbits-menu-styles-v10', 'orbits-menu-styles-v11', 'orbits-menu-styles-v12'].forEach(id => {
       const old = document.getElementById(id);
       if (old) old.remove();
     });

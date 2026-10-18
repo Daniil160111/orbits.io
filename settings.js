@@ -1,19 +1,13 @@
 /* =====================================================================
-   ORBITS.IO — SETTINGS BLOCK v17
+   ORBITS.IO — SETTINGS BLOCK v18 (LIQUID GLASS & 3D BG)
    Путь: settings.js
-   
-   Изменения:
-   - Удалён 3D звук и камера
-   - Вибрация перенесена на 1-ю страницу
-   - Добавлено жидкое стекло (SVG-фильтр)
-   - Все анимации плавные (без рывков)
    ===================================================================== */
 (function () {
   'use strict';
 
   const MUSIC_URLS = ['./Звуки/Меню/Н1-1.mp3'];
   const ASSETS = {
-    bg: './Текстуры/Меню/Фонменю.jpg',
+    bg: './Текстуры/Меню/Фонменю.jpg', // больше не используется, но оставим в кэше
     music: './Звуки/Меню/Н1-1.mp3',
     sfxBtn: './Звуки/Система/Button.wav',
     sfxSet: './Звуки/Система/Setting.wav',
@@ -24,7 +18,6 @@
 
   if (window.ORBITS && ORBITS.registerAssets) {
     ORBITS.registerAssets([
-      { key: 'set_bg', url: ASSETS.bg },
       { key: 'set_music', url: ASSETS.music },
       { key: 'set_sfx_btn', url: ASSETS.sfxBtn },
       { key: 'set_sfx_set', url: ASSETS.sfxSet },
@@ -84,6 +77,7 @@
   const SOUND_LOCK_MS = 350;
   let container = null;
   let root = null;
+  let bgCanvas = null, bgGl = null, bgRaf = 0, bgTime = 0;
   let savedSnapshot = null;
   let working = null;
   let dirty = false;
@@ -355,6 +349,7 @@
     return row;
   }
 
+  // ★ Переключатель (Вибрация) с красным/зеленым цветом
   function buildMiniToggle(key, label, value, hint) {
     const row = el('div', 'st-row st-mini-row');
     const labelWrap = el('div', 'st-label-wrap');
@@ -367,7 +362,9 @@
     row.appendChild(labelWrap);
 
     const trackWrap = el('div', 'st-mini-track');
+    const fill = el('div', 'st-mini-fill'); // Красный/зеленый фон
     const knob = el('div', 'st-mini-knob');
+    trackWrap.appendChild(fill);
     trackWrap.appendChild(knob);
     row.appendChild(trackWrap);
 
@@ -385,7 +382,9 @@
         ? 'transform 0.42s cubic-bezier(0.16,1,0.3,1)'
         : 'transform 0.06s linear';
       knob.style.transform = 'translateY(-50%) translateX(' + x + 'px) scale(' + scale + ')';
-      trackWrap.classList.toggle('on', p >= 0.5);
+      
+      // Плавный переход цвета
+      fill.style.opacity = p.toFixed(2);
     }
     function commitValue(v) {
       const changed = working[key] !== v;
@@ -795,11 +794,116 @@
     if (window.ORBITS && ORBITS.back) await ORBITS.back();
   }
 
+  // ★ ГЕНЕРАТИВНЫЙ 3D ФОН (WebGL)
+  function initBackground() {
+    bgCanvas = el('canvas', 'st-bg-canvas');
+    root.appendChild(bgCanvas);
+    
+    bgGl = bgCanvas.getContext('webgl', { alpha: false, antialias: false });
+    if (!bgGl) return;
+    
+    const vsSource = `
+      attribute vec2 a_pos;
+      void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+    `;
+    const fsSource = `
+      precision highp float;
+      uniform float u_time;
+      uniform vec2 u_res;
+      
+      // Симуляция плавных волн
+      float wave(vec2 p, float t) {
+        return sin(p.x * 2.0 + t) * cos(p.y * 3.0 + t * 0.5) * 0.5 + 0.5;
+      }
+      
+      void main() {
+        vec2 uv = gl_FragCoord.xy / u_res.xy;
+        float t = u_time * 0.15;
+        
+        vec2 p = uv * 3.0;
+        
+        // Искажаем пространство (жидкий металл)
+        float nx = sin(p.y * 1.5 + t) * 0.5 + cos(p.x * 2.0 - t) * 0.5;
+        float ny = cos(p.x * 1.2 - t) * 0.5 + sin(p.y * 1.8 + t) * 0.5;
+        p += vec2(nx, ny) * 0.8;
+        
+        // Слои волн для сине-голубого переливания
+        float w1 = wave(p * 1.0, t);
+        float w2 = wave(p * 2.5, t * 1.5);
+        float w3 = wave(p * 5.0, t * 2.0);
+        
+        // Смешиваем оттенки
+        vec3 c1 = vec3(0.01, 0.05, 0.15); // Глубокий синий
+        vec3 c2 = vec3(0.05, 0.2, 0.4);   // Сине-голубой
+        vec3 c3 = vec3(0.1, 0.4, 0.6);    // Голубой
+        vec3 c4 = vec3(0.0, 0.1, 0.2);    // Тени
+        
+        vec3 color = mix(c1, c2, w1);
+        color = mix(color, c3, w2 * 0.6);
+        color = mix(color, c4, w3 * 0.4);
+        
+        // Виньетка
+        float vig = smoothstep(0.0, 1.0, uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y) * 15.0);
+        color *= vig;
+        
+        // Добавляем свечение в центре
+        float glow = 1.0 - length(uv - 0.5);
+        color += vec3(0.0, 0.05, 0.1) * glow;
+        
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `;
+    
+    function compile(type, src) {
+      const s = bgGl.createShader(type);
+      bgGl.shaderSource(s, src); bgGl.compileShader(s);
+      return bgGl.getShaderParameter(s, bgGl.COMPILE_STATUS) ? s : null;
+    }
+    
+    const vs = compile(bgGl.VERTEX_SHADER, vsSource);
+    const fs = compile(bgGl.FRAGMENT_SHADER, fsSource);
+    if (!vs || !fs) return;
+    
+    const prog = bgGl.createProgram();
+    bgGl.attachShader(prog, vs); bgGl.attachShader(prog, fs);
+    bgGl.linkProgram(prog);
+    bgGl.useProgram(prog);
+    
+    const buf = bgGl.createBuffer();
+    bgGl.bindBuffer(bgGl.ARRAY_BUFFER, buf);
+    bgGl.bufferData(bgGl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), bgGl.STATIC_DRAW);
+    
+    const aPos = bgGl.getAttribLocation(prog, 'a_pos');
+    bgGl.enableVertexAttribArray(aPos);
+    bgGl.vertexAttribPointer(aPos, 2, bgGl.FLOAT, false, 0, 0);
+    
+    const uTime = bgGl.getUniformLocation(prog, 'u_time');
+    const uRes = bgGl.getUniformLocation(prog, 'u_res');
+    
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      bgCanvas.width = window.innerWidth * dpr;
+      bgCanvas.height = window.innerHeight * dpr;
+      bgGl.viewport(0, 0, bgCanvas.width, bgCanvas.height);
+      bgGl.uniform2f(uRes, bgCanvas.width, bgCanvas.height);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    
+    const startTime = performance.now();
+    function loop() {
+      bgRaf = requestAnimationFrame(loop);
+      const t = (performance.now() - startTime) / 1000;
+      bgGl.uniform1f(uTime, t);
+      bgGl.clearColor(0,0,0,1);
+      bgGl.clear(bgGl.COLOR_BUFFER_BIT);
+      bgGl.drawArrays(bgGl.TRIANGLES, 0, 6);
+    }
+    loop();
+  }
+
   function buildBg() {
-    const bg = el('div', 'st-bg');
-    bg.style.backgroundImage = "url('" + ASSETS.bg + "')";
-    root.appendChild(bg);
-    root.appendChild(el('div', 'st-bg-overlay'));
+    // Больше не используем картинку
   }
 
   function buildHeader() {
@@ -921,7 +1025,7 @@
 
   async function buildAll() {
     root.innerHTML = '';
-    buildBg();
+    initBackground();
     const mainPage = el('div', 'st-page st-page-main');
     const langPage = el('div', 'st-page st-page-lang');
     root.appendChild(mainPage);
@@ -959,15 +1063,12 @@
   }
 
   function injectStyles() {
-    if (document.getElementById('orbits-settings-styles-v17')) return;
+    if (document.getElementById('orbits-settings-styles-v18')) return;
     const css = `
-      /* ★ ЖИДКОЕ СТЕКЛО */
       .st-root { position: absolute; inset: 0; z-index: 50; overflow: hidden; pointer-events: auto; color: #fff; }
-      .st-bg { position: absolute; inset: 0; background-size: cover; background-position: center;
-        filter: brightness(0.75) saturate(1.2); z-index: 1; }
-      .st-bg-overlay { position: absolute; inset: 0;
-        background: linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 100%);
-        z-index: 2; pointer-events: none; }
+      
+      /* 3D ФОН */
+      .st-bg-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; display: block; }
 
       .st-page { position: absolute; inset: 0; z-index: 5;
         transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
@@ -983,25 +1084,37 @@
       .st-arrow { pointer-events: auto; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
         background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
         border-radius: 50%; color: #fff; font-size: 26px; font-weight: 900; cursor: pointer;
-        backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: transform 0.2s ease; }
+        backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
+        transition: transform 0.2s ease, background 0.2s ease; }
+      .st-arrow:hover { transform: scale(1.1); background: rgba(255,255,255,0.2); }
       .st-arrow:active { transform: scale(0.9); }
       .st-arrow.inactive { opacity: 0.28; pointer-events: none; }
 
       .st-list { position: absolute; top: 12vh; left: 50%; transform: translateX(-50%);
         width: min(85vw, 820px); display: flex; flex-direction: column; gap: 1.5vh; z-index: 5; }
 
-      /* ★ ЖИДКОЕ СТЕКЛО (Glassmorphism) */
+      /* ★ ЖИДКОЕ СТЕКЛО */
       .st-row { position: relative; display: flex; align-items: center; gap: 2vw; padding: 1.25vh 2.4vh; border-radius: 24px;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
         border: 1px solid rgba(255, 255, 255, 0.25);
-        backdrop-filter: blur(25px) saturate(200%); -webkit-backdrop-filter: blur(25px) saturate(200%);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255,255,255,0.3);
+        
+        /* ★ ПРИЛОЖЕНИЕ SVG-ФИЛЬТРА */
+        backdrop-filter: blur(10px) saturate(150%) url(#glass-distortion); 
+        -webkit-backdrop-filter: blur(10px) saturate(150%) url(#glass-distortion);
+        
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255,255,255,0.4);
         overflow: hidden; opacity: 0; transform: translateY(20px) scale(0.95);
-        transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        /* Плавная пружинная анимация */
+        transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); 
+      }
       .st-row::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 50%;
-        background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+        background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 100%);
         pointer-events: none; border-radius: 24px 24px 0 0; }
       .st-row.show { opacity: 1; transform: translateY(0) scale(1); }
+      
+      /* Эффект наведения на само стекло */
+      .st-row:hover { transform: scale(1.02); box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
 
       .st-label-wrap { flex: 0 0 32%; display: flex; align-items: center; gap: 8px; position: relative; z-index: 2; }
       .st-label { font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: #fff; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
@@ -1009,8 +1122,10 @@
       .st-help { width: 22px; height: 22px; border-radius: 50%;
         background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
         display: flex; align-items: center; justify-content: center;
-        font-size: 12px; font-weight: 900; color: #fff; cursor: pointer; flex: 0 0 auto; transition: background 0.2s ease; }
-      .st-help:active { background: rgba(255,255,255,0.5); }
+        font-size: 12px; font-weight: 900; color: #fff; cursor: pointer; flex: 0 0 auto; 
+        transition: transform 0.2s ease, background 0.2s ease; }
+      .st-help:hover { transform: scale(1.2); }
+      .st-help:active { transform: scale(0.9); background: rgba(255,255,255,0.5); }
 
       .st-tooltip { position: absolute; z-index: 100; max-width: 300px; padding: 10px 14px;
         background: rgba(20,15,40,0.95); border: 1px solid rgba(180,140,255,0.5);
@@ -1020,26 +1135,43 @@
         transition: opacity 0.25s ease, transform 0.25s ease; }
       .st-tooltip.show { opacity: 1; transform: translateY(0); }
 
+      /* ★ Слайдер */
       .st-slider-track { position: relative; flex: 1 1 auto; height: 46px; display: flex; align-items: center; padding: 0 22px; touch-action: none; }
       .st-slider-track-inner { position: relative; width: 100%; height: 12px;
-        background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15);
-        border-radius: 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
+        background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.6); }
       .st-slider-fill { position: absolute; left: 0; top: 0; bottom: 0;
-        background: linear-gradient(90deg, rgba(140,70,255,1) 0%, rgba(200,120,255,1) 100%);
+        background: linear-gradient(90deg, rgba(140,70,255,0.9) 0%, rgba(200,120,255,0.9) 100%);
         border-radius: 20px; box-shadow: 0 0 15px rgba(160,80,255,0.8); }
+      
+      /* ★ КАПЛЯ ВОДЫ (ползунок) */
       .st-slider-knob { position: absolute; top: 50%; left: 0; width: 30px; height: 30px; border-radius: 50%;
-        background: #fff; border: 2px solid rgba(255,255,255,0.9);
-        box-shadow: 0 0 15px rgba(180,120,255,1), 0 4px 10px rgba(0,0,0,0.5);
-        transform: translate(-50%, -50%); pointer-events: none; transition: transform 0.2s ease; }
-      .st-slider-knob.st-knob-active { transform: translate(-50%, -50%) scale(1.3); }
+        background: radial-gradient(circle at 30% 30%, #fff 0%, #e0c8ff 40%, #a070ff 100%);
+        border: 1.5px solid rgba(255,255,255,0.9);
+        box-shadow: 0 0 15px rgba(180,120,255,1), 0 4px 10px rgba(0,0,0,0.5), inset 0 0 5px rgba(255,255,255,0.8);
+        transform: translate(-50%, -50%); pointer-events: none; 
+        transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s ease; }
+      
+      .st-slider-knob.st-knob-active { 
+        transform: translate(-50%, -50%) scale(1.4); 
+        box-shadow: 0 0 25px rgba(200,150,255,1), 0 6px 15px rgba(0,0,0,0.6), inset 0 0 8px rgba(255,255,255,1);
+      }
       .st-value { flex: 0 0 10%; text-align: right; font-size: 14px; color: #fff; font-weight: 800; text-shadow: 0 1px 3px #000; }
 
+      /* ★ Переключатель (Вибрация) */
       .st-mini-track { position: relative; flex: 0 0 66px; height: 32px;
-        background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 40px; cursor: pointer; touch-action: none; transition: background 0.3s ease; }
-      .st-mini-track.on { background: linear-gradient(135deg, rgba(140,70,255,1), rgba(200,120,255,1)); box-shadow: 0 0 15px rgba(160,80,255,0.6); }
+        background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 40px; cursor: pointer; touch-action: none; overflow: hidden; }
+      
+      .st-mini-fill { position: absolute; inset: 0; opacity: 0; 
+        background: linear-gradient(135deg, rgba(74,222,128,0.9), rgba(34,197,94,0.9)); 
+        box-shadow: 0 0 15px rgba(74,222,128,0.6);
+        transition: opacity 0.3s ease; }
+      
       .st-mini-knob { position: absolute; top: 50%; left: 3px; width: 26px; height: 26px; border-radius: 50%;
-        background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.5); transform: translateY(-50%); pointer-events: none; }
+        background: radial-gradient(circle at 30% 30%, #fff 0%, #f0f0f0 100%); 
+        box-shadow: 0 2px 6px rgba(0,0,0,0.5); transform: translateY(-50%); pointer-events: none; 
+        transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }
 
       .st-seg { flex: 1 1 auto; display: flex; gap: 8px; position: relative; z-index: 2; }
       .st-seg-btn { flex: 1 1 0; padding: 10px 8px; text-align: center;
@@ -1047,6 +1179,7 @@
         color: rgba(255,255,255,0.6); cursor: pointer;
         background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
         transition: all 0.3s ease; }
+      .st-seg-btn:hover { background: rgba(255,255,255,0.15); transform: scale(1.02); }
       .st-seg-btn.active { color: #fff; background: linear-gradient(135deg, rgba(140,70,255,0.8), rgba(200,120,255,0.8));
         border-color: rgba(255,255,255,0.4); box-shadow: 0 0 15px rgba(160,80,255,0.5); }
 
@@ -1054,32 +1187,45 @@
       .st-multi-labels { display: flex; font-size: 14px; letter-spacing: 2px; color: rgba(255,255,255,0.5); font-weight: 800; }
       .st-multi-label { flex: 1 1 0; text-align: center; cursor: pointer; transition: color 0.3s ease; }
       .st-multi-label.active { color: #fff; text-shadow: 0 0 10px rgba(200,120,255,1); }
-      .st-multi-track { position: relative; height: 32px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2);
+      .st-multi-track { position: relative; height: 32px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
         border-radius: 40px; cursor: pointer; touch-action: none; width: 100%; overflow: hidden; }
       .st-multi-knob { position: absolute; top: 50%; left: 3px; width: 26px; height: 26px; border-radius: 50%;
-        background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.5); transform: translateY(-50%); pointer-events: none; }
+        background: radial-gradient(circle at 30% 30%, #fff 0%, #f0f0f0 100%); 
+        box-shadow: 0 2px 6px rgba(0,0,0,0.5); transform: translateY(-50%); pointer-events: none; 
+        transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }
 
       .st-nick-wrap { flex: 1 1 auto; position: relative; z-index: 2; }
       .st-nick-input { width: 100%; padding: 10px 18px;
         background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 14px;
-        color: #fff; font-size: 16px; outline: none; transition: border 0.3s ease; }
+        color: #fff; font-size: 16px; outline: none; transition: border 0.3s ease, box-shadow 0.3s ease; }
       .st-nick-input:focus { border-color: rgba(200,120,255,0.8); box-shadow: 0 0 10px rgba(200,120,255,0.5); }
 
+      /* ★ Кнопки Назад/Сохранить (жидкое стекло) */
       .st-btn-back, .st-btn-save { position: absolute; bottom: 4vh; padding: 1.5vh 4vh;
         color: #fff; font-family: inherit; font-size: 18px; letter-spacing: 2px;
         text-transform: uppercase; font-weight: 900; border-radius: 20px; cursor: pointer; z-index: 8;
-        backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-        transition: transform 0.2s ease, box-shadow 0.2s ease; }
-      .st-btn-back { left: 4vw; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); }
-      .st-btn-save { right: 4vw; background: linear-gradient(135deg, rgba(140,70,255,0.9), rgba(200,120,255,0.9));
-        border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 8px 24px rgba(140,70,255,0.5); }
-      .st-btn-back:active, .st-btn-save:active { transform: scale(0.95); }
+        
+        backdrop-filter: blur(10px) url(#glass-distortion); 
+        -webkit-backdrop-filter: blur(10px) url(#glass-distortion);
+        
+        transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s ease, background 0.2s ease; }
+      
+      .st-btn-back { left: 4vw; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); }
+      .st-btn-back:hover { transform: scale(1.05); background: rgba(255,255,255,0.2); }
+      .st-btn-back:active { transform: scale(0.95); }
+      
+      .st-btn-save { right: 4vw; background: linear-gradient(135deg, rgba(140,70,255,0.8), rgba(200,120,255,0.8));
+        border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 8px 24px rgba(140,70,255,0.4); }
+      .st-btn-save:hover { transform: scale(1.05); box-shadow: 0 12px 30px rgba(140,70,255,0.6); }
+      .st-btn-save:active { transform: scale(0.95); }
 
       .st-reset-row { justify-content: center; padding: 1.5vh 2.4vh;
         background: rgba(255,80,80,0.15); border: 1px solid rgba(255,80,80,0.3); }
       .st-reset-btn { width: 100%; padding: 12px; font-family: inherit; font-size: 15px;
         letter-spacing: 1.5px; text-transform: uppercase; font-weight: 900; color: #ffb8b8;
-        background: transparent; border: none; cursor: pointer; text-shadow: 0 0 10px rgba(255,80,80,0.8); }
+        background: transparent; border: none; cursor: pointer; text-shadow: 0 0 10px rgba(255,80,80,0.8); 
+        transition: transform 0.2s ease; }
+      .st-reset-btn:hover { transform: scale(1.05); }
 
       .st-modal { position: absolute; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
         background: rgba(0,0,0,0); opacity: 0; transition: opacity 0.5s ease; }
@@ -1087,18 +1233,21 @@
       .st-modal-box { width: min(88vw, 480px); padding: 30px 26px;
         background: linear-gradient(135deg, rgba(40,30,60,0.95), rgba(20,15,30,0.95));
         border: 1px solid rgba(255,255,255,0.2); border-radius: 24px; text-align: center;
-        transform: scale(0.8); opacity: 0; transition: transform 0.5s ease, opacity 0.5s ease; }
+        transform: scale(0.8); opacity: 0; 
+        transition: transform 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.5s ease; }
       .st-modal.show .st-modal-box { transform: scale(1); opacity: 1; }
       .st-modal-box h3 { font-size: 20px; color: #fff; margin-bottom: 10px; }
       .st-modal-box p { font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 20px; }
       .st-btn { padding: 14px; font-family: inherit; font-size: 16px; font-weight: 800;
-        border-radius: 16px; cursor: pointer; display: block; width: 100%; margin-top: 10px; border: none; color: #fff; }
+        border-radius: 16px; cursor: pointer; display: block; width: 100%; margin-top: 10px; border: none; color: #fff; 
+        transition: transform 0.2s ease; }
+      .st-btn:hover { transform: scale(1.02); }
       .st-btn-primary { background: linear-gradient(135deg, rgba(140,70,255,1), rgba(200,120,255,1)); }
       .st-btn-danger { background: rgba(255,80,80,0.8); }
       .st-btn-secondary { background: rgba(255,255,255,0.1); }
     `;
     const style = document.createElement('style');
-    style.id = 'orbits-settings-styles-v17';
+    style.id = 'orbits-settings-styles-v18';
     style.textContent = css;
     document.head.appendChild(style);
   }
@@ -1109,7 +1258,7 @@
      'orbits-settings-styles-v7', 'orbits-settings-styles-v8', 'orbits-settings-styles-v9',
      'orbits-settings-styles-v10', 'orbits-settings-styles-v11', 'orbits-settings-styles-v12',
      'orbits-settings-styles-v13', 'orbits-settings-styles-v14', 'orbits-settings-styles-v15',
-     'orbits-settings-styles-v16'].forEach(id => {
+     'orbits-settings-styles-v16', 'orbits-settings-styles-v17'].forEach(id => {
       const old = document.getElementById(id);
       if (old) old.remove();
     });

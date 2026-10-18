@@ -1,40 +1,15 @@
 /* =====================================================================
-   ORBITS.IO — SOUND ENGINE v4
+   ORBITS.IO — SOUND ENGINE v5
    Путь: sounds.js
 
    Возможности:
-   - Моно / Стерео / Пространство
-   - Spatial 3D: HRTF (наушники) + Ambisonics + Crossfeed (динамики)
-   - Head tracking (через HeadTracking модуль)
-   - Калибровка (сохраняется, применяется к spatial)
-   - Music crossfade при повторе (исправлен баг setTimeout)
-   - Без внешних библиотек
-
-   API:
-     Sound.init()
-     Sound.unlock()
-     Sound.setAudioMode('mono'|'stereo'|'spatial')
-     Sound.getAudioMode()
-     Sound.enableSpatialNoHeadphones(bool)
-     Sound.enableSpatialHeadphones(bool)
-     Sound.enableHeadTracking(bool)
-     Sound.loadBuffer(key, source)
-     Sound.playMusic(key, opts)
-     Sound.playMusicIntroLoop(key, opts)
-     Sound.playMusicCrossfade(key, opts)
-     Sound.stopMusic(fadeOut)
-     Sound.playSFX(key, opts)
-     Sound.playSpatial(key, position, opts)
-     Sound.playSys(name, vol)
-     Sound.setListenerOrientation(yaw, pitch, roll)
-     Sound.setListenerPosition(x, y, z)
-     Sound.applyCalibration(calibration)
-     Sound.preloadAllSys()
+   - Моно / Стерео / Пространство (Dolby Surround)
+   - Music crossfade при повторе (без багов с setTimeout)
+   - Spatial = Haas effect + anti-phase кроссфид
    ===================================================================== */
 (function (global) {
   'use strict';
 
-  // ============ КОНСТАНТЫ ============
   const SYS_SOUNDS = {
     back_select_menu: './Звуки/Система/Back-select-menu.wav',
     back:             './Звуки/Система/Back.wav',
@@ -51,16 +26,12 @@
   };
   const SYS_PREFIX = 'sys_';
 
-  const CROSSFADE_TAIL = 0.015;   // 15 мс наложение в музыке
-  const FADE_SMOOTH = 0.02;       // 20 мс для setTargetAtTime
+  const CROSSFADE_TAIL = 0.015;
+  const FADE_SMOOTH = 0.02;
 
-  // Crossfeed для динамиков
-  const CROSSFEED_DELAY_MS = 0.30;  // задержка L→R / R→L
-  const CROSSFEED_GAIN = 0.28;      // 28% уровень перекрёстной связи
-
-  // Ambisonics первого порядка — 8 виртуальных динамиков
-  const AMBI_SPEAKER_ANGLES = [-135, -90, -45, 0, 45, 90, 135, 180];
-  const AMBI_SPEAKER_GAIN = 1 / Math.sqrt(8);
+  // Haas effect + Crossfeed для Dolby Surround
+  const SURROUND_DELAY = 0.008; // 8 мс
+  const SURROUND_CROSS = -0.2;  // Anti-phase
 
   const Sound = {
     ctx: null,
@@ -69,29 +40,16 @@
     sfxGain: null,
     unlocked: false,
 
-    // ============ РЕЖИМЫ ============
-    _audioMode: 'stereo',              // 'mono' | 'stereo' | 'spatial'
-    _spatialNoHeadphones: false,       // динамики
-    _spatialHeadphones: false,         // наушники (HRTF)
+    _audioMode: 'stereo',
 
-    // ============ LISTENER ============
-    _listenerOrientation: { yaw: 0, pitch: 0, roll: 0 },
-    _listenerPosition: { x: 0, y: 0, z: 0 },
-
-    // ============ КАЛИБРОВКА ============
-    _calibration: null,                // { centerYaw, centerPitch, earDistancePx, sceneWidth }
-
-    // ============ BUFFERS ============
     _buffers: {},
     _musicNodes: null,
-    _musicTimers: [],                  // ★ все setTimeout для отмены
+    _musicTimers: [],
     _sfxPool: [],
     _poolSize: 20,
     _securityInstalled: false,
     _sysPreloaded: false,
-    _headTrackingUnsub: null,
 
-    // ============ INIT ============
     init() {
       if (this.ctx) return this.ctx;
       const AC = global.AudioContext || global.webkitAudioContext;
@@ -120,22 +78,14 @@
         this._sfxPool.push({ gain: g, busy: false, source: null, nodes: [] });
       }
 
-      // Подписка на смену настроек
       if (global.Settings && global.Settings.onChange) {
         global.Settings.onChange((key) => {
-          if (key === 'audioMode' || key === 'spatialNoHeadphones' ||
-              key === 'spatialHeadphones' || key === 'headTracking') {
+          if (key === 'audioMode') {
             this._readSettings();
             this._applyAudioMode();
-            if (key === 'headTracking') {
-              this.enableHeadTracking(!!global.Settings.get('headTracking'));
-            }
           }
         });
       }
-
-      // Автокалибровка из localStorage
-      this._loadCalibration();
 
       this.installSecurity();
       return this.ctx;
@@ -143,22 +93,8 @@
 
     _readSettings() {
       if (!global.Settings) return;
-      const s = global.Settings;
-      const mode = s.get('audioMode');
+      const mode = global.Settings.get('audioMode');
       if (mode) this._audioMode = mode;
-      this._spatialNoHeadphones = !!s.get('spatialNoHeadphones');
-      this._spatialHeadphones = !!s.get('spatialHeadphones');
-    },
-
-    _loadCalibration() {
-      try {
-        const raw = localStorage.getItem('orbits_head_tracking');
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed.done) {
-          this._calibration = parsed;
-        }
-      } catch (e) {}
     },
 
     _applyAudioMode() {
@@ -183,44 +119,7 @@
     },
 
     getAudioMode() { return this._audioMode; },
-    enableSpatialNoHeadphones(v) { this._spatialNoHeadphones = !!v; },
-    enableSpatialHeadphones(v) { this._spatialHeadphones = !!v; },
 
-    // ============ HEAD TRACKING ============
-    enableHeadTracking(enable) {
-      if (enable) {
-        if (!global.HeadTracking) {
-          console.warn('[Sound] HeadTracking модуль не загружен');
-          return false;
-        }
-        if (this._headTrackingUnsub) return true;
-        this._headTrackingUnsub = global.HeadTracking.onUpdate((data) => {
-          this.setListenerOrientation(data.yaw, data.pitch, data.roll);
-        });
-        console.log('[Sound] Head tracking включён');
-        return true;
-      } else {
-        if (this._headTrackingUnsub) {
-          this._headTrackingUnsub();
-          this._headTrackingUnsub = null;
-        }
-        this.setListenerOrientation(0, 0, 0);
-        console.log('[Sound] Head tracking выключен');
-        return true;
-      }
-    },
-
-    isHeadTrackingEnabled() {
-      return !!this._headTrackingUnsub;
-    },
-
-    // ============ CALIBRATION ============
-    applyCalibration(calibration) {
-      this._calibration = calibration || null;
-      this._updateListener();
-    },
-
-    // ============ SECURITY ============
     installSecurity() {
       if (this._securityInstalled) return;
       this._securityInstalled = true;
@@ -258,7 +157,6 @@
       }, { passive: false });
     },
 
-    // ============ UNLOCK ============
     async unlock() {
       this.init();
       if (!this.ctx) return false;
@@ -274,7 +172,6 @@
       return true;
     },
 
-    // ============ BUFFER ============
     async loadBuffer(key, source, opts = {}) {
       if (!opts.force && this._buffers[key]) return this._buffers[key];
       this.init();
@@ -319,7 +216,6 @@
 
     _stopNode(node, when) { try { node.stop(when); } catch (e) {} },
 
-    // ★ Отмена всех запланированных setTimeout
     _clearMusicTimers() {
       for (let i = 0; i < this._musicTimers.length; i++) {
         clearTimeout(this._musicTimers[i]);
@@ -327,7 +223,6 @@
       this._musicTimers = [];
     },
 
-    // ============ MUSIC ============
     async playMusic(key, opts = {}) {
       this.init();
       if (!this.ctx) return null;
@@ -419,7 +314,6 @@
       return this._musicNodes;
     },
 
-    // ★ Crossfade — ИСПРАВЛЕН баг с setTimeout
     async playMusicCrossfade(key, opts = {}) {
       this.init();
       if (!this.ctx) return null;
@@ -519,186 +413,6 @@
       this._musicNodes = null;
     },
 
-    // ============ SPATIAL PANNER ============
-    _createPanner(position) {
-      const panner = this.ctx.createPanner();
-
-      // ★ Выбор panning model
-      if (this._spatialHeadphones) {
-        panner.panningModel = 'HRTF';
-      } else {
-        panner.panningModel = 'equalpower';
-      }
-
-      panner.distanceModel = 'inverse';
-      panner.refDistance = 1;
-      panner.maxDistance = 10000;
-      panner.rolloffFactor = 1;
-      panner.coneInnerAngle = 360;
-      panner.coneOuterAngle = 0;
-      panner.coneOuterGain = 0;
-
-      const now = this.ctx.currentTime;
-      const px = position.x || 0, py = position.y || 0, pz = position.z || 0;
-      if (panner.positionX) {
-        panner.positionX.setValueAtTime(px, now);
-        panner.positionY.setValueAtTime(py, now);
-        panner.positionZ.setValueAtTime(pz, now);
-      } else {
-        panner.setPosition(px, py, pz);
-      }
-
-      this._updateListener();
-      return panner;
-    },
-
-    _updateListener() {
-      if (!this.ctx) return;
-      const l = this.ctx.listener;
-      const now = this.ctx.currentTime;
-      const o = this._listenerOrientation;
-      const p = this._listenerPosition;
-
-      if (l.positionX) {
-        l.positionX.setValueAtTime(p.x, now);
-        l.positionY.setValueAtTime(p.y, now);
-        l.positionZ.setValueAtTime(p.z, now);
-      } else {
-        try { l.setPosition(p.x, p.y, p.z); } catch (e) {}
-      }
-
-      // ★ Применяем калибровку — вычитаем «центр» головы
-      let yaw = o.yaw, pitch = o.pitch, roll = o.roll;
-      if (this._calibration && this._calibration.center) {
-        yaw -= this._calibration.center.yaw || 0;
-        pitch -= this._calibration.center.pitch || 0;
-        roll -= this._calibration.center.roll || 0;
-      }
-
-      const yawR = yaw * Math.PI / 180;
-      const pitchR = pitch * Math.PI / 180;
-      const rollR = roll * Math.PI / 180;
-
-      const fx = Math.sin(yawR) * Math.cos(pitchR);
-      const fy = Math.sin(pitchR);
-      const fz = -Math.cos(yawR) * Math.cos(pitchR);
-
-      const ux = Math.sin(rollR) * Math.cos(yawR);
-      const uy = Math.cos(rollR);
-      const uz = Math.sin(rollR) * Math.sin(yawR);
-
-      if (l.forwardX) {
-        l.forwardX.setTargetAtTime(fx, now, FADE_SMOOTH);
-        l.forwardY.setTargetAtTime(fy, now, FADE_SMOOTH);
-        l.forwardZ.setTargetAtTime(fz, now, FADE_SMOOTH);
-        l.upX.setTargetAtTime(ux, now, FADE_SMOOTH);
-        l.upY.setTargetAtTime(uy, now, FADE_SMOOTH);
-        l.upZ.setTargetAtTime(uz, now, FADE_SMOOTH);
-      } else {
-        try { l.setOrientation(fx, fy, fz, ux, uy, uz); } catch (e) {}
-      }
-    },
-
-    setListenerOrientation(yaw, pitch, roll) {
-      this._listenerOrientation.yaw = yaw || 0;
-      this._listenerOrientation.pitch = pitch || 0;
-      this._listenerOrientation.roll = roll || 0;
-      this._updateListener();
-    },
-
-    setListenerPosition(x, y, z) {
-      this._listenerPosition.x = x || 0;
-      this._listenerPosition.y = y || 0;
-      this._listenerPosition.z = z || 0;
-      this._updateListener();
-    },
-
-    // ============ SURROUND CROSSFEED (для динамиков) ============
-    // ★ Собственный crossfeed + Haas delay — даёт объём на 2 динамиках
-    _buildSpatialChain(sourceNode, position) {
-      const now = this.ctx.currentTime;
-      const px = position.x || 0, py = position.y || 0, pz = position.z || 0;
-
-      // Нормализуем вектор
-      const len = Math.sqrt(px*px + py*py + pz*pz) || 1;
-      const nx = px / len, ny = py / len, nz = pz / len;
-
-      // Угол в горизонтальной плоскости (0 = спереди, + = справа)
-      const angle = Math.atan2(nx, -nz);   // радианы
-      const angleDeg = angle * 180 / Math.PI;
-
-      // Панорама — базовый L/R
-      const pan = Math.sin(angle);         // -1..1
-
-      // ★ Режим: наушники → HRTF через PannerNode
-      if (this._spatialHeadphones) {
-        const panner = this.ctx.createPanner();
-        panner.panningModel = 'HRTF';
-        panner.distanceModel = 'inverse';
-        panner.refDistance = 1;
-        panner.maxDistance = 10000;
-        panner.rolloffFactor = 1;
-        if (panner.positionX) {
-          panner.positionX.setValueAtTime(px, now);
-          panner.positionY.setValueAtTime(py, now);
-          panner.positionZ.setValueAtTime(pz, now);
-        } else {
-          panner.setPosition(px, py, pz);
-        }
-        this._updateListener();
-        sourceNode.connect(panner);
-        return { out: panner, nodes: [panner] };
-      }
-
-      // ★ Режим: динамики → crossfeed + delay
-      // Создаём цепочку: source → split L/R (по pan) → crossfeed → merge
-
-      const merger = this.ctx.createChannelMerger(2);
-      const gainL = this.ctx.createGain();
-      const gainR = this.ctx.createGain();
-      const crossL = this.ctx.createGain();  // L → R
-      const crossR = this.ctx.createGain();  // R → L
-      const delayL = this.ctx.createDelay(0.1);
-      const delayR = this.ctx.createDelay(0.1);
-
-      // Базовая панорама
-      const gainLVal = Math.cos((pan + 1) * Math.PI / 4);  // 0..1
-      const gainRVal = Math.sin((pan + 1) * Math.PI / 4);
-      gainL.gain.value = gainLVal;
-      gainR.gain.value = gainRVal;
-
-      // Crossfeed
-      crossL.gain.value = CROSSFEED_GAIN * gainLVal;
-      crossR.gain.value = CROSSFEED_GAIN * gainRVal;
-
-      delayL.delayTime.value = CROSSFEED_DELAY_MS / 1000;
-      delayR.delayTime.value = CROSSFEED_DELAY_MS / 1000;
-
-      // Цепочка:
-      // source → gainL → merger.channel0 (left)
-      // source → gainR → merger.channel1 (right)
-      // source → crossL → delayL → merger.channel1 (crossfeed L→R с задержкой)
-      // source → crossR → delayR → merger.channel0 (crossfeed R→L с задержкой)
-
-      sourceNode.connect(gainL);
-      sourceNode.connect(gainR);
-      sourceNode.connect(crossL);
-      sourceNode.connect(crossR);
-
-      gainL.connect(merger, 0, 0);
-      gainR.connect(merger, 0, 1);
-      crossL.connect(delayL);
-      crossR.connect(delayR);
-      delayL.connect(merger, 0, 1);
-      delayR.connect(merger, 0, 0);
-
-      return {
-        out: merger,
-        nodes: [merger, gainL, gainR, crossL, crossR, delayL, delayR]
-      };
-    },
-
-    // ============ SFX ============
     async playSFX(key, opts = {}) {
       this.init();
       if (!this.ctx) return;
@@ -721,17 +435,30 @@
       const src = this.ctx.createBufferSource();
       src.buffer = buffer;
 
-      const isMono = this._audioMode === 'mono';
-
-      if (isMono) {
+      if (this._audioMode === 'mono') {
         src.connect(slot.gain);
-      } else if (this._audioMode === 'spatial' && opts.position) {
-        // ★ Пространственный режим — с crossfeed или HRTF
-        const chain = this._buildSpatialChain(src, opts.position);
-        chain.out.connect(slot.gain);
-        slot.nodes = chain.nodes;
+      } else if (this._audioMode === 'spatial') {
+        // ★ Dolby Surround эффект (Haas + anti-phase)
+        const splitter = this.ctx.createChannelSplitter(2);
+        const merger = this.ctx.createChannelMerger(2);
+        const gainL = this.ctx.createGain(); gainL.gain.value = 1.0;
+        const gainR = this.ctx.createGain(); gainR.gain.value = 1.0;
+        const delayL = this.ctx.createDelay(0.05); delayL.delayTime.value = SURROUND_DELAY;
+        const delayR = this.ctx.createDelay(0.05); delayR.delayTime.value = SURROUND_DELAY;
+        const crossL = this.ctx.createGain(); crossL.gain.value = SURROUND_CROSS;
+        const crossR = this.ctx.createGain(); crossR.gain.value = SURROUND_CROSS;
+        
+        src.connect(splitter);
+        splitter.connect(gainL, 0);
+        splitter.connect(gainR, 1);
+        splitter.connect(delayL, 1);
+        splitter.connect(delayR, 0);
+        delayL.connect(crossL); crossL.connect(merger, 0, 0);
+        delayR.connect(crossR); crossR.connect(merger, 0, 1);
+        gainL.connect(merger, 0, 0); gainR.connect(merger, 0, 1);
+        merger.connect(slot.gain);
+        slot.nodes = [splitter, merger, gainL, gainR, delayL, delayR, crossL, crossR];
       } else {
-        // Стерео
         src.connect(slot.gain);
       }
 
@@ -758,12 +485,6 @@
       }
     },
 
-    // ============ SPATIAL SFX ============
-    async playSpatial(key, position, opts = {}) {
-      return this.playSFX(key, Object.assign({}, opts, { position: position }));
-    },
-
-    // ============ SYS ============
     playSys(name, baseVolume) {
       if (!name) return false;
       const url = SYS_SOUNDS[name];
@@ -795,7 +516,6 @@
 
     getSysList() { return Object.keys(SYS_SOUNDS); },
 
-    // ============ VOLUME ============
     setMasterVolume(v, fade) { this._ramp(this.masterGain.gain, v, fade || 0); },
     setMusicVolume(v, fade)  { this._ramp(this.musicGain.gain, v, fade || 0); },
     setSFXVolume(v, fade)    { this._ramp(this.sfxGain.gain, v, fade || 0); },
@@ -820,7 +540,6 @@
     unloadAll() { this._buffers = {}; this._sysPreloaded = false; }
   };
 
-  // Автопредзагрузка системных звуков после unlock
   const originalUnlock = Sound.unlock.bind(Sound);
   Sound.unlock = async function () {
     const ok = await originalUnlock();
